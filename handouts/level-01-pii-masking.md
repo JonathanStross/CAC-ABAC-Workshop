@@ -26,30 +26,37 @@ All configuration is done inside SAP via transaction **`/N/APPSDM/ABAC`**
 
 ---
 
-## Step 1 — Verify the Problem
+## Step 1 — Verify the Problem & Identify the Data Element
+
+First, confirm the issue is real — and find the technical identifier for the email field.
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In SAP, run `SE16N` → table `SCUSTOM` → **Execute (F8)** | Passenger records |
-| 2 | Find the `EMAIL` column | Full email addresses — e.g. `max.mueller@gmail.com` |
+| 1 | In SAP, run `SE16N` → table `SCUSTOM` → **Execute (F8)** | Passenger records with full email addresses |
+| 2 | Click on the **`EMAIL` column header** to select the column | Column highlighted |
+| 3 | Press **F1** | SAP help popup opens |
+| 4 | Click **Technical Info** (button in the popup) | Technical details for the field |
+| 5 | Note the value in the **Data Element** field | You should see `AD_SMTPADR` |
 
-Note any email address. After completing this level you will come back and confirm it is masked.
+> ⚠️ Write down `AD_SMTPADR` — you will need it in the next step.
 
 ---
 
 ## Step 2 — Explore the Data Attribute
 
-A **Data Attribute** defines *what data* the policy will act on. The attribute for email has been pre-created in the system.
+A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is linked to SAP via the Data Element you just found. This attribute has been pre-created in the system — go find it and confirm the mapping.
 
-| # | Action |
-|---|---|
-| 1 | Run **`/N/APPSDM/ABAC`** |
-| 2 | In the left navigation tree, expand **Functional Configuration** |
-| 3 | Click **Data Attribute Master** |
-| 4 | Find and open the attribute **`DATA.CUSTOMER_EMAIL`** |
-| 5 | Read the **Description** field — note it down |
+| # | Action | What you see |
+|---|---|---|
+| 1 | Run **`/N/APPSDM/ABAC`** | Pathlock ABAC main screen |
+| 2 | Expand **Functional Configuration** in the left tree | Sub-items appear |
+| 3 | Click **Data Attribute Master** | List of data attributes |
+| 4 | Find and open **`DATA.CUSTOMER_EMAIL`** | Attribute detail screen |
+| 5 | Look at the **Technical Mapping** section / tab | You should see `AD_SMTPADR` already listed — the same Data Element from Step 1 ✅ |
+| 6 | Read the **Description** field at the top — note it down | This is part of your completion code |
 
-> **Convention:** All Data Attributes must start with `DATA.` — you will see this pattern throughout the workshop.
+> **Convention:** All Data Attributes start with `DATA.`  
+> **The "aha":** DAC bridges the gap between a business concept (`DATA.CUSTOMER_EMAIL`) and the SAP technical layer (`AD_SMTPADR`). You found both ends yourself.
 
 ---
 
@@ -153,9 +160,11 @@ Go to the **[leaderboard](http://152.53.187.143:9000)** → **Submit Code** → 
 The code is built from the two attributes you explored in Steps 2 and 3:
 
 1. The **name** of the User Attribute you found in Step 3
-2. The **Description value** of the Data Attribute `DATA.CUSTOMER_EMAIL` from Step 2
+2. The **Description value** of `DATA.CUSTOMER_EMAIL` from Step 2
 
-Concatenate them with an underscore: `<UserAttributeName>_<DataAttributeDescription>`
+Concatenate them with an underscore: `<UserAttributeName>_<DescriptionValue>`
+
+> Still stuck? The Description of `DATA.CUSTOMER_EMAIL` matches the Data Element you found via F1 in Step 1.
 
 </details>
 
