@@ -51,10 +51,11 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 | # | Action | What you see |
 |---|---|---|
 | 1 | Run **`/N/APPSDM/ABAC`** | Pathlock ABAC main screen |
-| 2 | Expand **Functional Configuration** in the left tree | Sub-items appear |
-| 3 | Click **Data Attribute Master** | List of data attributes |
-| 4 | Find and open **`DATA.S_EMAIL`** | Attribute detail screen opens |
-| 5 | Read the **Attribute ID** field at the top — **note it down** | `DATA.S_EMAIL` — this is part of your completion code |
+| 2 | Click the **Functional Configuration** tab **(first tab)** | Left tree shows Functional Configuration items |
+| 3 | Expand **Functional Configuration** in the left tree | Sub-items appear |
+| 4 | Click **Data Attribute Master** | List of data attributes |
+| 5 | Find and open **`DATA.S_EMAIL`** | Attribute detail screen opens |
+| 6 | Read the **Attribute ID** field at the top — **note it down** | `DATA.S_EMAIL` — this is your completion code |
 
 > **Convention:** All Data Attributes start with `DATA.`
 
@@ -76,13 +77,14 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 
 A **User Attribute** defines *who* the policy applies to. Again, this has been pre-created.
 
-| # | Action |
-|---|---|
-| 1 | Still in **`/N/APPSDM/ABAC`**, click **User Attribute Master** |
-| 2 | Find and open the attribute **`USER.ID`** |
-| 3 | Read its description — this attribute holds the **logged-in user's SAP username** at runtime |
+| # | Action | What you see |
+|---|---|---|
+| 1 | In **`/N/APPSDM/ABAC`**, make sure you are on the **Functional Configuration** tab **(first tab)** | Left tree shows Functional Configuration items |
+| 2 | Click **User Attribute Master** in the left tree | List of user attributes |
+| 3 | Find and open **`USER.ID`** | Attribute detail screen |
+| 4 | Read its description — this attribute holds the **logged-in user's SAP username** at runtime | — |
 
-> **Convention:** All User Attributes must start with `USER.`
+> **Convention:** All User Attributes start with `USER.`
 
 ---
 
@@ -92,11 +94,12 @@ A **Policy** is the container that holds the masking rules and links them to the
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | Still in **`/N/APPSDM/ABAC`**, click **Policy Administration Point** in the left tree | A list of all existing policies |
-| 2 | Click **New Entry** (top toolbar) | A blank policy form opens |
-| 3 | Enter the **Policy Name**: `MASK_EMAIL_<YOURUSERNAME>` — e.g. `MASK_EMAIL_AMUELLER` | Field fills in |
-| 4 | Enter the **Description**: `Mask passenger email for my user` | Field fills in |
-| 5 | Click **Save** (💾 or Ctrl+S) | Policy appears in the list |
+| 1 | In **`/N/APPSDM/ABAC`**, make sure you are on the **Functional Configuration** tab **(first tab)** | Left tree shows Functional Configuration items |
+| 2 | Click **Policy Administration Point** in the left tree | A list of all existing policies |
+| 3 | Click **New Entry** (top toolbar) | A blank policy form opens |
+| 4 | Enter the **Policy Name**: `MASK_EMAIL_<YOURUSERNAME>` — e.g. `MASK_EMAIL_AMUELLER` | Field fills in |
+| 5 | Enter the **Description**: `Mask passenger email for my user` | Field fills in |
+| 6 | Click **Save** (💾 or Ctrl+S) | Policy appears in the list |
 
 > ⚠️ If you get a "duplicate name" error, someone already used that name — double-check your username is in the policy name.
 
@@ -109,12 +112,13 @@ A **Rule Condition** tells the policy *when* it should fire. Without one, the po
 | # | Action | What you see |
 |---|---|---|
 | 1 | Open your policy `MASK_EMAIL_<YOURUSERNAME>` from the list | Policy detail screen |
-| 2 | Find the **Rules** section / tab | Empty rules list |
-| 3 | Click **New Entry** | A blank rule row appears |
-| 4 | Set **User Attribute** to `USER.ID` | Attribute selector fills |
-| 5 | Set **Operator** to `EQ` (equals) | Operator set |
-| 6 | Set **Value** to your SAP username — e.g. `AMUELLER` **(uppercase, exactly as you log in)** | Value filled |
-| 7 | Click **Save** | Rule row saved |
+| 2 | Make sure you are on the **Functional Configuration** tab **(first tab)** | Left tree shows Functional Configuration items |
+| 3 | Find the **Rules** section / tab | Empty rules list |
+| 4 | Click **New Entry** | A blank rule row appears |
+| 5 | Set **User Attribute** to `USER.ID` | Attribute selector fills |
+| 6 | Set **Operator** to `EQ` (equals) | Operator set |
+| 7 | Set **Value** to your SAP username — e.g. `AMUELLER` **(uppercase, exactly as you log in)** | Value filled |
+| 8 | Click **Save** | Rule row saved |
 
 > This condition reads: *"Only apply this policy when the currently logged-in user ID equals AMUELLER."*  
 > Your colleagues' sessions will not be affected at all.
@@ -127,12 +131,13 @@ The **Policy Enforcement Point** (PEP) is where you activate the masking action 
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In the left tree, click **Policy Enforcement Point** | Sub-items appear |
-| 2 | Click **Data Masking** | List of all active masking enforcement points |
-| 3 | Click **New Entry** | A blank row appears |
-| 4 | In the **Policy** field, select or type `MASK_EMAIL_<YOURUSERNAME>` | Your policy linked |
-| 5 | In the **Attribute** field, select or type `DATA.S_EMAIL` | Data attribute linked |
-| 6 | Click **Save** | New enforcement point row saved ✅ |
+| 1 | In **`/N/APPSDM/ABAC`**, make sure you are on the **Functional Configuration** tab **(first tab)** | Left tree shows Functional Configuration items |
+| 2 | Click **Policy Enforcement Point** in the left tree | Sub-items appear |
+| 3 | Click **Data Masking** | List of all active masking enforcement points |
+| 4 | Click **New Entry** | A blank row appears |
+| 5 | In the **Policy** field, select or type `MASK_EMAIL_<YOURUSERNAME>` | Your policy linked |
+| 6 | In the **Attribute** field, select or type `DATA.S_EMAIL` | Data attribute linked |
+| 7 | Click **Save** | New enforcement point row saved ✅ |
 
 > You have now told DAC: *"When my policy condition is met, mask the field defined by `DATA.S_EMAIL`."*
 
