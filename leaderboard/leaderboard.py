@@ -543,15 +543,97 @@ REGISTER_TEMPLATE = """
     {% if success %}
       <div class="msg ok" style="font-size:1.1em">
         <strong>✅ You're registered!</strong><br><br>
-          <table style="background:transparent;width:auto">
-          <tr><td style="padding:4px 16px 4px 0;color:#aaa">SAP System</td><td><strong>{{ sap_conn }}</strong></td></tr>
-          <tr><td style="padding:4px 16px 4px 0;color:#aaa">Your username</td><td><strong style="font-size:1.2em;color:#ffd700">{{ sap_username }}</strong></td></tr>
-          <tr><td style="padding:4px 16px 4px 0;color:#aaa">Temporary password</td><td><strong style="font-size:1.2em;color:#ffd700;letter-spacing:2px">{{ temp_password }}</strong></td></tr>
-          {% if wg_ip %}
-          <tr><td style="padding:4px 16px 4px 0;color:#aaa">VPN IP</td><td><strong style="color:#2ecc71">{{ wg_ip }}</strong></td></tr>
-          {% endif %}
-        </table>
-        <br>⚠️ <strong>Write the password down now.</strong> It is shown only once and will prompt for a change on first login.
+
+        <div style="background:#0f1f0f;border:1px solid #2ecc71;border-radius:8px;padding:16px 20px;margin-bottom:14px">
+          <div style="font-size:0.8em;color:#aaa;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Your SAP GUI connection details</div>
+          <table style="background:transparent;width:100%;border-collapse:collapse">
+            <tr>
+              <td style="padding:6px 16px 6px 0;color:#aaa;white-space:nowrap;font-size:0.9em">Application Server</td>
+              <td><strong style="color:#fff;font-size:1.1em">{{ sap_host }}</strong> <span style="color:#888;font-size:0.8em">← enter this in SAP GUI as the server address</span></td>
+            </tr>
+            <tr>
+              <td style="padding:6px 16px 6px 0;color:#aaa;white-space:nowrap;font-size:0.9em">System Number</td>
+              <td><strong style="color:#fff">{{ sap_sysnr }}</strong></td>
+            </tr>
+            <tr>
+              <td style="padding:6px 16px 6px 0;color:#aaa;white-space:nowrap;font-size:0.9em">Client</td>
+              <td><strong style="color:#fff">{{ sap_client }}</strong></td>
+            </tr>
+            <tr style="border-top:1px solid #1a3a1a">
+              <td style="padding:10px 16px 6px 0;color:#aaa;white-space:nowrap;font-size:0.9em">Your Username</td>
+              <td style="padding-top:10px"><strong style="font-size:1.3em;color:#ffd700;letter-spacing:1px">{{ sap_username }}</strong></td>
+            </tr>
+            <tr>
+              <td style="padding:6px 16px 6px 0;color:#aaa;white-space:nowrap;font-size:0.9em">Temporary Password</td>
+              <td>
+                <strong id="pw-display" style="font-size:1.3em;color:#ffd700;letter-spacing:2px">{{ temp_password }}</strong>
+              </td>
+            </tr>
+            {% if wg_ip %}
+            <tr style="border-top:1px solid #1a3a1a">
+              <td style="padding:10px 16px 6px 0;color:#aaa;white-space:nowrap;font-size:0.9em">Your VPN IP</td>
+              <td style="padding-top:10px"><strong style="color:#2ecc71">{{ wg_ip }}</strong> <span style="color:#888;font-size:0.8em">(assigned to your WireGuard tunnel)</span></td>
+            </tr>
+            {% endif %}
+          </table>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <button onclick="copyCredentials()" id="copy-btn"
+            style="background:#2a2a3e;color:#fff;border:1px solid #3a3a5e;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:0.9em">
+            📋 Copy credentials
+          </button>
+          <button onclick="downloadCredentials()"
+            style="background:#2a2a3e;color:#fff;border:1px solid #3a3a5e;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:0.9em">
+            ⬇ Download as .txt
+          </button>
+        </div>
+
+        <script>
+          const CREDS = {
+            host: "{{ sap_host }}",
+            sysnr: "{{ sap_sysnr }}",
+            client: "{{ sap_client }}",
+            username: "{{ sap_username }}",
+            password: "{{ temp_password }}",
+            wg_ip: "{{ wg_ip or '' }}"
+          };
+          function credText() {
+            return [
+              "=== DAC Workshop — SAP Credentials ===",
+              "",
+              "SAP GUI Connection",
+              "  Application Server : " + CREDS.host,
+              "  System Number      : " + CREDS.sysnr,
+              "  Client             : " + CREDS.client,
+              "",
+              "Login",
+              "  Username           : " + CREDS.username,
+              "  Temporary Password : " + CREDS.password,
+              "",
+              CREDS.wg_ip ? "VPN IP (WireGuard)   : " + CREDS.wg_ip : "",
+              "",
+              "NOTE: You will be prompted to change your password on first login.",
+              "NOTE: First VPN connection may take up to a minute.",
+            ].join("\\n");
+          }
+          function copyCredentials() {
+            navigator.clipboard.writeText(credText()).then(function() {
+              var btn = document.getElementById('copy-btn');
+              btn.textContent = '✅ Copied!';
+              setTimeout(function(){ btn.textContent = '📋 Copy credentials'; }, 2500);
+            });
+          }
+          function downloadCredentials() {
+            var blob = new Blob([credText()], {type: 'text/plain'});
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'sap-credentials-' + CREDS.username + '.txt';
+            a.click();
+          }
+        </script>
+
+        ⚠️ <strong>Write the password down now.</strong> It is shown only once and will prompt for a change on first login.
         {% if sap_warn %}
         <br><br>⚠️ <em style="color:#f39c12">{{ sap_warn }}</em>
         {% endif %}
@@ -845,7 +927,9 @@ def register():
         sap_username=sap_username,
         temp_password=temp_password,
         sap_warn=sap_warn,
-        sap_conn=SAP_CONN_DISPLAY,
+        sap_host=SAP_HOST,
+        sap_sysnr=SAP_SYSNR,
+        sap_client=SAP_CLIENT,
         wg_ip=wg_ip,
         wg_conf=wg_conf,
         wg_warn=wg_warn,
