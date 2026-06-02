@@ -83,6 +83,87 @@ def _sanitize_text(value: str, max_len: int) -> str:
     value = re.sub(r'[\x00-\x1f\x7f]', '', value)   # strip control chars
     return value[:max_len]
 
+
+def _detect_shenanigans(fields: dict[str, str]) -> str | None:
+    """
+    Check all input fields for injection attempts, script tags, and general
+    nonsense. Returns a funny error message string if something smells off,
+    or None if everything looks fine.
+    """
+    combined = " ".join(fields.values()).lower()
+
+    sql_patterns = [
+        r"('|\")\s*or\s+('|\")?\d",          # ' OR '1
+        r"('|\")\s*or\s+\w+=\w+",             # ' OR a=a
+        r"--\s",                               # SQL comment --
+        r";\s*(drop|delete|insert|update|select|alter|create|truncate)\b",
+        r"\bunion\b.+\bselect\b",
+        r"\bselect\b.+\bfrom\b",
+        r"xp_cmdshell",
+        r"information_schema",
+        r"sleep\s*\(\s*\d",
+        r"waitfor\s+delay",
+        r"1\s*=\s*1",
+        r"benchmark\s*\(",
+    ]
+    script_patterns = [
+        r"<\s*script",
+        r"javascript\s*:",
+        r"on\w+\s*=\s*[\"']",                  # onclick= onerror= etc
+        r"<\s*iframe",
+        r"<\s*img[^>]+onerror",
+        r"eval\s*\(",
+        r"document\s*\.\s*cookie",
+        r"window\s*\.\s*location",
+    ]
+    path_patterns = [
+        r"\.\./",                              # path traversal
+        r"/etc/passwd",
+        r"/proc/self",
+        r"cmd\.exe",
+        r"powershell",
+    ]
+
+    import random
+    sql_jokes = [
+        "Nice try, Bobby Tables. Your parents must be so proud.",
+        "'; DROP TABLE participants; --  ...was almost our favourite username.",
+        "SQL injection detected. Our database laughed, then reported you to the DPA.",
+        "Cute query. Unfortunately we use parameterised statements. Go touch grass.",
+        "UNION SELECT null, 'nope', null, null — counted the columns and everything. Impressive. Still no.",
+        "Our SQLite database would like to inform you that it has feelings too.",
+    ]
+    xss_jokes = [
+        "<script>alert('caught you')</script> — yes we see it, no it doesn't run here.",
+        "XSS attempt detected. Your payload has been safely composted.",
+        "Ooh, a script tag. Our Content Security Policy will frame that and hang it on the wall.",
+        "Nice try. document.cookie is just an empty jar here.",
+        "The <iframe> you ordered has been denied. Please try a salad instead.",
+    ]
+    path_jokes = [
+        "../../etc/passwd — classic. It's on your CV, isn't it.",
+        "Path traversal? The only path here leads to the leaderboard. You're already losing.",
+        "cmd.exe not found. Have you tried turning it off and not turning it back on?",
+        "We don't have a /proc/self/environ here. We barely have a self.",
+    ]
+
+    for p in sql_patterns:
+        if re.search(p, combined):
+            return random.choice(sql_jokes)
+    for p in script_patterns:
+        if re.search(p, combined):
+            return random.choice(xss_jokes)
+    for p in path_patterns:
+        if re.search(p, combined):
+            return random.choice(path_jokes)
+
+    # Suspiciously long single value
+    for field, val in fields.items():
+        if len(val) > 200:
+            return f"That's a lot of characters for a {field}. Are you writing a novel or an exploit?"
+
+    return None
+
 # ---------------------------------------------------------------------------
 # Static assets
 # ---------------------------------------------------------------------------
@@ -508,10 +589,24 @@ def register():
             form_name="", form_email="", form_sap="", form_company="")
 
     # ---- Sanitize inputs ---------------------------------------------------
-    name         = _sanitize_text(request.form.get("name", ""), 80)
-    email        = _sanitize_text(request.form.get("email", "").lower(), 120)
-    sap_username = _sanitize_text(request.form.get("sap_username", "").upper(), 12)
-    company      = _sanitize_text(request.form.get("company", ""), 80)
+    raw_fields = {
+        "name":         request.form.get("name", ""),
+        "email":        request.form.get("email", ""),
+        "sap_username": request.form.get("sap_username", ""),
+        "company":      request.form.get("company", ""),
+    }
+    name         = _sanitize_text(raw_fields["name"], 80)
+    email        = _sanitize_text(raw_fields["email"].lower(), 120)
+    sap_username = _sanitize_text(raw_fields["sap_username"].upper(), 12)
+    company      = _sanitize_text(raw_fields["company"], 80)
+
+    # ---- Shenanigans check — runs on raw input before sanitization ---------
+    funny = _detect_shenanigans(raw_fields)
+    if funny:
+        app.logger.warning("Shenanigans detected from %s: %s", ip, raw_fields)
+        return render_template_string(REGISTER_TEMPLATE,
+            success=False, msg=funny, msg_type="err", sap_available=SAP_AVAILABLE,
+            form_name="", form_email="", form_sap="", form_company="")
 
     # ---- Validation --------------------------------------------------------
     def err(msg):
