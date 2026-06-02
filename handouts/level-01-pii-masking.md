@@ -139,10 +139,12 @@ The **Policy Enforcement Point** (PEP) is where you activate the masking action 
 | 2 | **Double-click** on **Policy Enforcement Point** in the left tree | Sub-items appear: **Data Masking** and **Data Blocking** |
 | 3 | **Double-click** on **Data Masking** | List of all active masking enforcement points |
 | 4 | Click the **Change Mode** button in the top toolbar (pencil icon) | Screen switches to edit mode |
-| 5 | Click **New Entry** | A blank row appears |
-| 6 | In the **Policy** field, select or type `MASK_EMAIL_<YOURUSERNAME>` | Your policy linked |
-| 7 | In the **Attribute** field, select or type `DATA.S_EMAIL` | Data attribute linked |
-| 8 | Click **Save** | New enforcement point row saved ✅ |
+| 5 | Click **Append New** | A blank row appears at the bottom |
+| 6 | Check the **Active** flag | Row is marked active |
+| 7 | Set the **Action** dropdown to **Deny** | Action set |
+| 8 | In the **Policy** field, select or type `MASK_EMAIL_<YOURUSERNAME>` | Your policy linked |
+| 9 | In the **Attribute** field, select or type `DATA.S_EMAIL` | Data attribute linked |
+| 10 | Click **Save** | New enforcement point row saved ✅ |
 
 > You have now told DAC: *"When my policy condition is met, mask the field defined by `DATA.S_EMAIL`."*
 
