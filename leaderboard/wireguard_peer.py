@@ -121,3 +121,24 @@ def create_customer_peer(display_name: str) -> tuple[bool, str, str, str]:
         return True, wg_ip, conf_content, ""
 
     return False, wg_ip, "", f"Peer created but could not retrieve conf file from {conf_path}"
+
+
+def remove_customer_peer(wg_ip: str) -> tuple[bool, str]:
+    """
+    Remove a WireGuard peer by IP address.
+
+    Calls remove-peer.sh --ip <wg_ip> --yes on the host via SSH.
+
+    Returns (success, error_msg).
+    """
+    if not WG_AVAILABLE:
+        return False, "WireGuard SSH not available"
+
+    WG_REMOVE_PEER_CMD = os.environ.get("WG_REMOVE_PEER_CMD", "/etc/wireguard/remove-peer.sh")
+    rc, stdout, stderr = _ssh(f"{WG_REMOVE_PEER_CMD} --ip {wg_ip} --yes")
+    if rc != 0:
+        logger.error("remove-peer.sh failed for %s (rc=%d): %s", wg_ip, rc, stderr)
+        return False, f"remove-peer.sh exited {rc}: {stderr.strip()}"
+
+    logger.info("WireGuard peer removed: %s", wg_ip)
+    return True, ""

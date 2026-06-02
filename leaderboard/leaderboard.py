@@ -20,7 +20,7 @@ from flask import Flask, request, redirect, render_template_string, jsonify, Res
 import sqlite3, hashlib, json, os, re, time, hmac, base64
 from datetime import datetime
 from sap_user import create_workshop_user, user_exists, SAP_AVAILABLE
-from wireguard_peer import create_customer_peer, WG_AVAILABLE
+from wireguard_peer import create_customer_peer, remove_customer_peer, WG_AVAILABLE
 
 app = Flask(__name__)
 DB = "/data/leaderboard.db"
@@ -668,19 +668,53 @@ def admin():
     parts = db.execute("SELECT * FROM participants ORDER BY registered_at DESC").fetchall()
     db.close()
     codes = load_codes()
-    out = "<h2>Participants</h2><pre>"
+    td = "style='padding:4px 10px'"
+    th = "style='text-align:left;padding:4px 10px;color:#aaa'"
+    out = f"<h2>Participants</h2><table style='border-collapse:collapse;width:100%'><tr><th {th}>Username</th><th {th}>Name</th><th {th}>Email</th><th {th}>SAP</th><th {th}>VPN IP</th><th {th}>Registered</th><th></th></tr>"
     for p in parts:
-        sap_icon = "✅" if p["sap_created"] else "⚠️ manual"
-        wg_icon  = f"🌐 {p['wg_ip']}" if p["wg_ip"] else "⚠️ no VPN"
-        out += f"{p['sap_username']:12s}  {p['name']:30s}  {p['email']:35s}  SAP:{sap_icon}  WG:{wg_icon}  {p['registered_at']}\n"
-    out += "</pre><h2>Recent Submissions</h2><pre>"
+        sap_icon = "created" if p["sap_created"] else "manual"
+        wg_icon  = p["wg_ip"] if p["wg_ip"] else "no VPN"
+        uname = p["sap_username"]
+        out += (
+            f"<tr style='border-top:1px solid #333'>"
+            f"<td {td}><strong>{uname}</strong></td>"
+            f"<td {td}>{p['name']}</td>"
+            f"<td {td} style='color:#aaa'>{p['email']}</td>"
+            f"<td {td}>{sap_icon}</td>"
+            f"<td {td}>{wg_icon}</td>"
+            f"<td {td} style='color:#aaa'>{p['registered_at']}</td>"
+            f"<td {td}>"
+            f"<form method='POST' action='/admin/delete/{uname}' style='display:inline'>"
+            f"<button onclick='return confirm("Remove {uname}?");' "
+            f"style='background:#c0392b;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer'>Remove</button>"
+            f"</form></td></tr>"
+        )
+    out += "</table><h2>Recent Submissions</h2><pre>"
     for s in subs:
-        status = "✅" if s["correct"] else "❌"
-        out += f"{status} {s['participant']} | {s['level']} | {s['code']} | {s['points']}pts | {s['submitted_at']}\n"
+        status = "OK" if s["correct"] else "WRONG"
+        out += f"[{status}] {s['participant']} | {s['level']} | {s['code']} | {s['points']}pts | {s['submitted_at']}\n"
     out += "</pre><h2>Active Codes</h2><pre>"
     for lvl, info in codes.items():
         out += f"{lvl}: {info['code']} ({info['points']} pts)\n"
+    out += f"</pre><br><form method='POST' action='/admin/reset' onsubmit='return confirm("Reset ALL data? This also removes all WireGuard peers.")'><button style='background:#c0392b;color:#fff;border:none;padding:8px 20px;border-radius:4px;cursor:pointer;font-size:1em'>Reset Everything</button></form>"
     return f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>{out}</body></html>"
+
+@app.route("/admin/delete/<sap_username>", methods=["POST"])
+def admin_delete_user(sap_username):
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    db = get_db()
+    row = db.execute("SELECT wg_ip FROM participants WHERE sap_username=?", (sap_username.upper(),)).fetchone()
+    if row and row["wg_ip"]:
+        ok, err = remove_customer_peer(row["wg_ip"])
+        if not ok:
+            app.logger.warning("WG peer removal failed for %s: %s", sap_username, err)
+    db.execute("DELETE FROM submissions WHERE participant=?", (sap_username.upper(),))
+    db.execute("DELETE FROM participants WHERE sap_username=?", (sap_username.upper(),))
+    db.commit()
+    db.close()
+    return redirect("/admin")
 
 @app.route("/admin/reset", methods=["POST"])
 def reset():
@@ -688,6 +722,11 @@ def reset():
     if auth_err:
         return auth_err
     db = get_db()
+    parts = db.execute("SELECT wg_ip FROM participants WHERE wg_ip IS NOT NULL").fetchall()
+    for p in parts:
+        ok, err = remove_customer_peer(p["wg_ip"])
+        if not ok:
+            app.logger.warning("WG peer removal failed for %s during reset: %s", p["wg_ip"], err)
     db.execute("DELETE FROM submissions")
     db.execute("DELETE FROM participants")
     db.commit()
