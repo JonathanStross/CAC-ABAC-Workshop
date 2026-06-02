@@ -23,6 +23,17 @@ Make sure you have the following before you begin:
 | 📦 | **WireGuard** — [wireguard.com/install](https://www.wireguard.com/install/) |
 | 🖥️ | **SAP GUI** — [SAP Support downloads](https://support.sap.com/en/product/connectors/sapgui.html) |
 | 📄 | Your **WireGuard `.conf` file** — downloaded from the registration page |
+| 🔑 | Your **SAP credentials** — from your registration page (username + temporary password) |
+
+**SAP system parameters** — you will need these in Step 2:
+
+| Parameter | Value |
+|---|---|
+| Application Server | `10.8.0.1` |
+| Instance Number | `00` |
+| System ID (SID) | `A4H` |
+| Client | `001` |
+| Language | `EN` |
 
 ---
 
