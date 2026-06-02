@@ -40,6 +40,14 @@ REGISTER_CODE    = os.environ.get("REGISTER_CODE", "").strip()
 # Example:  ADMIN_PASSWORD=s3cr3t
 ADMIN_PASSWORD   = os.environ.get("ADMIN_PASSWORD", "").strip()
 
+# SAP connection details shown on the registration confirmation page
+SAP_HOST         = os.environ.get("SAP_HOST",    "10.8.0.1")
+SAP_SYSNR        = os.environ.get("SAP_SYSNR",   "00")
+SAP_CLIENT       = os.environ.get("SAP_CLIENT",  "001")
+# SAP GUI port: 32<SYSNR>  (e.g. SYSNR=00 → 3200)
+_sap_port        = f"32{SAP_SYSNR.zfill(2)}"
+SAP_CONN_DISPLAY = f"{SAP_HOST} &nbsp;|&nbsp; Instance {SAP_SYSNR} &nbsp;|&nbsp; Client {SAP_CLIENT}"
+
 # Simple in-memory rate limiter  {ip: [timestamp, ...]}
 # Max MAX_REG_PER_HOUR registration POSTs per IP per hour
 MAX_REG_PER_HOUR = 5
@@ -305,8 +313,8 @@ REGISTER_TEMPLATE = """
     {% if success %}
       <div class="msg ok" style="font-size:1.1em">
         <strong>✅ You're registered!</strong><br><br>
-        <table style="background:transparent;width:auto">
-          <tr><td style="padding:4px 16px 4px 0;color:#aaa">SAP System</td><td><strong>10.8.0.1:3200 &nbsp;|&nbsp; Client 001</strong></td></tr>
+          <table style="background:transparent;width:auto">
+          <tr><td style="padding:4px 16px 4px 0;color:#aaa">SAP System</td><td><strong>{{ sap_conn }}</strong></td></tr>
           <tr><td style="padding:4px 16px 4px 0;color:#aaa">Your username</td><td><strong style="font-size:1.2em;color:#ffd700">{{ sap_username }}</strong></td></tr>
           <tr><td style="padding:4px 16px 4px 0;color:#aaa">Temporary password</td><td><strong style="font-size:1.2em;color:#ffd700;letter-spacing:2px">{{ temp_password }}</strong></td></tr>
           {% if wg_ip %}
@@ -567,6 +575,7 @@ def register():
         sap_username=sap_username,
         temp_password=temp_password,
         sap_warn=sap_warn,
+        sap_conn=SAP_CONN_DISPLAY,
         wg_ip=wg_ip,
         wg_conf=wg_conf,
         wg_warn=wg_warn,
