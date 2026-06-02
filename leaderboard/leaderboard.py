@@ -16,7 +16,7 @@ Or via Docker:
     docker run -d -p 9000:9000 --name dac-leaderboard dac-leaderboard
 """
 
-from flask import Flask, request, redirect, render_template_string, jsonify, Response
+from flask import Flask, request, redirect, render_template_string, jsonify, Response, send_file
 import sqlite3, hashlib, json, os, re
 from datetime import datetime
 from sap_user import create_workshop_user, user_exists, SAP_AVAILABLE
@@ -25,6 +25,14 @@ from wireguard_peer import create_customer_peer, WG_AVAILABLE
 app = Flask(__name__)
 DB = "/data/leaderboard.db"
 CONFIG_FILE = "/data/level_codes.json"
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "pathlock-logo.svg")
+
+# ---------------------------------------------------------------------------
+# Static assets
+# ---------------------------------------------------------------------------
+@app.route("/logo")
+def logo():
+    return send_file(LOGO_PATH, mimetype="image/svg+xml")
 
 # ---------------------------------------------------------------------------
 # Level codes config — instructor sets these before the session
@@ -124,9 +132,10 @@ def get_level_completions():
 STYLE = """
 <style>
   body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #e0e0e0; margin: 0; padding: 0; }
-  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 30px 40px; border-bottom: 2px solid #c8102e; }
-  .header h1 { margin: 0; color: #fff; font-size: 2em; }
-  .header p { margin: 5px 0 0; color: #aaa; font-size: 0.9em; }
+  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 24px 40px; border-bottom: 2px solid #c8102e; display: flex; align-items: center; gap: 28px; }
+  .header img.logo { height: 44px; width: auto; flex-shrink: 0; }
+  .header-text h1 { margin: 0; color: #fff; font-size: 1.6em; }
+  .header-text p { margin: 4px 0 0; color: #aaa; font-size: 0.9em; }
   .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
   table { width: 100%; border-collapse: collapse; background: #1a1a2e; border-radius: 8px; overflow: hidden; }
   th { background: #c8102e; color: white; padding: 12px 16px; text-align: left; font-size: 0.85em; text-transform: uppercase; }
@@ -167,8 +176,11 @@ LEADERBOARD_TEMPLATE = """
 </head>
 <body>
   <div class="header">
-    <h1>🛡️ Meridian AG — Audit Remediation</h1>
-    <p>DAC / ABAC Workshop Leaderboard &nbsp;|&nbsp; Pathlock Live Demo</p>
+    <img src="/logo" class="logo" alt="Pathlock">
+    <div class="header-text">
+      <h1>Meridian AG — Audit Remediation</h1>
+      <p>DAC / ABAC Workshop Leaderboard &nbsp;|&nbsp; Pathlock Live Demo</p>
+    </div>
   </div>
   <div class="container">
     <div class="nav">
@@ -214,8 +226,11 @@ REGISTER_TEMPLATE = """
 <head><meta charset="utf-8"><title>Register — DAC Workshop</title>""" + STYLE + """</head>
 <body>
   <div class="header">
-    <h1>🛡️ Meridian AG — Join the Team</h1>
-    <p>Register to get your personal SAP login and join the leaderboard</p>
+    <img src="/logo" class="logo" alt="Pathlock">
+    <div class="header-text">
+      <h1>Meridian AG — Join the Team</h1>
+      <p>Register to get your personal SAP login and join the leaderboard</p>
+    </div>
   </div>
   <div class="container">
     <div class="nav"><a href="/">← Back to Leaderboard</a></div>
@@ -289,8 +304,11 @@ SUBMIT_TEMPLATE = """
 <head><meta charset="utf-8"><title>Submit Code</title>""" + STYLE + """</head>
 <body>
   <div class="header">
-    <h1>🔑 Submit Completion Code</h1>
-    <p>Enter the code you found in SAP / Pathlock to claim your points</p>
+    <img src="/logo" class="logo" alt="Pathlock">
+    <div class="header-text">
+      <h1>Submit Completion Code</h1>
+      <p>Enter the code you found in SAP / Pathlock to claim your points</p>
+    </div>
   </div>
   <div class="container">
     <div class="nav"><a href="/">← Back to Leaderboard</a></div>
