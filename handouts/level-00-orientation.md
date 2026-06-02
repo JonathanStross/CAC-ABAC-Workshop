@@ -127,7 +127,7 @@ You've connected to the VPN, logged into SAP, and seen the unprotected data firs
 
 **Now claim your Level 0 points.**
 
-> 💬 **Hint:** You've already seen the answer. Log back out and read everything on the screen carefully.
+> 💬 **Hint:** You've already seen the answer. Log out of SAP and read everything on the login screen carefully.
 
 Go to **[the leaderboard](http://152.53.187.143:9000)** → click **Submit Code** → select **L0 — Orientation** → enter the code.
 
