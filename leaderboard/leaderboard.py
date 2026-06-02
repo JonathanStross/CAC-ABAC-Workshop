@@ -252,7 +252,7 @@ LEADERBOARD_TEMPLATE = """
       </p>
       <div style="background:#0f0f1a;border-radius:6px;padding:16px 20px;font-size:0.9em;color:#ccc;line-height:2">
         <strong style="color:#fff">How to get started:</strong><br>
-        <span style="color:#2ecc71">①</span> &nbsp;Install <a href="https://www.wireguard.com/install/" target="_blank" style="color:#2ecc71">WireGuard</a> on your laptop or phone if you haven't already<br>
+        <span style="color:#2ecc71">①</span> &nbsp;Install <a href="https://www.wireguard.com/install/" target="_blank" style="color:#2ecc71">WireGuard</a> on your <strong style="color:#fff">laptop</strong> if you haven't already <span style="color:#aaa;font-size:0.9em">(phone only if you're tethering — you need a laptop to work in SAP)</span><br>
         <span style="color:#2ecc71">②</span> &nbsp;Go to <a href="/register" style="color:#2ecc71">Register</a> — enter the <strong style="color:#fff">access code your instructor announced</strong>, fill in your details and choose a SAP username<br>
         <span style="color:#2ecc71">③</span> &nbsp;Download your personal <strong style="color:#fff">WireGuard VPN config</strong> from the registration confirmation page and import it into the WireGuard app<br>
         <span style="color:#2ecc71">④</span> &nbsp;Connect to the VPN, open SAP GUI or Fiori, and work through the levels — starting with <strong style="color:#fff">Level 0</strong><br>
