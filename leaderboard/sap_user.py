@@ -220,7 +220,7 @@ def lock_sap_user(sap_username: str) -> tuple[bool, str]:
         return False, "SAP not available"
     try:
         conn = _sap_connection()
-        result = conn.call("BAPI_USER_LOCK", BNAME=sap_username.upper())
+        result = conn.call("BAPI_USER_LOCK", USERNAME=sap_username.upper())
         conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
         conn.close()
         errors = _parse_bapiret(result.get("RETURN", []))
@@ -242,7 +242,7 @@ def unlock_sap_user(sap_username: str) -> tuple[bool, str]:
         return False, "SAP not available"
     try:
         conn = _sap_connection()
-        result = conn.call("BAPI_USER_UNLOCK", BNAME=sap_username.upper())
+        result = conn.call("BAPI_USER_UNLOCK", USERNAME=sap_username.upper())
         conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
         conn.close()
         errors = _parse_bapiret(result.get("RETURN", []))
