@@ -157,6 +157,23 @@ def _detect_shenanigans(fields: dict[str, str]) -> str | None:
         if re.search(p, combined):
             return random.choice(path_jokes)
 
+    # SAP default / system usernames
+    sap_defaults = {
+        "SAP*", "DDIC", "DEVELOPER", "SAPCPIC", "TMSADM", "EARLYWATCH",
+        "RFCUSER", "SOLMAN_BTC", "SM_INTERN", "SAPSYS", "SAPJSF", "SAPABC",
+    }
+    sap_username_val = fields.get("sap_username", "").strip().upper()
+    if sap_username_val in sap_defaults:
+        import random
+        sap_jokes = [
+            f"Nice try. {sap_username_val} is a SAP system account, not your name.",
+            f"{sap_username_val}? Really? Did you think we wouldn't notice?",
+            f"SAP* walks into a bar. The bartender says: 'We don't serve system users here.'",
+            f"DDIC is a dictionary user, not a workshop participant. Try your own name.",
+            f"Using {sap_username_val} as a username is like signing a contract as 'The Government'.",
+        ]
+        return random.choice(sap_jokes)
+
     # Suspiciously long single value
     for field, val in fields.items():
         if len(val) > 200:
@@ -385,6 +402,75 @@ LEADERBOARD_TEMPLATE = """
 </html>
 """
 
+
+FLIP_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Really?</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d0d1a;
+    color: #eee;
+    font-family: 'Segoe UI', sans-serif;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 1.2s cubic-bezier(.68,-0.55,.27,1.55);
+  }
+  body.flipped { transform: rotate(180deg); }
+  .modal {
+    background: #1a1a2e;
+    border: 2px solid #e74c3c;
+    border-radius: 16px;
+    padding: 48px 56px;
+    max-width: 520px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(231,76,60,0.4);
+    animation: shake 0.5s ease 1.3s both;
+  }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-12px)}
+    40%{transform:translateX(12px)}
+    60%{transform:translateX(-8px)}
+    80%{transform:translateX(8px)}
+  }
+  h1 { font-size: 2.4em; color: #e74c3c; margin-bottom: 16px; }
+  p  { color: #aaa; font-size: 1.1em; line-height: 1.6; margin-bottom: 32px; }
+  button {
+    background: #2ecc71;
+    color: #0d0d1a;
+    border: none;
+    padding: 14px 36px;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover { background: #27ae60; }
+</style>
+</head>
+<body class="flipped" id="bd">
+  <div class="modal">
+    <h1>🙃 Joke's on you.</h1>
+    <p>
+      <strong style="color:#ffd700">{{ username }}</strong> is a SAP system account.<br><br>
+      You tried it twice. The screen is now upside down.<br>
+      This is what it feels like to be the server right now.
+    </p>
+    <button onclick="document.getElementById('bd').classList.remove('flipped'); setTimeout(()=>window.location='/register', 1400)">
+      🫡 &nbsp;I will behave
+    </button>
+  </div>
+</body>
+</html>
+"""
+
 REGISTER_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -605,9 +691,23 @@ def register():
     funny = _detect_shenanigans(raw_fields)
     if funny:
         app.logger.warning("Shenanigans detected from %s: %s", ip, raw_fields)
-        return render_template_string(REGISTER_TEMPLATE,
+        # Count SAP-default-user attempts via cookie — flip the screen on 2nd try
+        sap_default_cookie = "sap_naughty"
+        prior_attempts = int(request.cookies.get(sap_default_cookie, "0"))
+        sap_defaults = {"SAP*","DDIC","DEVELOPER","SAPCPIC","TMSADM","EARLYWATCH",
+                        "RFCUSER","SOLMAN_BTC","SM_INTERN","SAPSYS","SAPJSF","SAPABC"}
+        is_sap_default = raw_fields.get("sap_username","").strip().upper() in sap_defaults
+        if is_sap_default and prior_attempts >= 1:
+            resp = Response(render_template_string(FLIP_TEMPLATE,
+                username=raw_fields.get("sap_username","").strip().upper()))
+            resp.set_cookie(sap_default_cookie, "0", max_age=3600, httponly=True)
+            return resp
+        resp = Response(render_template_string(REGISTER_TEMPLATE,
             success=False, msg=funny, msg_type="err", sap_available=SAP_AVAILABLE,
-            form_name="", form_email="", form_sap="", form_company="")
+            form_name="", form_email="", form_sap="", form_company=""))
+        if is_sap_default:
+            resp.set_cookie(sap_default_cookie, str(prior_attempts + 1), max_age=3600, httponly=True)
+        return resp
 
     # ---- Validation --------------------------------------------------------
     def err(msg):
