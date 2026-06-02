@@ -721,8 +721,10 @@ def register():
         return err("A valid email address is required.")
     if not sap_username:
         return err("SAP username is required.")
+    if len(sap_username) < 3:
+        return err("SAP username must be at least 3 characters.")
     if len(sap_username) > 12:
-        return err("SAP username must be 12 characters or fewer.")
+        return err("SAP username must be at most 12 characters.")
     if not re.match(r'^[A-Z0-9_]+$', sap_username):
         return err("SAP username may only contain letters, digits and underscore.")
 
@@ -933,6 +935,7 @@ def admin_delete_user(sap_username):
         app.logger.warning("SAP user deletion failed for %s: %s", uname, sap_err)
 
     # 2. Remove WireGuard peer
+    wg_ok, wg_err = True, ""
     if row and row["wg_ip"]:
         wg_ok, wg_err = remove_customer_peer(row["wg_ip"])
         if not wg_ok:
@@ -945,7 +948,7 @@ def admin_delete_user(sap_username):
     db.close()
     app.logger.warning("Admin deleted user %s (SAP:%s WG:%s)",
                        uname, "ok" if sap_ok else sap_err,
-                       "ok" if (not row or not row["wg_ip"]) else "ok")
+                       "ok" if wg_ok else (wg_err if row and row["wg_ip"] else "no-peer"))
     return redirect("/admin")
 
 @app.route("/admin/lock/<sap_username>", methods=["POST"])
