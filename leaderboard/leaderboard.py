@@ -568,7 +568,8 @@ REGISTER_TEMPLATE = """
         <p style="color:#aaa;font-size:0.8em;margin-top:10px">
           Import this file into the WireGuard app on your laptop or phone.<br>
           Windows/Mac: <em>File → Import tunnel from file</em> &nbsp;|&nbsp;
-          iOS/Android: scan QR from the WireGuard app on the server.
+          iOS/Android: scan QR from the WireGuard app on the server.<br>
+          <span style="color:#f39c12">⏱ First connection may take up to a minute — the SAP system needs a moment to wake up after a new peer connects.</span>
         </p>
       </div>
       {% elif wg_warn %}
