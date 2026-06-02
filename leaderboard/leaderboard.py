@@ -782,7 +782,7 @@ def admin():
             f"<td {td} style='color:#aaa'>{p['registered_at']}</td>"
             f"<td {td}>"
             f"<form method='POST' action='/admin/delete/{uname}' style='display:inline'>"
-            f"<button onclick='return confirm("Remove {uname}?");' "
+            f"<button onclick=\"return confirm('Remove {uname}?');\" "
             f"style='background:#c0392b;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer'>Remove</button>"
             f"</form></td></tr>"
         )
@@ -793,7 +793,7 @@ def admin():
     out += "</pre><h2>Active Codes</h2><pre>"
     for lvl, info in codes.items():
         out += f"{lvl}: {info['code']} ({info['points']} pts)\n"
-    out += f"</pre><br><form method='POST' action='/admin/reset' onsubmit='return confirm("Reset ALL data? This also removes all WireGuard peers.")'><button style='background:#c0392b;color:#fff;border:none;padding:8px 20px;border-radius:4px;cursor:pointer;font-size:1em'>Reset Everything</button></form>"
+    out += "</pre><br><form method='POST' action='/admin/reset' onsubmit=\"return confirm('Reset ALL data? This also removes all WireGuard peers.');\" ><button style='background:#c0392b;color:#fff;border:none;padding:8px 20px;border-radius:4px;cursor:pointer;font-size:1em'>Reset Everything</button></form>" 
     return f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>{out}</body></html>"
 
 @app.route("/admin/delete/<sap_username>", methods=["POST"])
