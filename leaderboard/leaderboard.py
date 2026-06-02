@@ -942,9 +942,12 @@ def admin():
         is_locked = p["locked"]
         kicked_at = p["kicked_at"]
         row_style = "border-top:1px solid #333;background:#2a0a0a" if is_locked else "border-top:1px solid #333"
-        status_badge = "<span style='color:#e74c3c;font-weight:bold'>&#x1F512; LOCKED</span>" if is_locked else "<span style='color:#2ecc71'>active</span>"
         if kicked_at:
-            status_badge += f" <span style='color:#f39c12;font-size:0.8em'>(kicked {kicked_at[:16]})</span>"
+            status_badge = f"<span style='color:#f39c12;font-weight:bold'>&#x26A1; KICKED</span> <span style='color:#888;font-size:0.8em'>({kicked_at[:16]})</span>"
+        elif is_locked:
+            status_badge = "<span style='color:#e74c3c;font-weight:bold'>&#x1F512; LOCKED</span>"
+        else:
+            status_badge = "<span style='color:#2ecc71'>active</span>"
         lock_btn = (
             f"<form method='POST' action='/admin/unlock/{uname}' style='display:inline'>"
             f"<button style='background:#27ae60;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;margin-right:3px'>Unlock</button></form>"

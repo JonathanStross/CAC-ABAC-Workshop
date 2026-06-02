@@ -213,21 +213,19 @@ def user_exists(sap_username: str) -> bool:
 
 def lock_sap_user(sap_username: str) -> tuple[bool, str]:
     """
-    Lock a SAP user via BAPI_USER_CHANGE (ISLOCKED = "L" = locally locked).
+    Lock a SAP user via BAPI_USER_LOCK.
     Returns (success, error_msg).
     """
     if not SAP_AVAILABLE or not SAP_PASSWD:
         return False, "SAP not available"
     try:
         conn = _sap_connection()
-        conn.call(
-            "BAPI_USER_CHANGE",
-            USERNAME=sap_username.upper(),
-            LOGONDATA={"ISLOCKED": "L"},
-            LOGONDATAX={"ISLOCKED": "X"},
-        )
+        result = conn.call("BAPI_USER_LOCK", BNAME=sap_username.upper())
         conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
         conn.close()
+        errors = _parse_bapiret(result.get("RETURN", []))
+        if errors:
+            return False, "; ".join(errors)
         logger.info("SAP user %s locked", sap_username)
         return True, ""
     except Exception as exc:
@@ -237,21 +235,19 @@ def lock_sap_user(sap_username: str) -> tuple[bool, str]:
 
 def unlock_sap_user(sap_username: str) -> tuple[bool, str]:
     """
-    Unlock a SAP user via BAPI_USER_CHANGE (ISLOCKED = " " = not locked).
+    Unlock a SAP user via BAPI_USER_UNLOCK.
     Returns (success, error_msg).
     """
     if not SAP_AVAILABLE or not SAP_PASSWD:
         return False, "SAP not available"
     try:
         conn = _sap_connection()
-        conn.call(
-            "BAPI_USER_CHANGE",
-            USERNAME=sap_username.upper(),
-            LOGONDATA={"ISLOCKED": " "},
-            LOGONDATAX={"ISLOCKED": "X"},
-        )
+        result = conn.call("BAPI_USER_UNLOCK", BNAME=sap_username.upper())
         conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
         conn.close()
+        errors = _parse_bapiret(result.get("RETURN", []))
+        if errors:
+            return False, "; ".join(errors)
         logger.info("SAP user %s unlocked", sap_username)
         return True, ""
     except Exception as exc:
