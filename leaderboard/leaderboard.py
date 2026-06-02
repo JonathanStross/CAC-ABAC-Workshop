@@ -17,8 +17,9 @@ Or via Docker:
 """
 
 from flask import Flask, request, redirect, render_template_string, jsonify
-import sqlite3, hashlib, json, os
+import sqlite3, hashlib, json, os, re
 from datetime import datetime
+from sap_user import create_workshop_user, user_exists, SAP_AVAILABLE
 
 app = Flask(__name__)
 DB = "/data/leaderboard.db"
@@ -61,9 +62,12 @@ def init_db():
     db = get_db()
     db.executescript("""
         CREATE TABLE IF NOT EXISTS participants (
-            id       INTEGER PRIMARY KEY AUTOINCREMENT,
-            name     TEXT NOT NULL UNIQUE,
-            company  TEXT,
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            name          TEXT NOT NULL,
+            email         TEXT NOT NULL UNIQUE,
+            sap_username  TEXT NOT NULL UNIQUE,
+            company       TEXT,
+            sap_created   INTEGER DEFAULT 0,
             registered_at TEXT DEFAULT (datetime('now'))
         );
         CREATE TABLE IF NOT EXISTS submissions (
@@ -88,13 +92,13 @@ def load_codes():
 def get_leaderboard():
     db = get_db()
     rows = db.execute("""
-        SELECT p.name, p.company,
+        SELECT p.name, p.sap_username, p.company,
                COALESCE(SUM(CASE WHEN s.correct=1 THEN s.points ELSE 0 END), 0) as total,
                COUNT(CASE WHEN s.correct=1 THEN 1 END) as levels_done,
                MAX(s.submitted_at) as last_submission
         FROM participants p
-        LEFT JOIN submissions s ON s.participant = p.name
-        GROUP BY p.name, p.company
+        LEFT JOIN submissions s ON s.participant = p.sap_username
+        GROUP BY p.sap_username
         ORDER BY total DESC, last_submission ASC
     """).fetchall()
     db.close()
@@ -173,7 +177,7 @@ LEADERBOARD_TEMPLATE = """
     {% if rows %}
     <table>
       <tr>
-        <th>#</th><th>Participant</th><th>Company</th><th>Score</th><th>Levels</th><th>Last Activity</th>
+        <th>#</th><th>Participant</th><th>SAP User</th><th>Score</th><th>Levels</th><th>Last Activity</th>
       </tr>
       {% for r in rows %}
       <tr class="rank-{{ loop.index if loop.index <= 3 else '' }}">
@@ -184,7 +188,7 @@ LEADERBOARD_TEMPLATE = """
           {% else %}{{ loop.index }}{% endif %}
         </td>
         <td><strong>{{ r.name }}</strong></td>
-        <td>{{ r.company or '—' }}</td>
+        <td style="color:#aaa;font-size:0.85em">{{ r.sap_username }}</td>
         <td><strong>{{ r.total }} pts</strong></td>
         <td>{{ r.levels_done }} / {{ total_levels }}</td>
         <td style="color:#666; font-size:0.85em">{{ r.last_submission or 'Just registered' }}</td>
@@ -204,23 +208,51 @@ LEADERBOARD_TEMPLATE = """
 REGISTER_TEMPLATE = """
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Register</title>""" + STYLE + """</head>
+<head><meta charset="utf-8"><title>Register — DAC Workshop</title>""" + STYLE + """</head>
 <body>
   <div class="header">
     <h1>🛡️ Meridian AG — Join the Team</h1>
-    <p>Register to participate in the audit remediation workshop</p>
+    <p>Register to get your personal SAP login and join the leaderboard</p>
   </div>
   <div class="container">
     <div class="nav"><a href="/">← Back to Leaderboard</a></div>
-    {% if msg %}<div class="msg {{ msg_type }}">{{ msg }}</div>{% endif %}
-    <form method="POST">
-      <h2 style="margin-top:0">Register</h2>
-      <label>Your name (or nickname)</label>
-      <input type="text" name="name" placeholder="e.g. Anna M." required>
-      <label>Company (optional)</label>
-      <input type="text" name="company" placeholder="e.g. Meridian AG">
-      <button type="submit" class="btn">Join the workshop →</button>
-    </form>
+    {% if success %}
+      <div class="msg ok" style="font-size:1.1em">
+        <strong>✅ You're registered!</strong><br><br>
+        <table style="background:transparent;width:auto">
+          <tr><td style="padding:4px 16px 4px 0;color:#aaa">SAP System</td><td><strong>10.8.0.1:3200 &nbsp;|&nbsp; Client 001</strong></td></tr>
+          <tr><td style="padding:4px 16px 4px 0;color:#aaa">Your username</td><td><strong style="font-size:1.2em;color:#ffd700">{{ sap_username }}</strong></td></tr>
+          <tr><td style="padding:4px 16px 4px 0;color:#aaa">Temporary password</td><td><strong style="font-size:1.2em;color:#ffd700;letter-spacing:2px">{{ temp_password }}</strong></td></tr>
+        </table>
+        <br>⚠️ <strong>Write this down now.</strong> The password is shown only once and will prompt for a change on first login.
+        {% if sap_warn %}
+        <br><br>⚠️ <em style="color:#f39c12">{{ sap_warn }}</em>
+        {% endif %}
+      </div>
+      <br><a href="/" class="btn">Go to Leaderboard →</a>
+    {% else %}
+      {% if msg %}<div class="msg {{ msg_type }}">{{ msg }}</div>{% endif %}
+      <form method="POST">
+        <h2 style="margin-top:0">Create your account</h2>
+        <label>Full name <span style="color:#aaa;font-size:0.85em">(shown on leaderboard)</span></label>
+        <input type="text" name="name" placeholder="e.g. Anna Müller" required value="{{ form_name or '' }}">
+        <label>Email address <span style="color:#aaa;font-size:0.85em">(not shown publicly)</span></label>
+        <input type="email" name="email" placeholder="you@example.com" required value="{{ form_email or '' }}">
+        <label>SAP username <span style="color:#aaa;font-size:0.85em">(max 12 chars, letters/digits only — this becomes your SAP login)</span></label>
+        <input type="text" name="sap_username" placeholder="e.g. AMUELLER" maxlength="12"
+               pattern="[A-Za-z0-9_]+" title="Letters, digits and underscore only"
+               required value="{{ form_sap or '' }}" style="text-transform:uppercase;letter-spacing:1px">
+        <label>Company <span style="color:#aaa;font-size:0.85em">(optional)</span></label>
+        <input type="text" name="company" placeholder="e.g. Contoso AG" value="{{ form_company or '' }}">
+        <button type="submit" class="btn">Register & create SAP user →</button>
+        {% if not sap_available %}
+        <p style="color:#f39c12;margin-top:16px;font-size:0.85em">
+          ⚠️ SAP auto-provisioning is offline — your account will be created on the leaderboard
+          but your instructor will set up your SAP login manually.
+        </p>
+        {% endif %}
+      </form>
+    {% endif %}
   </div>
 </body>
 </html>
@@ -240,8 +272,8 @@ SUBMIT_TEMPLATE = """
     {% if msg %}<div class="msg {{ msg_type }}">{{ msg }}</div>{% endif %}
     <form method="POST">
       <h2 style="margin-top:0">Level Completion</h2>
-      <label>Your name</label>
-      <input type="text" name="name" required placeholder="Same name you registered with">
+      <label>Your SAP username</label>
+      <input type="text" name="name" required placeholder="e.g. AMUELLER" style="text-transform:uppercase;letter-spacing:1px">
       <label>Level</label>
       <select name="level">
         {% for lvl, info in levels.items() %}
@@ -270,44 +302,99 @@ def index():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    msg, msg_type = None, "ok"
-    if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        company = request.form.get("company", "").strip()
-        if not name:
-            msg, msg_type = "Name is required.", "err"
-        else:
-            try:
-                db = get_db()
-                db.execute("INSERT INTO participants (name, company) VALUES (?, ?)", (name, company))
-                db.commit()
-                db.close()
-                msg = f"Welcome, {name}! You're registered. Head to /submit when you complete a level."
-            except sqlite3.IntegrityError:
-                msg, msg_type = f"Name '{name}' is already registered.", "err"
-    return render_template_string(REGISTER_TEMPLATE, msg=msg, msg_type=msg_type)
+    if request.method == "GET":
+        return render_template_string(REGISTER_TEMPLATE,
+            success=False, msg=None, msg_type="ok", sap_available=SAP_AVAILABLE,
+            form_name="", form_email="", form_sap="", form_company="")
+
+    name         = request.form.get("name", "").strip()
+    email        = request.form.get("email", "").strip().lower()
+    sap_username = request.form.get("sap_username", "").strip().upper()
+    company      = request.form.get("company", "").strip()
+
+    # ---- Validation --------------------------------------------------------
+    def err(msg):
+        return render_template_string(REGISTER_TEMPLATE,
+            success=False, msg=msg, msg_type="err", sap_available=SAP_AVAILABLE,
+            form_name=name, form_email=email, form_sap=sap_username, form_company=company)
+
+    if not name:
+        return err("Full name is required.")
+    if not email or "@" not in email:
+        return err("A valid email address is required.")
+    if not sap_username:
+        return err("SAP username is required.")
+    if len(sap_username) > 12:
+        return err("SAP username must be 12 characters or fewer.")
+    if not re.match(r'^[A-Z0-9_]+$', sap_username):
+        return err("SAP username may only contain letters, digits and underscore.")
+
+    # ---- Check duplicates in leaderboard DB --------------------------------
+    db = get_db()
+    if db.execute("SELECT 1 FROM participants WHERE email=?", (email,)).fetchone():
+        db.close()
+        return err(f"Email '{email}' is already registered.")
+    if db.execute("SELECT 1 FROM participants WHERE sap_username=?", (sap_username,)).fetchone():
+        db.close()
+        return err(f"SAP username '{sap_username}' is already taken — choose another.")
+
+    # ---- Check SAP live (if available) -------------------------------------
+    if SAP_AVAILABLE and user_exists(sap_username):
+        db.close()
+        return err(f"SAP user '{sap_username}' already exists on the system — choose another username.")
+
+    # ---- Create SAP user ---------------------------------------------------
+    sap_ok, temp_password, sap_error = create_workshop_user(
+        sap_username=sap_username,
+        first_name=name.split()[0] if name.split() else name,
+        last_name=" ".join(name.split()[1:]) if len(name.split()) > 1 else "",
+        email=email,
+    )
+
+    sap_warn = None
+    if not sap_ok:
+        sap_warn = f"SAP user could not be created automatically: {sap_error}. Your instructor will create it manually."
+        temp_password = "(see instructor)"
+
+    # ---- Save to leaderboard DB --------------------------------------------
+    try:
+        db.execute(
+            "INSERT INTO participants (name, email, sap_username, company, sap_created) VALUES (?,?,?,?,?)",
+            (name, email, sap_username, company, 1 if sap_ok else 0))
+        db.commit()
+    except sqlite3.IntegrityError as exc:
+        db.close()
+        return err(f"Registration failed: {exc}")
+    db.close()
+
+    return render_template_string(REGISTER_TEMPLATE,
+        success=True,
+        sap_username=sap_username,
+        temp_password=temp_password,
+        sap_warn=sap_warn,
+        sap_available=SAP_AVAILABLE)
 
 @app.route("/submit", methods=["GET", "POST"])
 def submit():
     msg, msg_type = None, "ok"
     codes = load_codes()
     if request.method == "POST":
-        name  = request.form.get("name", "").strip()
+        sap_username = request.form.get("name", "").strip().upper()
         level = request.form.get("level", "").strip()
         code  = request.form.get("code", "").strip().upper()
 
         # Check participant exists
         db = get_db()
-        participant = db.execute("SELECT * FROM participants WHERE name=?", (name,)).fetchone()
+        participant = db.execute("SELECT * FROM participants WHERE sap_username=?", (sap_username,)).fetchone()
         if not participant:
-            msg, msg_type = f"Name '{name}' not found. Please register first.", "err"
+            msg, msg_type = f"SAP username '{sap_username}' not found. Please register first.", "err"
             db.close()
             return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
 
         # Check not already submitted correctly
         already = db.execute(
             "SELECT * FROM submissions WHERE participant=? AND level=? AND correct=1",
-            (name, level)).fetchone()
+            (sap_username, level)).fetchone()
         if already:
             msg, msg_type = f"You already completed {level}! No double points.", "err"
             db.close()
@@ -319,9 +406,8 @@ def submit():
         correct = (code == correct_code)
 
         if correct:
-            # Calculate speed bonus
             completions = get_level_completions()
-            position = (completions.get(level, 0)) + 1  # this will be position after insert
+            position = (completions.get(level, 0)) + 1
             bonus = SPEED_BONUS.get(position, 0)
             total_pts = base_points + bonus
             bonus_msg = f" +{bonus} speed bonus! 🚀" if bonus else ""
@@ -332,7 +418,7 @@ def submit():
 
         db.execute(
             "INSERT INTO submissions (participant, level, code, correct, points) VALUES (?,?,?,?,?)",
-            (name, level, code, 1 if correct else 0, total_pts))
+            (sap_username, level, code, 1 if correct else 0, total_pts))
         db.commit()
         db.close()
 
@@ -353,7 +439,8 @@ def admin():
     codes = load_codes()
     out = "<h2>Participants</h2><pre>"
     for p in parts:
-        out += f"{p['name']} ({p['company']}) — {p['registered_at']}\n"
+        sap_icon = "✅" if p["sap_created"] else "⚠️ manual"
+        out += f"{p['sap_username']:12s}  {p['name']:30s}  {p['email']:35s}  SAP:{sap_icon}  {p['registered_at']}\n"
     out += "</pre><h2>Recent Submissions</h2><pre>"
     for s in subs:
         status = "✅" if s["correct"] else "❌"

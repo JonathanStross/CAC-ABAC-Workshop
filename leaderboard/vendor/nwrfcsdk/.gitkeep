@@ -1,0 +1,17 @@
+# SAP NW RFC SDK — drop files here before building the Docker image
+#
+# Download from SAP Support Portal:
+#   https://support.sap.com/en/product/connectors/nwrfcsdk.html
+#   → "SAP NW RFC SDK 7.50" → Linux on x86_64 64bit
+#
+# Unpack so that this directory contains:
+#   lib/
+#     libsapnwrfc.so
+#     libsapucum.so
+#     (other .so files)
+#   include/
+#     sapnwrfc.h
+#     (other headers)
+#
+# This file (.gitkeep) is intentionally committed so the directory exists.
+# The SDK files themselves are NOT committed (see .gitignore).

@@ -1,0 +1,13 @@
+# SAP NW RFC SDK binaries — drop into vendor/nwrfcsdk/ but never commit
+vendor/nwrfcsdk/lib/
+vendor/nwrfcsdk/include/
+vendor/nwrfcsdk/demo/
+vendor/nwrfcsdk/doc/
+
+# Environment — contains SAP credentials
+.env
+
+# Runtime DB (if running locally outside Docker)
+*.db
+__pycache__/
+*.pyc

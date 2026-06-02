@@ -1,0 +1,37 @@
+version: "3.8"
+
+# ---------------------------------------------------------------------------
+# CAC ABAC Workshop — Leaderboard + SAP User Provisioning
+#
+# Deploy on the off-grid server alongside infra/docker/docker-compose.yml
+#
+# Quick start:
+#   1. cp .env.example .env  &&  edit .env
+#   2. Unpack SAP NW RFC SDK into vendor/nwrfcsdk/
+#   3. docker compose up -d --build
+#   4. Open http://<server-ip>:9000
+# ---------------------------------------------------------------------------
+
+services:
+  leaderboard:
+    build: .
+    container_name: cac-leaderboard
+    restart: unless-stopped
+
+    # host networking lets the container reach SAP RFC on 10.8.0.1:3300
+    # without extra routing config
+    network_mode: host
+
+    env_file:
+      - .env
+
+    volumes:
+      - leaderboard_data:/data
+
+    # If you want to run without the NW RFC SDK, comment out the build
+    # section and use the pre-built image instead:
+    # image: ghcr.io/jonathanstross/cac-abac-leaderboard:latest
+
+volumes:
+  leaderboard_data:
+    name: cac_leaderboard_data
