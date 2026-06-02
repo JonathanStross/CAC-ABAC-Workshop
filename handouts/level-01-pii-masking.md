@@ -32,7 +32,7 @@ First, confirm the issue is real — and find the technical identifier for the e
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In SAP, run `SE16N` → table `SCUSTOM` → **Execute (F8)** | Passenger records with full email addresses |
+| 1 | In SAP, run `SE16` → table `SCUSTOM` → **Execute (F8)** | Passenger records with full email addresses |
 | 2 | Click on the **`EMAIL` column header** to select the column | Column highlighted |
 | 3 | Press **F1** | SAP help popup opens |
 | 4 | Click **Technical Info** (button in the popup) | Technical details for the field |
@@ -134,8 +134,8 @@ Pathlock DAC policies are evaluated when a session starts — **you must log out
 |---|---|---|
 | 1 | **Log out** of SAP (System → Log Off) | SAP login screen |
 | 2 | **Log back in** with your username and password | SAP menu |
-| 3 | Run `SE16N` → table `SCUSTOM` → **Execute (F8)** | The `EMAIL` column now shows `***` for every passenger row ✅ |
-| 4 | Ask a colleague sitting next to you to open `SE16N` → `SCUSTOM` | Their `EMAIL` column still shows real addresses — your policy only affects your own session ✅ |
+| 3 | Run `SE16` → table `SCUSTOM` → **Execute (F8)** | The `EMAIL` column now shows `***` for every passenger row ✅ |
+| 4 | Ask a colleague sitting next to you to open `SE16` → `SCUSTOM` | Their `EMAIL` column still shows real addresses — your policy only affects your own session ✅ |
 
 > **Still seeing real emails after re-login?**  
 > → Check Step 5: the `USER.ID` value must be your exact SAP username, uppercase, no spaces.  
