@@ -50,8 +50,8 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | Run **`/N/APPSDM/ABAC`** | Pathlock ABAC main screen |
-| 2 | Click the **Functional Configuration** tab **(first tab)** | Left tree updates |
+| 1 | Run **`/N/APPSDM/ABAC`** | Pathlock ABAC main screen — three tabs at the top: **Home**, **Functional Configuration**, **Technical Configuration** |
+| 2 | Click the **Functional Configuration** tab **(second tab)** | Left tree updates |
 | 3 | Expand **Policy Information Point** in the left tree | Sub-items appear |
 | 4 | **Double-click** on **Data Attribute Master** | List of data attributes |
 | 5 | Find and open **`DATA.S_EMAIL`** | Attribute detail screen opens |
@@ -63,14 +63,14 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | Click the **Technical Configuration** tab **(second tab)** | Left tree updates |
+| 1 | Click the **Technical Configuration** tab **(third tab)** | Left tree updates |
 | 2 | Expand **Data Attribute Config** in the left tree | Sub-items appear |
 | 3 | Click **Technical Mapping** | Mapping entries for `DATA.S_EMAIL` |
 | 4 | Find the entry for `DATA.S_EMAIL` — note the SAP Data Element shown | You should see **`S_EMAIL`** — the same element you found in Step 1 ✅ |
 
 > **The "aha":** DAC bridges the gap between a business concept (`DATA.S_EMAIL`) and the SAP technical layer (`S_EMAIL`). You found both ends yourself.
 
-> ⚠️ All other configuration in this level (Data Attribute Master, User Attribute Master, Policy Administration Point, Policy Enforcement Point) is done in the **first tab — Functional Configuration**.
+> ⚠️ All other configuration in this level is done in the **Functional Configuration tab (second tab)**.
 
 ---
 
@@ -80,7 +80,7 @@ A **User Attribute** defines *who* the policy applies to. Again, this has been p
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(first tab)** | Left tree updates |
+| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(second tab)** | Left tree updates |
 | 2 | Expand **Policy Information Point** in the left tree | Sub-items appear |
 | 3 | **Double-click** on **User Attribute Master** | List of user attributes |
 | 4 | Find and open **`USER.ID`** | Attribute detail screen |
@@ -96,12 +96,13 @@ A **Policy** is the container that holds the masking rules and links them to the
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(first tab)** | Left tree updates |
+| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(second tab)** | Left tree updates |
 | 2 | **Double-click** on **Policy Administration Point** in the left tree | List of all existing policies opens |
-| 3 | Click **New Entry** (top toolbar) | A blank policy form opens |
-| 4 | Enter the **Policy Name**: `MASK_EMAIL_<YOURUSERNAME>` — e.g. `MASK_EMAIL_AMUELLER` | Field fills in |
-| 5 | Enter the **Description**: `Mask passenger email for my user` | Field fills in |
-| 6 | Click **Save** (💾 or Ctrl+S) | Policy appears in the list |
+| 3 | Click the **Change Mode** button in the top toolbar (pencil icon) | Screen switches to edit mode |
+| 4 | Click **New Entry** | A blank policy form opens |
+| 5 | Enter the **Policy Name**: `MASK_EMAIL_<YOURUSERNAME>` — e.g. `MASK_EMAIL_AMUELLER` | Field fills in |
+| 6 | Enter the **Description**: `Mask passenger email for my user` | Field fills in |
+| 7 | Click **Save** (💾 or Ctrl+S) | Policy appears in the list |
 
 > ⚠️ If you get a "duplicate name" error, someone already used that name — double-check your username is in the policy name.
 
@@ -115,11 +116,12 @@ A **Rule Condition** tells the policy *when* it should fire. Without one, the po
 |---|---|---|
 | 1 | In the left tree, **double-click** on **Policy Administration Point** → **Rules** | A selection dialog asks for a Rule ID |
 | 2 | Select or enter your policy `MASK_EMAIL_<YOURUSERNAME>` and confirm | The rules list for your policy opens |
-| 3 | Click **New** to insert a new condition | A blank condition row appears |
-| 4 | Set **User Attribute** to `USER.ID` | Attribute selector fills |
-| 5 | Set **Operator** to `EQ` (equals) | Operator set |
-| 6 | Set **Value** to your SAP username — e.g. `AMUELLER` **(uppercase, exactly as you log in)** | Value filled |
-| 7 | Click **Save** | Condition row saved |
+| 3 | Click the **Change Mode** button in the top toolbar (pencil icon) | Screen switches to edit mode |
+| 4 | Click **New** to insert a new condition | A blank condition row appears |
+| 5 | Set **User Attribute** to `USER.ID` | Attribute selector fills |
+| 6 | Set **Operator** to `EQ` (equals) | Operator set |
+| 7 | Set **Value** to your SAP username — e.g. `AMUELLER` **(uppercase, exactly as you log in)** | Value filled |
+| 8 | Click **Save** | Condition row saved |
 
 > This condition reads: *"Only apply this policy when the currently logged-in user ID equals AMUELLER."*  
 > Your colleagues' sessions will not be affected at all.
@@ -132,13 +134,14 @@ The **Policy Enforcement Point** (PEP) is where you activate the masking action 
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(first tab)** | Left tree updates |
+| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(second tab)** | Left tree updates |
 | 2 | **Double-click** on **Policy Enforcement Point** in the left tree | Sub-items appear: **Data Masking** and **Data Blocking** |
 | 3 | **Double-click** on **Data Masking** | List of all active masking enforcement points |
-| 4 | Click **New Entry** | A blank row appears |
-| 5 | In the **Policy** field, select or type `MASK_EMAIL_<YOURUSERNAME>` | Your policy linked |
-| 6 | In the **Attribute** field, select or type `DATA.S_EMAIL` | Data attribute linked |
-| 7 | Click **Save** | New enforcement point row saved ✅ |
+| 4 | Click the **Change Mode** button in the top toolbar (pencil icon) | Screen switches to edit mode |
+| 5 | Click **New Entry** | A blank row appears |
+| 6 | In the **Policy** field, select or type `MASK_EMAIL_<YOURUSERNAME>` | Your policy linked |
+| 7 | In the **Attribute** field, select or type `DATA.S_EMAIL` | Data attribute linked |
+| 8 | Click **Save** | New enforcement point row saved ✅ |
 
 > You have now told DAC: *"When my policy condition is met, mask the field defined by `DATA.S_EMAIL`."*
 
