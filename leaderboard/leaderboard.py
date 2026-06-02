@@ -46,7 +46,7 @@ SAP_SYSNR        = os.environ.get("SAP_SYSNR",   "00")
 SAP_CLIENT       = os.environ.get("SAP_CLIENT",  "001")
 # SAP GUI port: 32<SYSNR>  (e.g. SYSNR=00 → 3200)
 _sap_port        = f"32{SAP_SYSNR.zfill(2)}"
-SAP_CONN_DISPLAY = f"{SAP_HOST} &nbsp;|&nbsp; Instance {SAP_SYSNR} &nbsp;|&nbsp; Client {SAP_CLIENT}"
+SAP_CONN_DISPLAY = f"{SAP_HOST}  |  Instance {SAP_SYSNR}  |  Client {SAP_CLIENT}"
 
 # Simple in-memory rate limiter  {ip: [timestamp, ...]}
 # Max MAX_REG_PER_HOUR registration POSTs per IP per hour
