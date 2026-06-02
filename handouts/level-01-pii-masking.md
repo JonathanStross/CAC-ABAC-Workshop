@@ -44,17 +44,17 @@ First, confirm the issue is real — and find the technical identifier for the e
 
 ## Step 2 — Explore the Data Attribute
 
-A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is linked to SAP via the Data Element you just found. This attribute has been pre-created in the system — go find it, read its description, and then confirm the technical mapping to the SAP field.
+A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is linked to SAP via the Data Element you just found. This attribute has been pre-created in the system — go find it and then trace the mapping all the way down to the SAP field.
 
-**2a — Open the attribute and read the description**
+**2a — Open the attribute**
 
 | # | Action | What you see |
 |---|---|---|
 | 1 | Run **`/N/APPSDM/ABAC`** | Pathlock ABAC main screen |
 | 2 | Expand **Functional Configuration** in the left tree | Sub-items appear |
 | 3 | Click **Data Attribute Master** | List of data attributes |
-| 4 | Find and open **`DATA.CUSTOMER_EMAIL`** | Attribute detail screen with **Attribute ID** and **Description** fields at the top |
-| 5 | Read the **Description** field — note it down | This is part of your completion code |
+| 4 | Find and open **`DATA.S_EMAIL`** | Attribute detail screen opens |
+| 5 | Read the **Attribute ID** field at the top — **note it down** | `DATA.S_EMAIL` — this is part of your completion code |
 
 > **Convention:** All Data Attributes start with `DATA.`
 
@@ -62,11 +62,11 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | Still inside `DATA.CUSTOMER_EMAIL`, click the **Technical Configuration** tab / section | Technical sub-sections appear |
+| 1 | Still inside `DATA.S_EMAIL`, click the **Technical Configuration** tab / section | Technical sub-sections appear |
 | 2 | **Double-click** on **Technical Mapping** | A mapping detail screen opens |
-| 3 | Inspect the mapping entry | You should see `DATA.CUSTOMER_EMAIL` mapped to SAP Data Element **`S_EMAIL`** — the same element you found in Step 1 ✅ |
+| 3 | Inspect the mapping entry — **note down the SAP Data Element shown** | You should see **`S_EMAIL`** — the same element you found in Step 1 ✅ |
 
-> **The "aha":** DAC bridges the gap between a business concept (`DATA.CUSTOMER_EMAIL`) and the SAP technical layer (`S_EMAIL`). You found both ends yourself.
+> **The "aha":** DAC bridges the gap between a business concept (`DATA.S_EMAIL`) and the SAP technical layer (`S_EMAIL`). You found both ends yourself.
 
 ---
 
@@ -121,7 +121,7 @@ A **Rule Condition** tells the policy *when* it should fire. Without one, the po
 
 ## Step 6 — Configure the Enforcement Point
 
-The **Policy Enforcement Point** (PEP) is where you activate the masking action and connect your policy to the data attribute `DATA.CUSTOMER_EMAIL`. Without this, DAC knows the rule but does not act on anything.
+The **Policy Enforcement Point** (PEP) is where you activate the masking action and connect your policy to the data attribute `DATA.S_EMAIL`. Without this, DAC knows the rule but does not act on anything.
 
 | # | Action | What you see |
 |---|---|---|
@@ -129,10 +129,10 @@ The **Policy Enforcement Point** (PEP) is where you activate the masking action 
 | 2 | Click **Data Masking** | List of all active masking enforcement points |
 | 3 | Click **New Entry** | A blank row appears |
 | 4 | In the **Policy** field, select or type `MASK_EMAIL_<YOURUSERNAME>` | Your policy linked |
-| 5 | In the **Attribute** field, select or type `DATA.CUSTOMER_EMAIL` | Data attribute linked |
+| 5 | In the **Attribute** field, select or type `DATA.S_EMAIL` | Data attribute linked |
 | 6 | Click **Save** | New enforcement point row saved ✅ |
 
-> You have now told DAC: *"When my policy condition is met, mask the field defined by `DATA.CUSTOMER_EMAIL`."*
+> You have now told DAC: *"When my policy condition is met, mask the field defined by `DATA.S_EMAIL`."*
 
 ---
 
@@ -165,14 +165,12 @@ Go to the **[leaderboard](http://152.53.187.143:9000)** → **Submit Code** → 
 <summary>💬 <strong>Hint</strong> — click to reveal</summary>
 <br>
 
-The code is built from the two attributes you explored in Steps 2 and 3:
+The code answers two questions:
 
-1. The **name** of the User Attribute you found in Step 3
-2. The **Description value** of `DATA.CUSTOMER_EMAIL` from Step 2
+1. **Which user attribute identifies you at runtime?** → the **Attribute ID** of the user attribute you found in Step 3
+2. **Which field do we mask?** → the **Attribute ID** of the data attribute you found in Step 2a
 
-Concatenate them with an underscore: `<UserAttributeName>_<DescriptionValue>`
-
-> Still stuck? The Description of `DATA.CUSTOMER_EMAIL` matches the Data Element you found via F1 in Step 1.
+Concatenate them with an underscore: `<UserAttributeID>_<DataAttributeID>`
 
 </details>
 
@@ -186,8 +184,8 @@ Concatenate them with an underscore: `<UserAttributeName>_<DescriptionValue>`
 | Policy save fails with "duplicate name" | Your username is already in a policy name — check Step 4, make the name unique |
 | `EMAIL` still visible after re-login | Check Step 5: the `USER.ID` value must be your exact SAP username (uppercase). Also confirm Step 6 Enforcement Point is saved. Log out and back in again. |
 | Colleague's email is also masked | Your Step 5 rule condition is missing or has the wrong username — it should be your username only |
-| Enforcement Point save fails | Check Step 6: Policy field must match your exact policy name, Attribute must be `DATA.CUSTOMER_EMAIL` |
-| Can't find `DATA.CUSTOMER_EMAIL` in the list | Make sure you are in **Data Attribute Master** (Step 2), not User Attribute Master |
+| Enforcement Point save fails | Check Step 6: Policy field must match your exact policy name, Attribute must be `DATA.S_EMAIL` |
+| Can't find `DATA.S_EMAIL` in the list | Make sure you are in **Data Attribute Master** (Step 2), not User Attribute Master |
 
 ---
 
