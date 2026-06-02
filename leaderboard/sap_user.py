@@ -208,7 +208,7 @@ def user_exists(sap_username: str) -> bool:
 
 def lock_sap_user(sap_username: str) -> tuple[bool, str]:
     """
-    Lock a SAP user via BAPI_USER_CHANGE (sets LOCK_LOCALLY).
+    Lock a SAP user via BAPI_USER_CHANGE (ISLOCKED = "L" = locally locked).
     Returns (success, error_msg).
     """
     if not SAP_AVAILABLE or not SAP_PASSWD:
@@ -218,8 +218,8 @@ def lock_sap_user(sap_username: str) -> tuple[bool, str]:
         conn.call(
             "BAPI_USER_CHANGE",
             USERNAME=sap_username.upper(),
-            LOGONDATA={"LTIME": "0000"},   # local lock
-            LOGONDATAX={"LTIME": "X"},
+            LOGONDATA={"ISLOCKED": "L"},
+            LOGONDATAX={"ISLOCKED": "X"},
         )
         conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
         conn.close()
@@ -232,7 +232,7 @@ def lock_sap_user(sap_username: str) -> tuple[bool, str]:
 
 def unlock_sap_user(sap_username: str) -> tuple[bool, str]:
     """
-    Unlock a SAP user via BAPI_USER_CHANGE (clears LOCK_LOCALLY).
+    Unlock a SAP user via BAPI_USER_CHANGE (ISLOCKED = " " = not locked).
     Returns (success, error_msg).
     """
     if not SAP_AVAILABLE or not SAP_PASSWD:
@@ -242,8 +242,8 @@ def unlock_sap_user(sap_username: str) -> tuple[bool, str]:
         conn.call(
             "BAPI_USER_CHANGE",
             USERNAME=sap_username.upper(),
-            LOGONDATA={"LTIME": ""},
-            LOGONDATAX={"LTIME": "X"},
+            LOGONDATA={"ISLOCKED": " "},
+            LOGONDATAX={"ISLOCKED": "X"},
         )
         conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
         conn.close()
@@ -257,6 +257,7 @@ def unlock_sap_user(sap_username: str) -> tuple[bool, str]:
 def kick_sap_user(sap_username: str) -> tuple[bool, str]:
     """
     Terminate all active SAP sessions for a user via TH_DELETE_USER.
+    Correct signature: EXPORTING USER = <bname>, CLIENT = <mandt>
     Returns (success, error_msg).
     """
     if not SAP_AVAILABLE or not SAP_PASSWD:
@@ -265,7 +266,8 @@ def kick_sap_user(sap_username: str) -> tuple[bool, str]:
         conn = _sap_connection()
         conn.call(
             "TH_DELETE_USER",
-            BNAME=sap_username.upper(),
+            USER=sap_username.upper(),
+            CLIENT=SAP_CLIENT,
         )
         conn.close()
         logger.info("SAP sessions terminated for %s", sap_username)
@@ -287,7 +289,7 @@ def delete_sap_user(sap_username: str) -> tuple[bool, str]:
         conn = _sap_connection()
         # Kill active sessions first — best effort, ignore errors
         try:
-            conn.call("TH_DELETE_USER", BNAME=sap_username.upper())
+            conn.call("TH_DELETE_USER", USER=sap_username.upper(), CLIENT=SAP_CLIENT)
         except Exception:
             pass
         result = conn.call("BAPI_USER_DELETE", USERNAME=sap_username.upper())
