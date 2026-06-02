@@ -150,7 +150,12 @@ Go to the **[leaderboard](http://152.53.187.143:9000)** → **Submit Code** → 
 <summary>💬 <strong>Hint</strong> — click to reveal</summary>
 <br>
 
-The code is hidden in plain sight inside the tool you just used. Go back to **`/N/APPSDM/ABAC`** → **Data Attribute Master** → open **`DATA.CUSTOMER_EMAIL`** → read the Description field.
+The code is built from the two attributes you explored in Steps 2 and 3:
+
+1. The **name** of the User Attribute you found in Step 3
+2. The **Description value** of the Data Attribute `DATA.CUSTOMER_EMAIL` from Step 2
+
+Concatenate them with an underscore: `<UserAttributeName>_<DataAttributeDescription>`
 
 </details>
 
