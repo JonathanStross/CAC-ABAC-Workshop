@@ -922,11 +922,6 @@ def submit():
 
     return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
 
-@app.route("/api/leaderboard")
-def api_leaderboard():
-    rows = get_leaderboard()
-    return jsonify([dict(r) for r in rows])
-
 @app.route("/admin")
 def admin():
     auth_err = _require_admin_auth()
