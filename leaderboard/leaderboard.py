@@ -145,6 +145,11 @@ def init_db():
             submitted_at TEXT DEFAULT (datetime('now'))
         );
     """)
+    # Migrate older DBs that predate the wg_ip / wg_conf columns
+    existing = {row[1] for row in db.execute("PRAGMA table_info(participants)")}
+    for col, typedef in [("wg_ip", "TEXT"), ("wg_conf", "TEXT")]:
+        if col not in existing:
+            db.execute(f"ALTER TABLE participants ADD COLUMN {col} {typedef}")
     db.commit()
     db.close()
 

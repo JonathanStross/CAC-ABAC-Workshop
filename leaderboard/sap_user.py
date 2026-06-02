@@ -154,11 +154,6 @@ def create_workshop_user(
                 "LASTNAME":  last_name[:25],
                 "E_MAIL":    email[:241],
             },
-            ADDRESSX={
-                "FIRSTNAME": "X",
-                "LASTNAME":  "X",
-                "E_MAIL":    "X",
-            },
         )
 
         errors = _parse_bapiret(result.get("RETURN", []))
