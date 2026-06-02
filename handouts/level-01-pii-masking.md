@@ -165,12 +165,9 @@ Go to the **[leaderboard](http://152.53.187.143:9000)** → **Submit Code** → 
 <summary>💬 <strong>Hint</strong> — click to reveal</summary>
 <br>
 
-The code answers two questions:
+The code is the **Attribute ID** of the data attribute you explored in Step 2a.
 
-1. **Which user attribute identifies you at runtime?** → the **Attribute ID** of the user attribute you found in Step 3
-2. **Which field do we mask?** → the **Attribute ID** of the data attribute you found in Step 2a
-
-Concatenate them with an underscore: `<UserAttributeID>_<DataAttributeID>`
+Ask yourself: *which field do we mask?*
 
 </details>
 
