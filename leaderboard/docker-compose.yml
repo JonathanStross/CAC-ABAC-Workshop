@@ -31,6 +31,8 @@ services:
       - /root/.ssh/id_ed25519:/secrets/wg_ssh_key:ro
       # WireGuard: read generated .conf files back into the container
       - /etc/wireguard/peers:/wg-peers:ro
+      # Level guides: mount handouts/ from the git clone so content updates = git pull only
+      - /opt/cac-workshop/handouts:/app/handouts:ro
 
     # If you want to run without the NW RFC SDK, comment out the build
     # section and use the pre-built image instead:

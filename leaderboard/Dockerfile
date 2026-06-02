@@ -14,8 +14,8 @@ ENV SAPNWRFC_HOME=/nwrfcsdk
 
 WORKDIR /app
 
-# Install Flask (always required) + openssh-client for WireGuard peer creation
-RUN pip install --no-cache-dir flask && \
+# Install Flask (always required) + openssh-client for WireGuard peer creation + markdown for level guides
+RUN pip install --no-cache-dir flask markdown && \
     apt-get update -qq && \
     apt-get install -y --no-install-recommends openssh-client && \
     rm -rf /var/lib/apt/lists/*

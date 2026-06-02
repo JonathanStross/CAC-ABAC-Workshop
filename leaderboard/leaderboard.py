@@ -19,6 +19,11 @@ Or via Docker:
 from flask import Flask, request, redirect, render_template_string, jsonify, Response, send_file
 import sqlite3, hashlib, json, os, re, time, hmac, base64
 from datetime import datetime
+try:
+    import markdown as _markdown_lib
+    MARKDOWN_AVAILABLE = True
+except ImportError:
+    MARKDOWN_AVAILABLE = False
 from sap_user import create_workshop_user, user_exists, lock_sap_user, unlock_sap_user, kick_sap_user, delete_sap_user, SAP_AVAILABLE
 from wireguard_peer import create_customer_peer, remove_customer_peer, WG_AVAILABLE
 
@@ -26,6 +31,8 @@ app = Flask(__name__)
 DB = "/data/leaderboard.db"
 CONFIG_FILE = "/data/level_codes.json"
 LOGO_PATH = os.path.join(os.path.dirname(__file__), "pathlock-logo.svg")
+# Level guide .md files — lives one directory above the leaderboard/ folder
+HANDOUTS_DIR = os.path.join(os.path.dirname(__file__), "..", "handouts")
 
 # ---------------------------------------------------------------------------
 # Security config — set via environment variables
@@ -187,6 +194,137 @@ def _detect_shenanigans(fields: dict[str, str]) -> str | None:
 @app.route("/logo")
 def logo():
     return send_file(LOGO_PATH, mimetype="image/svg+xml")
+
+# ---------------------------------------------------------------------------
+# Level guide renderer — markdown files from the handouts/ directory
+# ---------------------------------------------------------------------------
+LEVEL_FILES = {
+    0:  "level-00-orientation.md",
+    1:  "level-01-pii-masking.md",
+    2:  "level-02-contextual-access.md",
+    3:  "level-03-scrambling.md",
+    4:  "level-04-overprivileged-role.md",
+    5:  "level-05-export-classification.md",
+    6:  "level-06-multi-entity.md",
+    7:  "level-07-fiori-masking.md",
+    8:  "level-08-audit-trail.md",
+    9:  "level-09-classification-framework.md",
+    10: "level-10-gdpr-art30.md",
+    11: "level-11-compliance-multiplier.md",
+    12: "level-12-too-powerful-role.md",
+    13: "level-13-red-blue-team.md",
+}
+
+LEVEL_STYLE = """
+<style>
+  body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#e0e0e0;margin:0;padding:0}
+  .header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:20px 40px;border-bottom:2px solid #c8102e;display:flex;align-items:center;gap:24px}
+  .header img{height:38px}
+  .header-text h1{margin:0;color:#fff;font-size:1.3em}
+  .header-text p{margin:2px 0 0;color:#aaa;font-size:0.85em}
+  .container{max-width:820px;margin:30px auto;padding:0 24px 60px}
+  .nav{margin-bottom:24px;font-size:0.9em}
+  .nav a{color:#aaa;text-decoration:none;margin-right:16px}
+  .nav a:hover{color:#fff}
+  .level-badge{display:inline-block;background:#c8102e;color:#fff;border-radius:4px;padding:3px 10px;font-size:0.8em;font-weight:bold;margin-right:8px;vertical-align:middle}
+  h1{color:#fff;border-bottom:1px solid #2a2a3e;padding-bottom:10px}
+  h2{color:#e0e0e0;margin-top:36px}
+  h3{color:#ccc}
+  p{line-height:1.7;color:#ccc}
+  a{color:#2ecc71}
+  a:hover{color:#27ae60}
+  code{background:#1a1a2e;padding:2px 6px;border-radius:3px;font-size:0.9em;color:#7ec8e3}
+  pre{background:#1a1a2e;padding:16px;border-radius:6px;overflow-x:auto;border-left:3px solid #2ecc71}
+  pre code{background:transparent;padding:0;color:#aef}
+  table{width:100%;border-collapse:collapse;margin:16px 0}
+  th{background:#c8102e;color:#fff;padding:8px 12px;text-align:left;font-size:0.85em}
+  td{padding:8px 12px;border-bottom:1px solid #2a2a3e;color:#ccc}
+  tr:hover td{background:#1a1a2e}
+  blockquote{border-left:3px solid #c8102e;margin:16px 0;padding:10px 16px;background:#1a1a2e;color:#aaa;border-radius:0 6px 6px 0}
+  blockquote p{margin:0;color:#ccc}
+  hr{border:none;border-top:1px solid #2a2a3e;margin:28px 0}
+  .hint-box{background:#1a2a1a;border:1px solid #2ecc71;border-radius:6px;padding:14px 18px;margin:16px 0}
+  .warn-box{background:#2a1a0a;border:1px solid #f39c12;border-radius:6px;padding:14px 18px;margin:16px 0}
+  .level-nav{display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid #2a2a3e}
+  .level-nav a{background:#1a1a2e;border:1px solid #3a3a5e;padding:10px 18px;border-radius:6px;color:#aaa;text-decoration:none;font-size:0.9em}
+  .level-nav a:hover{background:#2a2a3e;color:#fff}
+</style>
+"""
+
+@app.route("/levels/")
+@app.route("/levels")
+def levels_index():
+    codes = load_codes()
+    items = []
+    for lvl_key, info in codes.items():
+        n = int(lvl_key[1:])
+        available = n in LEVEL_FILES and os.path.exists(
+            os.path.join(HANDOUTS_DIR, LEVEL_FILES[n]))
+        items.append((n, lvl_key, info["title"], info["points"], available))
+    items.sort(key=lambda x: x[0])
+    rows = ""
+    for n, key, title, pts, avail in items:
+        if avail:
+            link = f"<a href='/levels/{n}' style='color:#2ecc71'>{key} — {title}</a>"
+        else:
+            link = f"<span style='color:#555'>{key} — {title} <em style='font-size:0.8em'>(coming soon)</em></span>"
+        rows += f"<tr><td>{link}</td><td style='color:#aaa'>{pts} pts</td></tr>"
+    return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level Guides</title>{LEVEL_STYLE}</head>
+<body>
+  <div class='header'><img src='/logo' alt='Pathlock'>
+    <div class='header-text'><h1>Meridian AG — Level Guides</h1><p>DAC / ABAC Workshop</p></div>
+  </div>
+  <div class='container'>
+    <div class='nav'><a href='/'>← Leaderboard</a><a href='/submit'>Submit Code</a></div>
+    <h1>Workshop Levels</h1>
+    <table><tr><th>Level</th><th>Points</th></tr>{rows}</table>
+  </div>
+</body></html>"""
+
+@app.route("/levels/<int:level_num>")
+def level_guide(level_num):
+    if level_num not in LEVEL_FILES:
+        return "Level not found.", 404
+    md_path = os.path.join(HANDOUTS_DIR, LEVEL_FILES[level_num])
+    if not os.path.exists(md_path):
+        return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level {level_num}</title>{LEVEL_STYLE}</head>
+<body>
+  <div class='header'><img src='/logo' alt='Pathlock'>
+    <div class='header-text'><h1>Level {level_num}</h1><p>Guide coming soon</p></div>
+  </div>
+  <div class='container'>
+    <div class='nav'><a href='/levels'>← All Levels</a><a href='/'>Leaderboard</a></div>
+    <p style='color:#666;padding:40px 0;text-align:center'>This level guide hasn't been published yet. Check back soon.</p>
+  </div>
+</body></html>""", 404
+    with open(md_path, encoding="utf-8") as f:
+        md_text = f.read()
+    if MARKDOWN_AVAILABLE:
+        body_html = _markdown_lib.markdown(
+            md_text, extensions=["tables", "fenced_code", "toc"])
+    else:
+        # Fallback: wrap in <pre> if markdown lib not installed
+        body_html = f"<pre style='white-space:pre-wrap'>{md_text}</pre>"
+    # Prev / next navigation
+    prev_link = f"<a href='/levels/{level_num-1}'>← Level {level_num-1}</a>" if level_num > 0 else "<span></span>"
+    next_link = f"<a href='/levels/{level_num+1}'>Level {level_num+1} →</a>" if (level_num+1) in LEVEL_FILES else "<span></span>"
+    codes = load_codes()
+    key = f"L{level_num}"
+    title = codes.get(key, {}).get("title", f"Level {level_num}")
+    return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level {level_num} — {title}</title>{LEVEL_STYLE}</head>
+<body>
+  <div class='header'><img src='/logo' alt='Pathlock'>
+    <div class='header-text'>
+      <h1><span class='level-badge'>L{level_num}</span>{title}</h1>
+      <p>Meridian AG Audit Remediation &nbsp;|&nbsp; Pathlock DAC/ABAC Workshop</p>
+    </div>
+  </div>
+  <div class='container'>
+    <div class='nav'><a href='/levels'>← All Levels</a><a href='/'>Leaderboard</a><a href='/submit'>Submit Code</a></div>
+    {body_html}
+    <div class='level-nav'>{prev_link}{next_link}</div>
+  </div>
+</body></html>"""
 
 # ---------------------------------------------------------------------------
 # Level codes config — instructor sets these before the session
