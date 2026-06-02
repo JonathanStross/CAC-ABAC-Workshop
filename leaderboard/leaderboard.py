@@ -19,7 +19,7 @@ Or via Docker:
 from flask import Flask, request, redirect, render_template_string, jsonify, Response, send_file
 import sqlite3, hashlib, json, os, re, time, hmac, base64
 from datetime import datetime
-from sap_user import create_workshop_user, user_exists, lock_sap_user, unlock_sap_user, kick_sap_user, SAP_AVAILABLE
+from sap_user import create_workshop_user, user_exists, lock_sap_user, unlock_sap_user, kick_sap_user, delete_sap_user, SAP_AVAILABLE
 from wireguard_peer import create_customer_peer, remove_customer_peer, WG_AVAILABLE
 
 app = Flask(__name__)
@@ -823,16 +823,29 @@ def admin_delete_user(sap_username):
     auth_err = _require_admin_auth()
     if auth_err:
         return auth_err
+    uname = sap_username.upper()
     db = get_db()
-    row = db.execute("SELECT wg_ip FROM participants WHERE sap_username=?", (sap_username.upper(),)).fetchone()
+    row = db.execute("SELECT wg_ip FROM participants WHERE sap_username=?", (uname,)).fetchone()
+
+    # 1. Delete SAP user (kills sessions + BAPI_USER_DELETE)
+    sap_ok, sap_err = delete_sap_user(uname)
+    if not sap_ok:
+        app.logger.warning("SAP user deletion failed for %s: %s", uname, sap_err)
+
+    # 2. Remove WireGuard peer
     if row and row["wg_ip"]:
-        ok, err = remove_customer_peer(row["wg_ip"])
-        if not ok:
-            app.logger.warning("WG peer removal failed for %s: %s", sap_username, err)
-    db.execute("DELETE FROM submissions WHERE participant=?", (sap_username.upper(),))
-    db.execute("DELETE FROM participants WHERE sap_username=?", (sap_username.upper(),))
+        wg_ok, wg_err = remove_customer_peer(row["wg_ip"])
+        if not wg_ok:
+            app.logger.warning("WG peer removal failed for %s: %s", uname, wg_err)
+
+    # 3. Remove from leaderboard DB (always — no inconsistent states)
+    db.execute("DELETE FROM submissions WHERE participant=?", (uname,))
+    db.execute("DELETE FROM participants WHERE sap_username=?", (uname,))
     db.commit()
     db.close()
+    app.logger.warning("Admin deleted user %s (SAP:%s WG:%s)",
+                       uname, "ok" if sap_ok else sap_err,
+                       "ok" if (not row or not row["wg_ip"]) else "ok")
     return redirect("/admin")
 
 @app.route("/admin/lock/<sap_username>", methods=["POST"])

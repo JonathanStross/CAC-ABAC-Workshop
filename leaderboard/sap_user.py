@@ -273,3 +273,33 @@ def kick_sap_user(sap_username: str) -> tuple[bool, str]:
     except Exception as exc:
         logger.error("Failed to kick SAP user %s: %s", sap_username, exc)
         return False, str(exc)
+
+
+def delete_sap_user(sap_username: str) -> tuple[bool, str]:
+    """
+    Delete a SAP user via BAPI_USER_DELETE.
+    Also terminates any active sessions first (best-effort).
+    Returns (success, error_msg).
+    """
+    if not SAP_AVAILABLE or not SAP_PASSWD:
+        return False, "SAP not available"
+    try:
+        conn = _sap_connection()
+        # Kill active sessions first — best effort, ignore errors
+        try:
+            conn.call("TH_DELETE_USER", BNAME=sap_username.upper())
+        except Exception:
+            pass
+        result = conn.call("BAPI_USER_DELETE", USERNAME=sap_username.upper())
+        errors = _parse_bapiret(result.get("RETURN", []))
+        if errors:
+            conn.call("BAPI_TRANSACTION_ROLLBACK")
+            conn.close()
+            return False, " | ".join(errors)
+        conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
+        conn.close()
+        logger.info("SAP user %s deleted", sap_username)
+        return True, ""
+    except Exception as exc:
+        logger.error("Failed to delete SAP user %s: %s", sap_username, exc)
+        return False, str(exc)
