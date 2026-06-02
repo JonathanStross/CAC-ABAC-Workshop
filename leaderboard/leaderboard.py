@@ -429,21 +429,21 @@ def register():
         if not REGISTER_CODE:
             return True   # no code configured — open registration
         token = request.cookies.get(ACCESS_COOKIE, "")
-        expected = hashlib.sha256(REGISTER_CODE.lower().encode()).hexdigest()
+        expected = hashlib.sha256(REGISTER_CODE.encode()).hexdigest()
         return hmac.compare_digest(token, expected)
 
     # POST with only access_code field → validate the gate
     if request.method == "POST" and "access_code" in request.form and "name" not in request.form:
         entered = request.form.get("access_code", "").strip()
         if REGISTER_CODE and hmac.compare_digest(
-                hashlib.sha256(entered.lower().encode()).hexdigest(),
-                hashlib.sha256(REGISTER_CODE.lower().encode()).hexdigest()):
+                hashlib.sha256(entered.encode()).hexdigest(),
+                hashlib.sha256(REGISTER_CODE.encode()).hexdigest()):
             # Correct — set cookie and show the registration form
             resp = Response(render_template_string(REGISTER_TEMPLATE,
                 success=False, msg=None, msg_type="ok", sap_available=SAP_AVAILABLE,
                 form_name="", form_email="", form_sap="", form_company=""))
             resp.set_cookie(ACCESS_COOKIE,
-                hashlib.sha256(REGISTER_CODE.lower().encode()).hexdigest(),
+                hashlib.sha256(REGISTER_CODE.encode()).hexdigest(),
                 max_age=3600, httponly=True, samesite="Lax")
             return resp
         return render_template_string(ACCESS_CODE_TEMPLATE,
