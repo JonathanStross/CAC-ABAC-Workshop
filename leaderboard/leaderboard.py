@@ -43,6 +43,20 @@ HANDOUTS_DIR = os.path.join(os.path.dirname(__file__), "..", "handouts")
 # Example:  REGISTER_CODE=meridian2026
 REGISTER_CODE    = os.environ.get("REGISTER_CODE", "").strip()
 
+# Shared cookie name and helper — used by /register and /levels/* gates
+_ACCESS_COOKIE = "wb_access"
+
+def _access_token() -> str:
+    """HMAC token stored in the access cookie once the code is verified."""
+    return hashlib.sha256(REGISTER_CODE.encode()).hexdigest() if REGISTER_CODE else ""
+
+def _has_access_cookie() -> bool:
+    """Return True if the browser has a valid access cookie (or no code is configured)."""
+    if not REGISTER_CODE:
+        return True
+    token = request.cookies.get(_ACCESS_COOKIE, "")
+    return hmac.compare_digest(token, _access_token())
+
 # HTTP Basic Auth for /admin routes.
 # ADMIN_USER: email / username accepted  (default: admin)
 # ADMIN_PASSWORD: password
@@ -254,6 +268,8 @@ LEVEL_STYLE = """
 @app.route("/levels/")
 @app.route("/levels")
 def levels_index():
+    if not _has_access_cookie():
+        return redirect("/register")
     codes = load_codes()
     items = []
     for lvl_key, info in codes.items():
@@ -283,6 +299,8 @@ def levels_index():
 
 @app.route("/levels/<int:level_num>")
 def level_guide(level_num):
+    if not _has_access_cookie():
+        return redirect("/register")
     if level_num not in LEVEL_FILES:
         return "Level not found.", 404
     md_path = os.path.join(HANDOUTS_DIR, LEVEL_FILES[level_num])
@@ -506,8 +524,7 @@ LEADERBOARD_TEMPLATE = """
         <span style="color:#2ecc71">④</span> &nbsp;Connect to the VPN, open SAP GUI or Fiori, and work through the levels — starting with <strong style="color:#fff">Level 0</strong><br>
         <span style="color:#2ecc71">⑤</span> &nbsp;Found a completion code? Submit it at <a href="/submit" style="color:#2ecc71">Submit Code</a> to claim your points and climb the leaderboard<br>
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid #2a2a3e;color:#aaa;font-size:0.9em">
-          📖 &nbsp;Go to the <a href="https://github.com/JonathanStross/CAC-ABAC-Workshop" target="_blank" style="color:#7ec8e3">CAC-ABAC-Workshop GitHub repo</a>
-          and start with <strong style="color:#fff">Level 0</strong>!<br>
+          📖 &nbsp;<a href="/levels/0" style="color:#2ecc71;font-weight:bold">Click here to start with Level 0 →</a><br>
           Your instructor will also provide the SAP system address, client number, and any additional guidance.
         </div>
       </div>
@@ -913,42 +930,34 @@ def register():
     # ---- Step 1: access code gate ------------------------------------------
     # If REGISTER_CODE is set, the user must first POST the correct code.
     # We store a simple session token in a cookie once the code is verified.
-    ACCESS_COOKIE = "wb_access"
-
-    def _access_granted() -> bool:
-        if not REGISTER_CODE:
-            return True   # no code configured — open registration
-        token = request.cookies.get(ACCESS_COOKIE, "")
-        expected = hashlib.sha256(REGISTER_CODE.encode()).hexdigest()
-        return hmac.compare_digest(token, expected)
+    # Reuses the module-level _has_access_cookie() / _access_token() helpers.
 
     # POST with only access_code field → validate the gate
     if request.method == "POST" and "access_code" in request.form and "name" not in request.form:
         entered = request.form.get("access_code", "").strip()
         if REGISTER_CODE and hmac.compare_digest(
                 hashlib.sha256(entered.encode()).hexdigest(),
-                hashlib.sha256(REGISTER_CODE.encode()).hexdigest()):
+                _access_token()):
             # Correct — set cookie and show the registration form
             resp = Response(render_template_string(REGISTER_TEMPLATE,
                 success=False, msg=None, msg_type="ok", sap_available=SAP_AVAILABLE,
                 form_name="", form_email="", form_sap="", form_company=""))
-            resp.set_cookie(ACCESS_COOKIE,
-                hashlib.sha256(REGISTER_CODE.encode()).hexdigest(),
-                max_age=3600, httponly=True, samesite="Lax")
+            resp.set_cookie(_ACCESS_COOKIE, _access_token(),
+                max_age=86400, httponly=True, samesite="Lax")
             return resp
         return render_template_string(ACCESS_CODE_TEMPLATE,
             error="Incorrect access code. Check with your instructor.")
 
     # GET or unauthed → show gate or form depending on cookie
     if request.method == "GET":
-        if not _access_granted():
+        if not _has_access_cookie():
             return render_template_string(ACCESS_CODE_TEMPLATE, error=None)
         return render_template_string(REGISTER_TEMPLATE,
             success=False, msg=None, msg_type="ok", sap_available=SAP_AVAILABLE,
             form_name="", form_email="", form_sap="", form_company="")
 
     # ---- Step 2: actual registration POST ----------------------------------
-    if not _access_granted():
+    if not _has_access_cookie():
         return render_template_string(ACCESS_CODE_TEMPLATE,
             error="Session expired — please enter the access code again.")
 
