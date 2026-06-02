@@ -74,75 +74,73 @@ A **User Attribute** defines *who* the policy applies to. Again, this has been p
 
 ---
 
-## Step 4 — Create Your Policy
+## Step 4 — Create the Policy
 
-A **Policy** is the rule engine that ties data attributes and user attributes together. You will create your own personal policy now.
+A **Policy** is the container that holds the masking rules and links them to the data. You will create your own personal policy — because there are 20+ participants on this system, your policy name **must include your SAP username** to avoid collisions.
 
-| # | Action |
-|---|---|
-| 1 | Click **Policy Administration Point** in the left tree |
-| 2 | Click **New Entry** |
-| 3 | Fill in the fields below — use your own SAP username in the policy name to keep it unique |
-| 4 | Click **Save** |
+| # | Action | What you see |
+|---|---|---|
+| 1 | Still in **`/N/APPSDM/ABAC`**, click **Policy Administration Point** in the left tree | A list of all existing policies |
+| 2 | Click **New Entry** (top toolbar) | A blank policy form opens |
+| 3 | Enter the **Policy Name**: `MASK_EMAIL_<YOURUSERNAME>` — e.g. `MASK_EMAIL_AMUELLER` | Field fills in |
+| 4 | Enter the **Description**: `Mask passenger email for my user` | Field fills in |
+| 5 | Click **Save** (💾 or Ctrl+S) | Policy appears in the list |
 
-**Policy values:**
-
-| Field | Value |
-|---|---|
-| Policy Name | `MASK_EMAIL_<YOURUSERNAME>` — e.g. `MASK_EMAIL_AMUELLER` |
-| Description | `Mask passenger email for my user` |
+> ⚠️ If you get a "duplicate name" error, someone already used that name — double-check your username is in the policy name.
 
 ---
 
 ## Step 5 — Add a Rule Condition
 
-The rule defines *when* the policy triggers. You will scope it to your own user so it only affects you.
-
-| # | Action |
-|---|---|
-| 1 | Inside your new policy, click **Rules** → **New Entry** |
-| 2 | Set the condition as shown below |
-| 3 | Click **Save** |
-
-**Rule condition:**
-
-| Field | Value |
-|---|---|
-| User Attribute | `USER.ID` |
-| Operator | `EQ` (equals) |
-| Value | Your SAP username — e.g. `AMUELLER` (uppercase) |
-
-> This means: *"Only apply this policy when the logged-in user is me."*
-
----
-
-## Step 6 — Configure the Policy Enforcement Point
-
-This is where you activate masking and link the policy to the data attribute.
-
-| # | Action |
-|---|---|
-| 1 | In the left tree, click **Policy Enforcement Point** → **Data Masking** |
-| 2 | Click **New Entry** |
-| 3 | Fill in the values below |
-| 4 | Click **Save** |
-
-**Enforcement Point values:**
-
-| Field | Value |
-|---|---|
-| Policy | `MASK_EMAIL_<YOURUSERNAME>` |
-| Attribute | `DATA.CUSTOMER_EMAIL` |
-
----
-
-## Step 7 — Verify Masking Works
+A **Rule Condition** tells the policy *when* it should fire. Without one, the policy would apply to every user on the system — we want it to apply only to you.
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | **Log out** of SAP and **log back in** — policies are evaluated at session start |
-| 2 | Run `SE16N` → table `SCUSTOM` → **Execute** | The `EMAIL` column now shows `***` for all passengers |
-| 3 | Ask a colleague to check `SCUSTOM` on their screen | Their email column is still visible — your policy only affects your user ✅ |
+| 1 | Open your policy `MASK_EMAIL_<YOURUSERNAME>` from the list | Policy detail screen |
+| 2 | Find the **Rules** section / tab | Empty rules list |
+| 3 | Click **New Entry** | A blank rule row appears |
+| 4 | Set **User Attribute** to `USER.ID` | Attribute selector fills |
+| 5 | Set **Operator** to `EQ` (equals) | Operator set |
+| 6 | Set **Value** to your SAP username — e.g. `AMUELLER` **(uppercase, exactly as you log in)** | Value filled |
+| 7 | Click **Save** | Rule row saved |
+
+> This condition reads: *"Only apply this policy when the currently logged-in user ID equals AMUELLER."*  
+> Your colleagues' sessions will not be affected at all.
+
+---
+
+## Step 6 — Configure the Enforcement Point
+
+The **Policy Enforcement Point** (PEP) is where you activate the masking action and connect your policy to the data attribute `DATA.CUSTOMER_EMAIL`. Without this, DAC knows the rule but does not act on anything.
+
+| # | Action | What you see |
+|---|---|---|
+| 1 | In the left tree, click **Policy Enforcement Point** | Sub-items appear |
+| 2 | Click **Data Masking** | List of all active masking enforcement points |
+| 3 | Click **New Entry** | A blank row appears |
+| 4 | In the **Policy** field, select or type `MASK_EMAIL_<YOURUSERNAME>` | Your policy linked |
+| 5 | In the **Attribute** field, select or type `DATA.CUSTOMER_EMAIL` | Data attribute linked |
+| 6 | Click **Save** | New enforcement point row saved ✅ |
+
+> You have now told DAC: *"When my policy condition is met, mask the field defined by `DATA.CUSTOMER_EMAIL`."*
+
+---
+
+## Step 7 — Test: Verify the Masking Works
+
+Pathlock DAC policies are evaluated when a session starts — **you must log out and back in** for your new policy to take effect.
+
+| # | Action | Expected result |
+|---|---|---|
+| 1 | **Log out** of SAP (System → Log Off) | SAP login screen |
+| 2 | **Log back in** with your username and password | SAP menu |
+| 3 | Run `SE16N` → table `SCUSTOM` → **Execute (F8)** | The `EMAIL` column now shows `***` for every passenger row ✅ |
+| 4 | Ask a colleague sitting next to you to open `SE16N` → `SCUSTOM` | Their `EMAIL` column still shows real addresses — your policy only affects your own session ✅ |
+
+> **Still seeing real emails after re-login?**  
+> → Check Step 5: the `USER.ID` value must be your exact SAP username, uppercase, no spaces.  
+> → Make sure the Enforcement Point in Step 6 is saved.  
+> → Log out and back in again after fixing.
 
 ---
 
@@ -175,10 +173,11 @@ Concatenate them with an underscore: `<UserAttributeName>_<DescriptionValue>`
 | Symptom | Solution |
 |---|---|
 | `/N/APPSDM/ABAC` gives "No authorization" | Raise your hand — your user may be missing the `/APPSDM/POL_CHANGE` role |
-| Policy save fails with "duplicate name" | Add your username to the policy name to make it unique |
-| `EMAIL` still visible after re-login | Check that the Rule condition uses your exact SAP username (uppercase) and that the Enforcement Point is saved |
-| Colleague's email is also masked | Your rule condition is missing or has the wrong username — check Step 5 |
-| Policy save fails | Check that Attribute ID starts with `DATA.` and Policy name has no spaces |
+| Policy save fails with "duplicate name" | Your username is already in a policy name — check Step 4, make the name unique |
+| `EMAIL` still visible after re-login | Check Step 5: the `USER.ID` value must be your exact SAP username (uppercase). Also confirm Step 6 Enforcement Point is saved. Log out and back in again. |
+| Colleague's email is also masked | Your Step 5 rule condition is missing or has the wrong username — it should be your username only |
+| Enforcement Point save fails | Check Step 6: Policy field must match your exact policy name, Attribute must be `DATA.CUSTOMER_EMAIL` |
+| Can't find `DATA.CUSTOMER_EMAIL` in the list | Make sure you are in **Data Attribute Master** (Step 2), not User Attribute Master |
 
 ---
 
