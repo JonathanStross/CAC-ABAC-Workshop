@@ -194,14 +194,19 @@ def create_workshop_user(
 
 
 def user_exists(sap_username: str) -> bool:
-    """Return True if the SAP username already exists."""
+    """
+    Return True if the SAP username already exists.
+    Uses BAPI_USER_EXISTENCE_CHECK — NUMBER 088 = exists, 124 = does not exist.
+    """
     if not SAP_AVAILABLE or not SAP_PASSWD:
         return False
     try:
         conn = _sap_connection()
-        result = conn.call("SUSR_USER_ADDRESS_READ", BNAME=sap_username.upper())
+        result = conn.call("BAPI_USER_EXISTENCE_CHECK", USERNAME=sap_username.upper())
         conn.close()
-        return True
+        ret = result.get("RETURN", {})
+        # NUMBER 088 = "User <x> exists", 124 = "User <x> does not exist"
+        return str(ret.get("NUMBER", "")) == "088"
     except Exception:
         return False
 
