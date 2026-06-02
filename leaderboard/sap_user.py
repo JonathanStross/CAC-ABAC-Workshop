@@ -201,7 +201,75 @@ def user_exists(sap_username: str) -> bool:
         conn = _sap_connection()
         result = conn.call("SUSR_USER_ADDRESS_READ", BNAME=sap_username.upper())
         conn.close()
-        # If no exception, user exists
         return True
     except Exception:
         return False
+
+
+def lock_sap_user(sap_username: str) -> tuple[bool, str]:
+    """
+    Lock a SAP user via BAPI_USER_CHANGE (sets LOCK_LOCALLY).
+    Returns (success, error_msg).
+    """
+    if not SAP_AVAILABLE or not SAP_PASSWD:
+        return False, "SAP not available"
+    try:
+        conn = _sap_connection()
+        conn.call(
+            "BAPI_USER_CHANGE",
+            USERNAME=sap_username.upper(),
+            LOGONDATA={"LTIME": "0000"},   # local lock
+            LOGONDATAX={"LTIME": "X"},
+        )
+        conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
+        conn.close()
+        logger.info("SAP user %s locked", sap_username)
+        return True, ""
+    except Exception as exc:
+        logger.error("Failed to lock SAP user %s: %s", sap_username, exc)
+        return False, str(exc)
+
+
+def unlock_sap_user(sap_username: str) -> tuple[bool, str]:
+    """
+    Unlock a SAP user via BAPI_USER_CHANGE (clears LOCK_LOCALLY).
+    Returns (success, error_msg).
+    """
+    if not SAP_AVAILABLE or not SAP_PASSWD:
+        return False, "SAP not available"
+    try:
+        conn = _sap_connection()
+        conn.call(
+            "BAPI_USER_CHANGE",
+            USERNAME=sap_username.upper(),
+            LOGONDATA={"LTIME": ""},
+            LOGONDATAX={"LTIME": "X"},
+        )
+        conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
+        conn.close()
+        logger.info("SAP user %s unlocked", sap_username)
+        return True, ""
+    except Exception as exc:
+        logger.error("Failed to unlock SAP user %s: %s", sap_username, exc)
+        return False, str(exc)
+
+
+def kick_sap_user(sap_username: str) -> tuple[bool, str]:
+    """
+    Terminate all active SAP sessions for a user via TH_DELETE_USER.
+    Returns (success, error_msg).
+    """
+    if not SAP_AVAILABLE or not SAP_PASSWD:
+        return False, "SAP not available"
+    try:
+        conn = _sap_connection()
+        conn.call(
+            "TH_DELETE_USER",
+            BNAME=sap_username.upper(),
+        )
+        conn.close()
+        logger.info("SAP sessions terminated for %s", sap_username)
+        return True, ""
+    except Exception as exc:
+        logger.error("Failed to kick SAP user %s: %s", sap_username, exc)
+        return False, str(exc)

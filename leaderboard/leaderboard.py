@@ -19,7 +19,7 @@ Or via Docker:
 from flask import Flask, request, redirect, render_template_string, jsonify, Response, send_file
 import sqlite3, hashlib, json, os, re, time, hmac, base64
 from datetime import datetime
-from sap_user import create_workshop_user, user_exists, SAP_AVAILABLE
+from sap_user import create_workshop_user, user_exists, lock_sap_user, unlock_sap_user, kick_sap_user, SAP_AVAILABLE
 from wireguard_peer import create_customer_peer, remove_customer_peer, WG_AVAILABLE
 
 app = Flask(__name__)
@@ -840,11 +840,17 @@ def admin_lock_user(sap_username):
     auth_err = _require_admin_auth()
     if auth_err:
         return auth_err
+    uname = sap_username.upper()
+    # Lock in leaderboard DB
     db = get_db()
-    db.execute("UPDATE participants SET locked=1 WHERE sap_username=?", (sap_username.upper(),))
+    db.execute("UPDATE participants SET locked=1 WHERE sap_username=?", (uname,))
     db.commit()
     db.close()
-    app.logger.warning("Admin locked user %s", sap_username)
+    # Lock in SAP via BAPI_USER_CHANGE
+    ok, err = lock_sap_user(uname)
+    if not ok:
+        app.logger.warning("SAP lock failed for %s (leaderboard lock still applied): %s", uname, err)
+    app.logger.warning("Admin locked user %s", uname)
     return redirect("/admin")
 
 
@@ -853,32 +859,44 @@ def admin_unlock_user(sap_username):
     auth_err = _require_admin_auth()
     if auth_err:
         return auth_err
+    uname = sap_username.upper()
     db = get_db()
-    db.execute("UPDATE participants SET locked=0 WHERE sap_username=?", (sap_username.upper(),))
+    db.execute("UPDATE participants SET locked=0, kicked_at=NULL WHERE sap_username=?", (uname,))
     db.commit()
     db.close()
+    # Unlock in SAP
+    ok, err = unlock_sap_user(uname)
+    if not ok:
+        app.logger.warning("SAP unlock failed for %s: %s", uname, err)
     return redirect("/admin")
 
 
 @app.route("/admin/kick/<sap_username>", methods=["POST"])
 def admin_kick_user(sap_username):
     """
-    Mark the participant as kicked (records timestamp).
-    Their browser session cookie is based on REGISTER_CODE hash so we can't
-    revoke it server-side — but locking their account blocks all submissions.
-    Kick = lock + timestamp so the instructor can see who was ejected and when.
+    Kill active SAP sessions (TH_DELETE_USER) + lock the SAP user (BAPI_USER_CHANGE)
+    + lock in leaderboard DB with a kicked_at timestamp.
     """
     auth_err = _require_admin_auth()
     if auth_err:
         return auth_err
-    db = get_db()
+    uname = sap_username.upper()
     from datetime import datetime
+    db = get_db()
     db.execute(
         "UPDATE participants SET locked=1, kicked_at=? WHERE sap_username=?",
-        (datetime.utcnow().isoformat(timespec="seconds"), sap_username.upper()))
+        (datetime.utcnow().isoformat(timespec="seconds"), uname))
     db.commit()
     db.close()
-    app.logger.warning("Admin kicked user %s", sap_username)
+    # Terminate active SAP sessions
+    ok, err = kick_sap_user(uname)
+    if not ok:
+        app.logger.warning("SAP session kill failed for %s: %s", uname, err)
+    # Lock the SAP account so they can't log back in
+    ok, err = lock_sap_user(uname)
+    if not ok:
+        app.logger.warning("SAP lock after kick failed for %s: %s", uname, err)
+    app.logger.warning("Admin kicked user %s", uname)
     return redirect("/admin")
 
 
