@@ -242,13 +242,19 @@ LEADERBOARD_TEMPLATE = """
         The DPA has issued a formal warning — five critical access control findings must be closed before end of day.
         Work through the levels, find the completion codes inside SAP or Pathlock, and submit them here to earn points.
       </p>
-      <div style="background:#0f0f1a;border-radius:6px;padding:16px 20px;font-size:0.9em;color:#ccc;line-height:1.8">
+      <div style="background:#0f0f1a;border-radius:6px;padding:16px 20px;font-size:0.9em;color:#ccc;line-height:2">
         <strong style="color:#fff">How to get started:</strong><br>
-        <span style="color:#2ecc71">①</span> &nbsp;Go to <a href="/register" style="color:#2ecc71">Register</a> and enter the <strong style="color:#fff">access code your instructor announced</strong><br>
-        <span style="color:#2ecc71">②</span> &nbsp;Fill in your name, email and choose a SAP username — your SAP login and VPN config are created automatically<br>
-        <span style="color:#2ecc71">③</span> &nbsp;Connect to the VPN, log into SAP, and start with <strong style="color:#fff">Level 0</strong><br>
-        <span style="color:#2ecc71">④</span> &nbsp;Found a completion code? Submit it at <a href="/submit" style="color:#2ecc71">Submit Code</a> to claim your points<br>
-        <span style="color:#aaa;font-size:0.85em">Your instructor will provide the SAP system address, client number, and any additional guidance.</span>
+        <span style="color:#2ecc71">①</span> &nbsp;Install <a href="https://www.wireguard.com/install/" target="_blank" style="color:#2ecc71">WireGuard</a> on your laptop or phone if you haven't already<br>
+        <span style="color:#2ecc71">②</span> &nbsp;Go to <a href="/register" style="color:#2ecc71">Register</a> — enter the <strong style="color:#fff">access code your instructor announced</strong>, fill in your details and choose a SAP username<br>
+        <span style="color:#2ecc71">③</span> &nbsp;Download your personal <strong style="color:#fff">WireGuard VPN config</strong> from the registration confirmation page and import it into the WireGuard app<br>
+        <span style="color:#2ecc71">④</span> &nbsp;Connect to the VPN, open SAP GUI or Fiori, and work through the levels — starting with <strong style="color:#fff">Level 0</strong><br>
+        <span style="color:#2ecc71">⑤</span> &nbsp;Found a completion code? Submit it at <a href="/submit" style="color:#2ecc71">Submit Code</a> to claim your points and climb the leaderboard<br>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #2a2a3e;color:#aaa;font-size:0.9em">
+          📖 &nbsp;All levels, audit findings and exercise materials are in the
+          <a href="https://github.com/JonathanStross/CAC-ABAC-Workshop" target="_blank" style="color:#7ec8e3">CAC-ABAC-Workshop GitHub repo</a>
+          &nbsp;—&nbsp; your instructor will point you to the relevant level.<br>
+          Your instructor will also provide the SAP system address, client number, and any additional guidance.
+        </div>
       </div>
     </div>
 
