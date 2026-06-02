@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir flask
 # Needs build tools + Cython for the C extension.
 RUN if [ -f /nwrfcsdk/lib/libsapnwrfc.so ]; then \
       apt-get update -qq && \
-      apt-get install -y --no-install-recommends gcc git cython3 python3-dev libpython3-dev && \
+      apt-get install -y --no-install-recommends gcc g++ git cython3 python3-dev libpython3-dev && \
       pip install --no-cache-dir cython && \
       pip install --no-cache-dir git+https://github.com/SAP/PyRFC.git && \
       apt-get purge -y gcc git python3-dev libpython3-dev && \
