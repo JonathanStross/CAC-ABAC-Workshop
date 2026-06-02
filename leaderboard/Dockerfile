@@ -33,6 +33,7 @@ RUN if [ -f /nwrfcsdk/lib/libsapnwrfc.so ]; then \
 
 COPY leaderboard.py .
 COPY sap_user.py .
+COPY wireguard_peer.py .
 COPY level_codes.json /data/level_codes.json
 
 VOLUME ["/data"]

@@ -16,10 +16,11 @@ Or via Docker:
     docker run -d -p 9000:9000 --name dac-leaderboard dac-leaderboard
 """
 
-from flask import Flask, request, redirect, render_template_string, jsonify
+from flask import Flask, request, redirect, render_template_string, jsonify, Response
 import sqlite3, hashlib, json, os, re
 from datetime import datetime
 from sap_user import create_workshop_user, user_exists, SAP_AVAILABLE
+from wireguard_peer import create_customer_peer, WG_AVAILABLE
 
 app = Flask(__name__)
 DB = "/data/leaderboard.db"
@@ -68,6 +69,8 @@ def init_db():
             sap_username  TEXT NOT NULL UNIQUE,
             company       TEXT,
             sap_created   INTEGER DEFAULT 0,
+            wg_ip         TEXT,
+            wg_conf       TEXT,
             registered_at TEXT DEFAULT (datetime('now'))
         );
         CREATE TABLE IF NOT EXISTS submissions (
@@ -223,12 +226,34 @@ REGISTER_TEMPLATE = """
           <tr><td style="padding:4px 16px 4px 0;color:#aaa">SAP System</td><td><strong>10.8.0.1:3200 &nbsp;|&nbsp; Client 001</strong></td></tr>
           <tr><td style="padding:4px 16px 4px 0;color:#aaa">Your username</td><td><strong style="font-size:1.2em;color:#ffd700">{{ sap_username }}</strong></td></tr>
           <tr><td style="padding:4px 16px 4px 0;color:#aaa">Temporary password</td><td><strong style="font-size:1.2em;color:#ffd700;letter-spacing:2px">{{ temp_password }}</strong></td></tr>
+          {% if wg_ip %}
+          <tr><td style="padding:4px 16px 4px 0;color:#aaa">VPN IP</td><td><strong style="color:#2ecc71">{{ wg_ip }}</strong></td></tr>
+          {% endif %}
         </table>
-        <br>⚠️ <strong>Write this down now.</strong> The password is shown only once and will prompt for a change on first login.
+        <br>⚠️ <strong>Write the password down now.</strong> It is shown only once and will prompt for a change on first login.
         {% if sap_warn %}
         <br><br>⚠️ <em style="color:#f39c12">{{ sap_warn }}</em>
         {% endif %}
       </div>
+
+      {% if wg_conf %}
+      <br>
+      <div style="background:#1a1a2e;border:1px solid #2ecc71;border-radius:8px;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <strong style="color:#2ecc71">📡 Your WireGuard VPN Config</strong>
+          <a href="/download/{{ sap_username }}" class="btn" style="padding:6px 14px;font-size:0.85em">⬇ Download .conf</a>
+        </div>
+        <pre style="background:#0f0f1a;padding:16px;border-radius:6px;font-size:0.8em;overflow-x:auto;color:#aef;margin:0">{{ wg_conf }}</pre>
+        <p style="color:#aaa;font-size:0.8em;margin-top:10px">
+          Import this file into the WireGuard app on your laptop or phone.<br>
+          Windows/Mac: <em>File → Import tunnel from file</em> &nbsp;|&nbsp;
+          iOS/Android: scan QR from the WireGuard app on the server.
+        </p>
+      </div>
+      {% elif wg_warn %}
+      <br><div class="msg err">⚠️ {{ wg_warn }}</div>
+      {% endif %}
+
       <br><a href="/" class="btn">Go to Leaderboard →</a>
     {% else %}
       {% if msg %}<div class="msg {{ msg_type }}">{{ msg }}</div>{% endif %}
@@ -356,11 +381,20 @@ def register():
         sap_warn = f"SAP user could not be created automatically: {sap_error}. Your instructor will create it manually."
         temp_password = "(see instructor)"
 
+    # ---- Create WireGuard peer ---------------------------------------------
+    wg_ok, wg_ip, wg_conf, wg_error = create_customer_peer(display_name=name)
+
+    wg_warn = None
+    if not wg_ok:
+        wg_warn = f"VPN config could not be created automatically: {wg_error}. Your instructor will provide your WireGuard config."
+        wg_ip = None
+        wg_conf = None
+
     # ---- Save to leaderboard DB --------------------------------------------
     try:
         db.execute(
-            "INSERT INTO participants (name, email, sap_username, company, sap_created) VALUES (?,?,?,?,?)",
-            (name, email, sap_username, company, 1 if sap_ok else 0))
+            "INSERT INTO participants (name, email, sap_username, company, sap_created, wg_ip, wg_conf) VALUES (?,?,?,?,?,?,?)",
+            (name, email, sap_username, company, 1 if sap_ok else 0, wg_ip, wg_conf))
         db.commit()
     except sqlite3.IntegrityError as exc:
         db.close()
@@ -372,7 +406,27 @@ def register():
         sap_username=sap_username,
         temp_password=temp_password,
         sap_warn=sap_warn,
+        wg_ip=wg_ip,
+        wg_conf=wg_conf,
+        wg_warn=wg_warn,
         sap_available=SAP_AVAILABLE)
+
+@app.route("/download/<sap_username>")
+def download_wg_conf(sap_username):
+    """Serve the WireGuard .conf for a registered participant."""
+    db = get_db()
+    row = db.execute(
+        "SELECT wg_conf, name FROM participants WHERE sap_username=?",
+        (sap_username.upper(),)).fetchone()
+    db.close()
+    if not row or not row["wg_conf"]:
+        return "No WireGuard config found for this user.", 404
+    filename = f"{sap_username.upper()}_vpn.conf"
+    return Response(
+        row["wg_conf"],
+        mimetype="text/plain",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
 
 @app.route("/submit", methods=["GET", "POST"])
 def submit():
@@ -440,7 +494,8 @@ def admin():
     out = "<h2>Participants</h2><pre>"
     for p in parts:
         sap_icon = "✅" if p["sap_created"] else "⚠️ manual"
-        out += f"{p['sap_username']:12s}  {p['name']:30s}  {p['email']:35s}  SAP:{sap_icon}  {p['registered_at']}\n"
+        wg_icon  = f"🌐 {p['wg_ip']}" if p["wg_ip"] else "⚠️ no VPN"
+        out += f"{p['sap_username']:12s}  {p['name']:30s}  {p['email']:35s}  SAP:{sap_icon}  WG:{wg_icon}  {p['registered_at']}\n"
     out += "</pre><h2>Recent Submissions</h2><pre>"
     for s in subs:
         status = "✅" if s["correct"] else "❌"

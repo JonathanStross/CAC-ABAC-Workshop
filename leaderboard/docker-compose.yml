@@ -27,6 +27,10 @@ services:
 
     volumes:
       - leaderboard_data:/data
+      # WireGuard: SSH key to call add-peer.sh on the host
+      - /root/.ssh/id_ed25519:/secrets/wg_ssh_key:ro
+      # WireGuard: read generated .conf files back into the container
+      - /etc/wireguard/peers:/wg-peers:ro
 
     # If you want to run without the NW RFC SDK, comment out the build
     # section and use the pre-built image instead:
