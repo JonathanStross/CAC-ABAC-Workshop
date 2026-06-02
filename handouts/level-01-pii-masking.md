@@ -55,7 +55,7 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 | 3 | Expand **Policy Information Point** in the left tree | Sub-items appear |
 | 4 | **Double-click** on **Data Attribute Master** | List of data attributes |
 | 5 | Find and open **`DATA.S_EMAIL`** | Attribute detail screen opens |
-| 6 | Read the **Attribute ID** field at the top — **note it down** | `DATA.S_EMAIL` — this is your completion code |
+| 6 | Read the **Attribute ID** field at the top — **note it down** | — |
 
 > **Convention:** All Data Attributes start with `DATA.`
 
@@ -169,6 +169,8 @@ You have created your first Pathlock DAC masking policy. Passenger emails are no
 
 **Claim your Level 1 points:**
 Go to the **[leaderboard](http://152.53.187.143:9000)** → **Submit Code** → select **L1 — PII Masking** → enter the code.
+
+> 💭 *What was the Attribute ID of the data attribute you masked?*
 
 <details>
 <summary>💬 <strong>Hint</strong> — click to reveal</summary>
