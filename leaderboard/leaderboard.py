@@ -235,6 +235,23 @@ LEADERBOARD_TEMPLATE = """
       <a href="/submit">🔑 Submit Code</a>
     </div>
 
+    <div style="background:#1a1a2e;border-radius:8px;padding:24px 28px;margin-bottom:28px;border-left:4px solid #c8102e">
+      <h2 style="margin:0 0 10px;color:#fff;font-size:1.2em">👋 Welcome to the Pathlock DAC/ABAC Workshop</h2>
+      <p style="margin:0 0 14px;color:#ccc;line-height:1.6">
+        You are part of the <strong style="color:#fff">Meridian AG audit remediation team</strong>.
+        The DPA has issued a formal warning — five critical access control findings must be closed before end of day.
+        Work through the levels, find the completion codes inside SAP or Pathlock, and submit them here to earn points.
+      </p>
+      <div style="background:#0f0f1a;border-radius:6px;padding:16px 20px;font-size:0.9em;color:#ccc;line-height:1.8">
+        <strong style="color:#fff">How to get started:</strong><br>
+        <span style="color:#2ecc71">①</span> &nbsp;Go to <a href="/register" style="color:#2ecc71">Register</a> and enter the <strong style="color:#fff">access code your instructor announced</strong><br>
+        <span style="color:#2ecc71">②</span> &nbsp;Fill in your name, email and choose a SAP username — your SAP login and VPN config are created automatically<br>
+        <span style="color:#2ecc71">③</span> &nbsp;Connect to the VPN, log into SAP, and start with <strong style="color:#fff">Level 0</strong><br>
+        <span style="color:#2ecc71">④</span> &nbsp;Found a completion code? Submit it at <a href="/submit" style="color:#2ecc71">Submit Code</a> to claim your points<br>
+        <span style="color:#aaa;font-size:0.85em">Your instructor will provide the SAP system address, client number, and any additional guidance.</span>
+      </div>
+    </div>
+
     {% if rows %}
     <table>
       <tr>
