@@ -250,9 +250,8 @@ LEADERBOARD_TEMPLATE = """
         <span style="color:#2ecc71">④</span> &nbsp;Connect to the VPN, open SAP GUI or Fiori, and work through the levels — starting with <strong style="color:#fff">Level 0</strong><br>
         <span style="color:#2ecc71">⑤</span> &nbsp;Found a completion code? Submit it at <a href="/submit" style="color:#2ecc71">Submit Code</a> to claim your points and climb the leaderboard<br>
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid #2a2a3e;color:#aaa;font-size:0.9em">
-          📖 &nbsp;All levels, audit findings and exercise materials are in the
-          <a href="https://github.com/JonathanStross/CAC-ABAC-Workshop" target="_blank" style="color:#7ec8e3">CAC-ABAC-Workshop GitHub repo</a>
-          &nbsp;—&nbsp; your instructor will point you to the relevant level.<br>
+          📖 &nbsp;Go to the <a href="https://github.com/JonathanStross/CAC-ABAC-Workshop" target="_blank" style="color:#7ec8e3">CAC-ABAC-Workshop GitHub repo</a>
+          and start with <strong style="color:#fff">Level 0</strong>!<br>
           Your instructor will also provide the SAP system address, client number, and any additional guidance.
         </div>
       </div>
