@@ -44,18 +44,28 @@ First, confirm the issue is real — and find the technical identifier for the e
 
 ## Step 2 — Explore the Data Attribute
 
-A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is linked to SAP via the Data Element you just found. This attribute has been pre-created in the system — go find it and confirm the mapping.
+A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is linked to SAP via the Data Element you just found. This attribute has been pre-created in the system — go find it, read its description, and then confirm the technical mapping to the SAP field.
+
+**2a — Open the attribute and read the description**
 
 | # | Action | What you see |
 |---|---|---|
 | 1 | Run **`/N/APPSDM/ABAC`** | Pathlock ABAC main screen |
 | 2 | Expand **Functional Configuration** in the left tree | Sub-items appear |
 | 3 | Click **Data Attribute Master** | List of data attributes |
-| 4 | Find and open **`DATA.CUSTOMER_EMAIL`** | Attribute detail screen |
-| 5 | Look at the **Technical Mapping** section / tab | You should see `S_EMAIL` already listed — the same Data Element from Step 1 ✅ |
-| 6 | Read the **Description** field at the top — note it down | This is part of your completion code |
+| 4 | Find and open **`DATA.CUSTOMER_EMAIL`** | Attribute detail screen with **Attribute ID** and **Description** fields at the top |
+| 5 | Read the **Description** field — note it down | This is part of your completion code |
 
-> **Convention:** All Data Attributes start with `DATA.`  
+> **Convention:** All Data Attributes start with `DATA.`
+
+**2b — Confirm the Technical Mapping**
+
+| # | Action | What you see |
+|---|---|---|
+| 1 | Still inside `DATA.CUSTOMER_EMAIL`, click the **Technical Configuration** tab / section | Technical sub-sections appear |
+| 2 | **Double-click** on **Technical Mapping** | A mapping detail screen opens |
+| 3 | Inspect the mapping entry | You should see `DATA.CUSTOMER_EMAIL` mapped to SAP Data Element **`S_EMAIL`** — the same element you found in Step 1 ✅ |
+
 > **The "aha":** DAC bridges the gap between a business concept (`DATA.CUSTOMER_EMAIL`) and the SAP technical layer (`S_EMAIL`). You found both ends yourself.
 
 ---
