@@ -36,9 +36,9 @@ First, confirm the issue is real — and find the technical identifier for the e
 | 2 | Click on the **`EMAIL` column header** to select the column | Column highlighted |
 | 3 | Press **F1** | SAP help popup opens |
 | 4 | Click **Technical Info** (button in the popup) | Technical details for the field |
-| 5 | Note the value in the **Data Element** field | You should see `AD_SMTPADR` |
+| 5 | Note the value in the **Data Element** field | You should see `S_EMAIL` |
 
-> ⚠️ Write down `AD_SMTPADR` — you will need it in the next step.
+> ⚠️ Write down `S_EMAIL` — you will need it in the next step.
 
 ---
 
@@ -52,11 +52,11 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 | 2 | Expand **Functional Configuration** in the left tree | Sub-items appear |
 | 3 | Click **Data Attribute Master** | List of data attributes |
 | 4 | Find and open **`DATA.CUSTOMER_EMAIL`** | Attribute detail screen |
-| 5 | Look at the **Technical Mapping** section / tab | You should see `AD_SMTPADR` already listed — the same Data Element from Step 1 ✅ |
+| 5 | Look at the **Technical Mapping** section / tab | You should see `S_EMAIL` already listed — the same Data Element from Step 1 ✅ |
 | 6 | Read the **Description** field at the top — note it down | This is part of your completion code |
 
 > **Convention:** All Data Attributes start with `DATA.`  
-> **The "aha":** DAC bridges the gap between a business concept (`DATA.CUSTOMER_EMAIL`) and the SAP technical layer (`AD_SMTPADR`). You found both ends yourself.
+> **The "aha":** DAC bridges the gap between a business concept (`DATA.CUSTOMER_EMAIL`) and the SAP technical layer (`S_EMAIL`). You found both ends yourself.
 
 ---
 

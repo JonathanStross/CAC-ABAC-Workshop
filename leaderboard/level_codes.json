@@ -1,6 +1,6 @@
 {
   "L0":  { "code": "42.", "points": 100, "title": "Orientation" },
-  "L1":  { "code": "USER.ID_AD_SMTPADR", "points": 100, "title": "PII Masking" },
+  "L1":  { "code": "USER.ID_S_EMAIL", "points": 100, "title": "PII Masking" },
   "L2":  { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Contextual Access" },
   "L3":  { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Scrambling" },
   "L4":  { "code": "SET_BEFORE_SESSION", "points": 150, "title": "Overprivileged Role" },
