@@ -127,10 +127,10 @@ You've connected to the VPN, logged into SAP, and seen the unprotected data firs
 
 **Now claim your Level 0 points.**
 
-> 💬 **Hint:** Look at the background of the leaderboard page you registered on.  
-> In **lowercase** — what is the keyword?
+> 💬 **Hint:** Check the SAP login screen info text — it contains a message from the system.  
+> The answer is, and always will be, **42** — but enter it exactly as displayed (with the dot).
 
-Go to **[the leaderboard](http://152.53.187.143:9000)** → click **Submit Code** → select **L0 — Orientation** → enter the keyword.
+Go to **[the leaderboard](http://152.53.187.143:9000)** → click **Submit Code** → select **L0 — Orientation** → enter the code.
 
 ---
 
