@@ -36,8 +36,10 @@ LOGO_PATH = os.path.join(os.path.dirname(__file__), "pathlock-logo.svg")
 # Example:  REGISTER_CODE=meridian2026
 REGISTER_CODE    = os.environ.get("REGISTER_CODE", "").strip()
 
-# HTTP Basic Auth password for /admin routes.
-# Example:  ADMIN_PASSWORD=s3cr3t
+# HTTP Basic Auth for /admin routes.
+# ADMIN_USER: email / username accepted  (default: admin)
+# ADMIN_PASSWORD: password
+ADMIN_USER       = os.environ.get("ADMIN_USER",     "admin").strip()
 ADMIN_PASSWORD   = os.environ.get("ADMIN_PASSWORD", "").strip()
 
 # SAP connection details shown on the registration confirmation page
@@ -68,7 +70,7 @@ def _require_admin_auth():
     if not ADMIN_PASSWORD:
         return None  # auth disabled — VPN-only access assumed
     auth = request.authorization
-    if auth and auth.username == "admin" and hmac.compare_digest(auth.password, ADMIN_PASSWORD):
+    if auth and hmac.compare_digest(auth.username, ADMIN_USER) and hmac.compare_digest(auth.password, ADMIN_PASSWORD):
         return None
     return Response(
         "Admin access denied.",
