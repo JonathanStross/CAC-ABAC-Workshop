@@ -122,6 +122,7 @@ A **Rule Condition** tells the policy *when* it should fire. Without one, the po
 | 6 | Set **Operator** to `EQ` (equals) | Operator set |
 | 7 | Set **Value** to your SAP username — e.g. `AMUELLER` **(uppercase, exactly as you log in)** | Value filled |
 | 8 | Click **Save** | Condition row saved |
+| 9 | Optionally click **Details** on the saved row | Full detail view of the condition — confirm `USER.ID` / `EQ` / your username |
 
 > This condition reads: *"Only apply this policy when the currently logged-in user ID equals AMUELLER."*  
 > Your colleagues' sessions will not be affected at all.
