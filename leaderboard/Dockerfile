@@ -38,7 +38,6 @@ COPY leaderboard.py .
 COPY sap_user.py .
 COPY wireguard_peer.py .
 COPY pathlock-logo.svg .
-COPY level_codes.json /data/level_codes.json
 
 VOLUME ["/data"]
 EXPOSE 9000
