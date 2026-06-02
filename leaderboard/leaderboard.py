@@ -17,7 +17,7 @@ Or via Docker:
 """
 
 from flask import Flask, request, redirect, render_template_string, jsonify, Response, send_file
-import sqlite3, hashlib, json, os, re
+import sqlite3, hashlib, json, os, re, time, hmac, base64
 from datetime import datetime
 from sap_user import create_workshop_user, user_exists, SAP_AVAILABLE
 from wireguard_peer import create_customer_peer, WG_AVAILABLE
@@ -26,6 +26,52 @@ app = Flask(__name__)
 DB = "/data/leaderboard.db"
 CONFIG_FILE = "/data/level_codes.json"
 LOGO_PATH = os.path.join(os.path.dirname(__file__), "pathlock-logo.svg")
+
+# ---------------------------------------------------------------------------
+# Security config — set via environment variables
+# ---------------------------------------------------------------------------
+
+# Access code required to reach the /register form.
+# Set to any memorable word you'll announce at the start of the session.
+# Example:  REGISTER_CODE=meridian2026
+REGISTER_CODE    = os.environ.get("REGISTER_CODE", "").strip()
+
+# HTTP Basic Auth password for /admin routes.
+# Example:  ADMIN_PASSWORD=s3cr3t
+ADMIN_PASSWORD   = os.environ.get("ADMIN_PASSWORD", "").strip()
+
+# Simple in-memory rate limiter  {ip: [timestamp, ...]}
+# Max MAX_REG_PER_HOUR registration POSTs per IP per hour
+MAX_REG_PER_HOUR = 5
+_reg_attempts: dict[str, list[float]] = {}
+
+def _check_rate_limit(ip: str) -> bool:
+    """Return True if the IP is within limits, False if it should be blocked."""
+    now = time.time()
+    attempts = [t for t in _reg_attempts.get(ip, []) if now - t < 3600]
+    _reg_attempts[ip] = attempts
+    if len(attempts) >= MAX_REG_PER_HOUR:
+        return False
+    _reg_attempts[ip].append(now)
+    return True
+
+def _require_admin_auth():
+    """Return a 401 response if ADMIN_PASSWORD is set and credentials don't match."""
+    if not ADMIN_PASSWORD:
+        return None  # auth disabled — VPN-only access assumed
+    auth = request.authorization
+    if auth and auth.username == "admin" and hmac.compare_digest(auth.password, ADMIN_PASSWORD):
+        return None
+    return Response(
+        "Admin access denied.",
+        401,
+        {"WWW-Authenticate": 'Basic realm="Workshop Admin"'})
+
+def _sanitize_text(value: str, max_len: int) -> str:
+    """Strip whitespace, remove control characters, enforce max length."""
+    value = value.strip()
+    value = re.sub(r'[\x00-\x1f\x7f]', '', value)   # strip control chars
+    return value[:max_len]
 
 # ---------------------------------------------------------------------------
 # Static assets
@@ -332,6 +378,33 @@ SUBMIT_TEMPLATE = """
 </html>
 """
 
+ACCESS_CODE_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Register — DAC Workshop</title>""" + STYLE + """</head>
+<body>
+  <div class="header">
+    <img src="/logo" class="logo" alt="Pathlock">
+    <div class="header-text">
+      <h1>Meridian AG — Join the Team</h1>
+      <p>Workshop participant registration</p>
+    </div>
+  </div>
+  <div class="container">
+    <div class="nav"><a href="/">← Back to Leaderboard</a></div>
+    {% if error %}<div class="msg err">{{ error }}</div>{% endif %}
+    <form method="POST">
+      <h2 style="margin-top:0">🔐 Enter access code</h2>
+      <p style="color:#aaa;margin-top:0">Your instructor shared an access code at the start of the session.</p>
+      <label>Access code</label>
+      <input type="password" name="access_code" placeholder="Enter code" required autofocus>
+      <button type="submit" class="btn">Continue →</button>
+    </form>
+  </div>
+</body>
+</html>
+"""
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -345,15 +418,63 @@ def index():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    ip = request.remote_addr or "unknown"
+
+    # ---- Step 1: access code gate ------------------------------------------
+    # If REGISTER_CODE is set, the user must first POST the correct code.
+    # We store a simple session token in a cookie once the code is verified.
+    ACCESS_COOKIE = "wb_access"
+
+    def _access_granted() -> bool:
+        if not REGISTER_CODE:
+            return True   # no code configured — open registration
+        token = request.cookies.get(ACCESS_COOKIE, "")
+        expected = hashlib.sha256(REGISTER_CODE.encode()).hexdigest()
+        return hmac.compare_digest(token, expected)
+
+    # POST with only access_code field → validate the gate
+    if request.method == "POST" and "access_code" in request.form and "name" not in request.form:
+        entered = request.form.get("access_code", "").strip()
+        if REGISTER_CODE and hmac.compare_digest(
+                hashlib.sha256(entered.encode()).hexdigest(),
+                hashlib.sha256(REGISTER_CODE.encode()).hexdigest()):
+            # Correct — set cookie and show the registration form
+            resp = Response(render_template_string(REGISTER_TEMPLATE,
+                success=False, msg=None, msg_type="ok", sap_available=SAP_AVAILABLE,
+                form_name="", form_email="", form_sap="", form_company=""))
+            resp.set_cookie(ACCESS_COOKIE,
+                hashlib.sha256(REGISTER_CODE.encode()).hexdigest(),
+                max_age=3600, httponly=True, samesite="Lax")
+            return resp
+        return render_template_string(ACCESS_CODE_TEMPLATE,
+            error="Incorrect access code. Check with your instructor.")
+
+    # GET or unauthed → show gate or form depending on cookie
     if request.method == "GET":
+        if not _access_granted():
+            return render_template_string(ACCESS_CODE_TEMPLATE, error=None)
         return render_template_string(REGISTER_TEMPLATE,
             success=False, msg=None, msg_type="ok", sap_available=SAP_AVAILABLE,
             form_name="", form_email="", form_sap="", form_company="")
 
-    name         = request.form.get("name", "").strip()
-    email        = request.form.get("email", "").strip().lower()
-    sap_username = request.form.get("sap_username", "").strip().upper()
-    company      = request.form.get("company", "").strip()
+    # ---- Step 2: actual registration POST ----------------------------------
+    if not _access_granted():
+        return render_template_string(ACCESS_CODE_TEMPLATE,
+            error="Session expired — please enter the access code again.")
+
+    # Rate limiting
+    if not _check_rate_limit(ip):
+        return render_template_string(REGISTER_TEMPLATE,
+            success=False,
+            msg="Too many registration attempts from your IP. Please wait a while.",
+            msg_type="err", sap_available=SAP_AVAILABLE,
+            form_name="", form_email="", form_sap="", form_company="")
+
+    # ---- Sanitize inputs ---------------------------------------------------
+    name         = _sanitize_text(request.form.get("name", ""), 80)
+    email        = _sanitize_text(request.form.get("email", "").lower(), 120)
+    sap_username = _sanitize_text(request.form.get("sap_username", "").upper(), 12)
+    company      = _sanitize_text(request.form.get("company", ""), 80)
 
     # ---- Validation --------------------------------------------------------
     def err(msg):
@@ -363,7 +484,7 @@ def register():
 
     if not name:
         return err("Full name is required.")
-    if not email or "@" not in email:
+    if not email or "@" not in email or "." not in email.split("@")[-1]:
         return err("A valid email address is required.")
     if not sap_username:
         return err("SAP username is required.")
@@ -372,16 +493,16 @@ def register():
     if not re.match(r'^[A-Z0-9_]+$', sap_username):
         return err("SAP username may only contain letters, digits and underscore.")
 
-    # ---- Check duplicates in leaderboard DB --------------------------------
+    # ---- Check duplicates --------------------------------------------------
     db = get_db()
     if db.execute("SELECT 1 FROM participants WHERE email=?", (email,)).fetchone():
         db.close()
-        return err(f"Email '{email}' is already registered.")
+        return err("That email address is already registered.")
     if db.execute("SELECT 1 FROM participants WHERE sap_username=?", (sap_username,)).fetchone():
         db.close()
         return err(f"SAP username '{sap_username}' is already taken — choose another.")
 
-    # ---- Check SAP live (if available) -------------------------------------
+    # ---- Check SAP live ----------------------------------------------------
     if SAP_AVAILABLE and user_exists(sap_username):
         db.close()
         return err(f"SAP user '{sap_username}' already exists on the system — choose another username.")
@@ -408,7 +529,7 @@ def register():
         wg_ip = None
         wg_conf = None
 
-    # ---- Save to leaderboard DB --------------------------------------------
+    # ---- Save to DB --------------------------------------------------------
     try:
         db.execute(
             "INSERT INTO participants (name, email, sap_username, company, sap_created, wg_ip, wg_conf) VALUES (?,?,?,?,?,?,?)",
@@ -503,7 +624,9 @@ def api_leaderboard():
 
 @app.route("/admin")
 def admin():
-    """Simple admin view — protect with basic auth or VPN-only in production"""
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
     db = get_db()
     subs = db.execute("SELECT * FROM submissions ORDER BY submitted_at DESC LIMIT 100").fetchall()
     parts = db.execute("SELECT * FROM participants ORDER BY registered_at DESC").fetchall()
@@ -525,6 +648,9 @@ def admin():
 
 @app.route("/admin/reset", methods=["POST"])
 def reset():
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
     db = get_db()
     db.execute("DELETE FROM submissions")
     db.execute("DELETE FROM participants")
