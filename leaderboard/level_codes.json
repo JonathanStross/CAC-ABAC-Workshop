@@ -1,0 +1,16 @@
+{
+  "L0":  { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Orientation" },
+  "L1":  { "code": "SET_BEFORE_SESSION", "points": 100, "title": "PII Masking" },
+  "L2":  { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Contextual Access" },
+  "L3":  { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Scrambling" },
+  "L4":  { "code": "SET_BEFORE_SESSION", "points": 150, "title": "Overprivileged Role" },
+  "L5":  { "code": "SET_BEFORE_SESSION", "points": 150, "title": "Export Block + Classification" },
+  "L6":  { "code": "SET_BEFORE_SESSION", "points": 175, "title": "Multi-Entity ABAC" },
+  "L7":  { "code": "SET_BEFORE_SESSION", "points": 175, "title": "Fiori/UI5 Masking" },
+  "L8":  { "code": "SET_BEFORE_SESSION", "points": 175, "title": "Audit Trail" },
+  "L9":  { "code": "SET_BEFORE_SESSION", "points": 200, "title": "Classification Framework" },
+  "L10": { "code": "SET_BEFORE_SESSION", "points": 75,  "title": "GDPR Art.30 Report" },
+  "L11": { "code": "SET_BEFORE_SESSION", "points": 75,  "title": "Compliance Multiplier" },
+  "L12": { "code": "SET_BEFORE_SESSION", "points": 75,  "title": "Too Powerful Role" },
+  "L13": { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Red vs Blue Team" }
+}

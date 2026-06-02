@@ -1,0 +1,379 @@
+#!/usr/bin/env python3
+"""
+DAC Workshop Leaderboard
+========================
+Runs on the off-grid server at http://10.8.0.1:9000
+
+Participants register, then submit completion codes per level.
+Leaderboard auto-refreshes and shows live rankings.
+
+Run:
+    pip install flask
+    python3 leaderboard.py
+
+Or via Docker:
+    docker build -t dac-leaderboard .
+    docker run -d -p 9000:9000 --name dac-leaderboard dac-leaderboard
+"""
+
+from flask import Flask, request, redirect, render_template_string, jsonify
+import sqlite3, hashlib, json, os
+from datetime import datetime
+
+app = Flask(__name__)
+DB = "/data/leaderboard.db"
+CONFIG_FILE = "/data/level_codes.json"
+
+# ---------------------------------------------------------------------------
+# Level codes config — instructor sets these before the session
+# Edit level_codes.json or set env var LEVEL_CODES_FILE
+# ---------------------------------------------------------------------------
+DEFAULT_CODES = {
+    "L0":  {"code": "SET_BEFORE_SESSION", "points": 100, "title": "Orientation"},
+    "L1":  {"code": "SET_BEFORE_SESSION", "points": 100, "title": "PII Masking"},
+    "L2":  {"code": "SET_BEFORE_SESSION", "points": 100, "title": "Contextual Access"},
+    "L3":  {"code": "SET_BEFORE_SESSION", "points": 100, "title": "Scrambling"},
+    "L4":  {"code": "SET_BEFORE_SESSION", "points": 150, "title": "Overprivileged Role"},
+    "L5":  {"code": "SET_BEFORE_SESSION", "points": 150, "title": "Export Block + Classification"},
+    "L6":  {"code": "SET_BEFORE_SESSION", "points": 175, "title": "Multi-Entity ABAC"},
+    "L7":  {"code": "SET_BEFORE_SESSION", "points": 175, "title": "Fiori/UI5 Masking"},
+    "L8":  {"code": "SET_BEFORE_SESSION", "points": 175, "title": "Audit Trail"},
+    "L9":  {"code": "SET_BEFORE_SESSION", "points": 200, "title": "Classification Framework"},
+    "L10": {"code": "SET_BEFORE_SESSION", "points": 75,  "title": "GDPR Art.30 Report"},
+    "L11": {"code": "SET_BEFORE_SESSION", "points": 75,  "title": "Compliance Multiplier"},
+    "L12": {"code": "SET_BEFORE_SESSION", "points": 75,  "title": "Too Powerful Role"},
+    "L13": {"code": "SET_BEFORE_SESSION", "points": 100, "title": "Red vs Blue Team"},
+}
+
+SPEED_BONUS = {1: 50, 2: 25, 3: 10}  # 1st/2nd/3rd place bonus per level
+WRONG_PENALTY = 5
+
+# ---------------------------------------------------------------------------
+# DB setup
+# ---------------------------------------------------------------------------
+def get_db():
+    os.makedirs(os.path.dirname(DB), exist_ok=True)
+    db = sqlite3.connect(DB)
+    db.row_factory = sqlite3.Row
+    return db
+
+def init_db():
+    db = get_db()
+    db.executescript("""
+        CREATE TABLE IF NOT EXISTS participants (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            name     TEXT NOT NULL UNIQUE,
+            company  TEXT,
+            registered_at TEXT DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS submissions (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            participant  TEXT NOT NULL,
+            level        TEXT NOT NULL,
+            code         TEXT NOT NULL,
+            correct      INTEGER NOT NULL,
+            points       INTEGER DEFAULT 0,
+            submitted_at TEXT DEFAULT (datetime('now'))
+        );
+    """)
+    db.commit()
+    db.close()
+
+def load_codes():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE) as f:
+            return json.load(f)
+    return DEFAULT_CODES
+
+def get_leaderboard():
+    db = get_db()
+    rows = db.execute("""
+        SELECT p.name, p.company,
+               COALESCE(SUM(CASE WHEN s.correct=1 THEN s.points ELSE 0 END), 0) as total,
+               COUNT(CASE WHEN s.correct=1 THEN 1 END) as levels_done,
+               MAX(s.submitted_at) as last_submission
+        FROM participants p
+        LEFT JOIN submissions s ON s.participant = p.name
+        GROUP BY p.name, p.company
+        ORDER BY total DESC, last_submission ASC
+    """).fetchall()
+    db.close()
+    return rows
+
+def get_level_completions():
+    """How many people completed each level (for speed bonus calc)"""
+    db = get_db()
+    rows = db.execute("""
+        SELECT level, COUNT(*) as cnt
+        FROM submissions WHERE correct=1
+        GROUP BY level
+    """).fetchall()
+    db.close()
+    return {r["level"]: r["cnt"] for r in rows}
+
+# ---------------------------------------------------------------------------
+# Templates
+# ---------------------------------------------------------------------------
+STYLE = """
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #e0e0e0; margin: 0; padding: 0; }
+  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 30px 40px; border-bottom: 2px solid #c8102e; }
+  .header h1 { margin: 0; color: #fff; font-size: 2em; }
+  .header p { margin: 5px 0 0; color: #aaa; font-size: 0.9em; }
+  .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+  table { width: 100%; border-collapse: collapse; background: #1a1a2e; border-radius: 8px; overflow: hidden; }
+  th { background: #c8102e; color: white; padding: 12px 16px; text-align: left; font-size: 0.85em; text-transform: uppercase; }
+  td { padding: 12px 16px; border-bottom: 1px solid #2a2a3e; }
+  tr:hover td { background: #1f1f35; }
+  .rank-1 td { color: #ffd700; font-weight: bold; }
+  .rank-2 td { color: #c0c0c0; }
+  .rank-3 td { color: #cd7f32; }
+  .badge { display: inline-block; background: #c8102e; color: white; border-radius: 4px; padding: 2px 8px; font-size: 0.75em; margin-left: 6px; }
+  .badge.green { background: #2ecc71; color: #000; }
+  .btn { display: inline-block; background: #c8102e; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; border: none; cursor: pointer; font-size: 1em; }
+  .btn:hover { background: #a00d24; }
+  .btn.secondary { background: #2a2a3e; }
+  .btn.secondary:hover { background: #3a3a5e; }
+  form { background: #1a1a2e; padding: 30px; border-radius: 8px; max-width: 500px; margin: 0 auto; }
+  input, select { width: 100%; padding: 10px; margin: 8px 0 16px; background: #0f0f1a; border: 1px solid #3a3a5e; color: #e0e0e0; border-radius: 4px; font-size: 1em; box-sizing: border-box; }
+  .msg { padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; }
+  .msg.ok { background: #1a3a1a; border: 1px solid #2ecc71; color: #2ecc71; }
+  .msg.err { background: #3a1a1a; border: 1px solid #c8102e; color: #ff6b6b; }
+  .nav { margin-bottom: 20px; }
+  .nav a { color: #aaa; text-decoration: none; margin-right: 20px; }
+  .nav a:hover { color: #fff; }
+  .refresh-note { color: #666; font-size: 0.8em; text-align: right; margin-top: 10px; }
+  .level-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin: 20px 0; }
+  .level-cell { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 6px; padding: 10px; text-align: center; font-size: 0.85em; }
+  .level-cell.done { border-color: #2ecc71; color: #2ecc71; }
+</style>
+"""
+
+LEADERBOARD_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="10">
+  <title>DAC Workshop — Leaderboard</title>
+  """ + STYLE + """
+</head>
+<body>
+  <div class="header">
+    <h1>🛡️ Meridian AG — Audit Remediation</h1>
+    <p>DAC / ABAC Workshop Leaderboard &nbsp;|&nbsp; Pathlock Live Demo</p>
+  </div>
+  <div class="container">
+    <div class="nav">
+      <a href="/">🏆 Leaderboard</a>
+      <a href="/register">📝 Register</a>
+      <a href="/submit">🔑 Submit Code</a>
+    </div>
+
+    {% if rows %}
+    <table>
+      <tr>
+        <th>#</th><th>Participant</th><th>Company</th><th>Score</th><th>Levels</th><th>Last Activity</th>
+      </tr>
+      {% for r in rows %}
+      <tr class="rank-{{ loop.index if loop.index <= 3 else '' }}">
+        <td>
+          {% if loop.index == 1 %}🥇
+          {% elif loop.index == 2 %}🥈
+          {% elif loop.index == 3 %}🥉
+          {% else %}{{ loop.index }}{% endif %}
+        </td>
+        <td><strong>{{ r.name }}</strong></td>
+        <td>{{ r.company or '—' }}</td>
+        <td><strong>{{ r.total }} pts</strong></td>
+        <td>{{ r.levels_done }} / {{ total_levels }}</td>
+        <td style="color:#666; font-size:0.85em">{{ r.last_submission or 'Just registered' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p style="text-align:center; color:#666; padding: 40px">No participants yet — be the first to register!</p>
+    {% endif %}
+
+    <p class="refresh-note">Auto-refreshes every 10 seconds</p>
+  </div>
+</body>
+</html>
+"""
+
+REGISTER_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Register</title>""" + STYLE + """</head>
+<body>
+  <div class="header">
+    <h1>🛡️ Meridian AG — Join the Team</h1>
+    <p>Register to participate in the audit remediation workshop</p>
+  </div>
+  <div class="container">
+    <div class="nav"><a href="/">← Back to Leaderboard</a></div>
+    {% if msg %}<div class="msg {{ msg_type }}">{{ msg }}</div>{% endif %}
+    <form method="POST">
+      <h2 style="margin-top:0">Register</h2>
+      <label>Your name (or nickname)</label>
+      <input type="text" name="name" placeholder="e.g. Anna M." required>
+      <label>Company (optional)</label>
+      <input type="text" name="company" placeholder="e.g. Meridian AG">
+      <button type="submit" class="btn">Join the workshop →</button>
+    </form>
+  </div>
+</body>
+</html>
+"""
+
+SUBMIT_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Submit Code</title>""" + STYLE + """</head>
+<body>
+  <div class="header">
+    <h1>🔑 Submit Completion Code</h1>
+    <p>Enter the code you found in SAP / Pathlock to claim your points</p>
+  </div>
+  <div class="container">
+    <div class="nav"><a href="/">← Back to Leaderboard</a></div>
+    {% if msg %}<div class="msg {{ msg_type }}">{{ msg }}</div>{% endif %}
+    <form method="POST">
+      <h2 style="margin-top:0">Level Completion</h2>
+      <label>Your name</label>
+      <input type="text" name="name" required placeholder="Same name you registered with">
+      <label>Level</label>
+      <select name="level">
+        {% for lvl, info in levels.items() %}
+        <option value="{{ lvl }}">{{ lvl }} — {{ info.title }}</option>
+        {% endfor %}
+      </select>
+      <label>Completion code</label>
+      <input type="text" name="code" required placeholder="Enter the code from SAP/Pathlock">
+      <button type="submit" class="btn">Submit →</button>
+    </form>
+  </div>
+</body>
+</html>
+"""
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+@app.route("/")
+def index():
+    rows = get_leaderboard()
+    codes = load_codes()
+    return render_template_string(LEADERBOARD_TEMPLATE,
+        rows=rows,
+        total_levels=len(codes))
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    msg, msg_type = None, "ok"
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        company = request.form.get("company", "").strip()
+        if not name:
+            msg, msg_type = "Name is required.", "err"
+        else:
+            try:
+                db = get_db()
+                db.execute("INSERT INTO participants (name, company) VALUES (?, ?)", (name, company))
+                db.commit()
+                db.close()
+                msg = f"Welcome, {name}! You're registered. Head to /submit when you complete a level."
+            except sqlite3.IntegrityError:
+                msg, msg_type = f"Name '{name}' is already registered.", "err"
+    return render_template_string(REGISTER_TEMPLATE, msg=msg, msg_type=msg_type)
+
+@app.route("/submit", methods=["GET", "POST"])
+def submit():
+    msg, msg_type = None, "ok"
+    codes = load_codes()
+    if request.method == "POST":
+        name  = request.form.get("name", "").strip()
+        level = request.form.get("level", "").strip()
+        code  = request.form.get("code", "").strip().upper()
+
+        # Check participant exists
+        db = get_db()
+        participant = db.execute("SELECT * FROM participants WHERE name=?", (name,)).fetchone()
+        if not participant:
+            msg, msg_type = f"Name '{name}' not found. Please register first.", "err"
+            db.close()
+            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
+
+        # Check not already submitted correctly
+        already = db.execute(
+            "SELECT * FROM submissions WHERE participant=? AND level=? AND correct=1",
+            (name, level)).fetchone()
+        if already:
+            msg, msg_type = f"You already completed {level}! No double points.", "err"
+            db.close()
+            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
+
+        # Validate code
+        correct_code = codes.get(level, {}).get("code", "").upper()
+        base_points  = codes.get(level, {}).get("points", 100)
+        correct = (code == correct_code)
+
+        if correct:
+            # Calculate speed bonus
+            completions = get_level_completions()
+            position = (completions.get(level, 0)) + 1  # this will be position after insert
+            bonus = SPEED_BONUS.get(position, 0)
+            total_pts = base_points + bonus
+            bonus_msg = f" +{bonus} speed bonus! 🚀" if bonus else ""
+            msg = f"✅ Correct! +{base_points} points{bonus_msg} for {level}."
+        else:
+            total_pts = -WRONG_PENALTY
+            msg, msg_type = f"❌ Wrong code. -{WRONG_PENALTY} points. Try again.", "err"
+
+        db.execute(
+            "INSERT INTO submissions (participant, level, code, correct, points) VALUES (?,?,?,?,?)",
+            (name, level, code, 1 if correct else 0, total_pts))
+        db.commit()
+        db.close()
+
+    return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
+
+@app.route("/api/leaderboard")
+def api_leaderboard():
+    rows = get_leaderboard()
+    return jsonify([dict(r) for r in rows])
+
+@app.route("/admin")
+def admin():
+    """Simple admin view — protect with basic auth or VPN-only in production"""
+    db = get_db()
+    subs = db.execute("SELECT * FROM submissions ORDER BY submitted_at DESC LIMIT 100").fetchall()
+    parts = db.execute("SELECT * FROM participants ORDER BY registered_at DESC").fetchall()
+    db.close()
+    codes = load_codes()
+    out = "<h2>Participants</h2><pre>"
+    for p in parts:
+        out += f"{p['name']} ({p['company']}) — {p['registered_at']}\n"
+    out += "</pre><h2>Recent Submissions</h2><pre>"
+    for s in subs:
+        status = "✅" if s["correct"] else "❌"
+        out += f"{status} {s['participant']} | {s['level']} | {s['code']} | {s['points']}pts | {s['submitted_at']}\n"
+    out += "</pre><h2>Active Codes</h2><pre>"
+    for lvl, info in codes.items():
+        out += f"{lvl}: {info['code']} ({info['points']} pts)\n"
+    return f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>{out}</body></html>"
+
+@app.route("/admin/reset", methods=["POST"])
+def reset():
+    db = get_db()
+    db.execute("DELETE FROM submissions")
+    db.execute("DELETE FROM participants")
+    db.commit()
+    db.close()
+    return redirect("/admin")
+
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    init_db()
+    print("DAC Workshop Leaderboard running on http://0.0.0.0:9000")
+    app.run(host="0.0.0.0", port=9000, debug=False)
