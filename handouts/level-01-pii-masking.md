@@ -113,14 +113,13 @@ A **Rule Condition** tells the policy *when* it should fire. Without one, the po
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In the left tree, expand **Policy Administration Point** | Your policy is listed |
-| 2 | Expand your policy `MASK_EMAIL_<YOURUSERNAME>` | Sub-items appear, including **Rules** |
-| 3 | **Double-click** on **Rules** | Rules list opens |
-| 4 | Click **New Entry** | A blank rule row appears |
-| 5 | Set **User Attribute** to `USER.ID` | Attribute selector fills |
-| 6 | Set **Operator** to `EQ` (equals) | Operator set |
-| 7 | Set **Value** to your SAP username — e.g. `AMUELLER` **(uppercase, exactly as you log in)** | Value filled |
-| 8 | Click **Save** | Rule row saved |
+| 1 | In the left tree, **double-click** on **Policy Administration Point** → **Rules** | A selection dialog asks for a Rule ID |
+| 2 | Select or enter your policy `MASK_EMAIL_<YOURUSERNAME>` and confirm | The rules list for your policy opens |
+| 3 | Click **New** to insert a new condition | A blank condition row appears |
+| 4 | Set **User Attribute** to `USER.ID` | Attribute selector fills |
+| 5 | Set **Operator** to `EQ` (equals) | Operator set |
+| 6 | Set **Value** to your SAP username — e.g. `AMUELLER` **(uppercase, exactly as you log in)** | Value filled |
+| 7 | Click **Save** | Condition row saved |
 
 > This condition reads: *"Only apply this policy when the currently logged-in user ID equals AMUELLER."*  
 > Your colleagues' sessions will not be affected at all.
