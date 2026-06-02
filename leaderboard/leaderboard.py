@@ -228,9 +228,10 @@ def init_db():
             submitted_at TEXT DEFAULT (datetime('now'))
         );
     """)
-    # Migrate older DBs that predate the wg_ip / wg_conf columns
+    # Migrate older DBs
     existing = {row[1] for row in db.execute("PRAGMA table_info(participants)")}
-    for col, typedef in [("wg_ip", "TEXT"), ("wg_conf", "TEXT")]:
+    for col, typedef in [("wg_ip", "TEXT"), ("wg_conf", "TEXT"),
+                         ("locked", "INTEGER DEFAULT 0"), ("kicked_at", "TEXT")]:
         if col not in existing:
             db.execute(f"ALTER TABLE participants ADD COLUMN {col} {typedef}")
     db.commit()
@@ -717,6 +718,11 @@ def submit():
             db.close()
             return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
 
+        if participant["locked"]:
+            msg, msg_type = "Your account has been locked by the instructor. Please raise your hand.", "err"
+            db.close()
+            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
+
         # Check not already submitted correctly
         already = db.execute(
             "SELECT * FROM submissions WHERE participant=? AND level=? AND correct=1",
@@ -769,21 +775,37 @@ def admin():
     th = "style='text-align:left;padding:4px 10px;color:#aaa'"
     out = f"<h2>Participants</h2><table style='border-collapse:collapse;width:100%'><tr><th {th}>Username</th><th {th}>Name</th><th {th}>Email</th><th {th}>SAP</th><th {th}>VPN IP</th><th {th}>Registered</th><th></th></tr>"
     for p in parts:
-        sap_icon = "created" if p["sap_created"] else "manual"
+        sap_icon = "&#x2705;" if p["sap_created"] else "manual"
         wg_icon  = p["wg_ip"] if p["wg_ip"] else "no VPN"
         uname = p["sap_username"]
+        is_locked = p["locked"]
+        kicked_at = p["kicked_at"]
+        row_style = "border-top:1px solid #333;background:#2a0a0a" if is_locked else "border-top:1px solid #333"
+        status_badge = "<span style='color:#e74c3c;font-weight:bold'>&#x1F512; LOCKED</span>" if is_locked else "<span style='color:#2ecc71'>active</span>"
+        if kicked_at:
+            status_badge += f" <span style='color:#f39c12;font-size:0.8em'>(kicked {kicked_at[:16]})</span>"
+        lock_btn = (
+            f"<form method='POST' action='/admin/unlock/{uname}' style='display:inline'>"
+            f"<button style='background:#27ae60;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;margin-right:3px'>Unlock</button></form>"
+        ) if is_locked else (
+            f"<form method='POST' action='/admin/lock/{uname}' style='display:inline'>"
+            f"<button style='background:#e67e22;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;margin-right:3px'>Lock</button></form>"
+        )
         out += (
-            f"<tr style='border-top:1px solid #333'>"
+            f"<tr style='{row_style}'>"
             f"<td {td}><strong>{uname}</strong></td>"
             f"<td {td}>{p['name']}</td>"
             f"<td {td} style='color:#aaa'>{p['email']}</td>"
-            f"<td {td}>{sap_icon}</td>"
+            f"<td {td}>{sap_icon} {status_badge}</td>"
             f"<td {td}>{wg_icon}</td>"
             f"<td {td} style='color:#aaa'>{p['registered_at']}</td>"
-            f"<td {td}>"
+            f"<td {td} style='white-space:nowrap'>"
+            f"{lock_btn}"
+            f"<form method='POST' action='/admin/kick/{uname}' style='display:inline'>"
+            f"<button style='background:#8e44ad;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;margin-right:3px' title='Expire their session cookie — forces re-auth'>Kick</button></form>"
             f"<form method='POST' action='/admin/delete/{uname}' style='display:inline'>"
-            f"<button onclick=\"return confirm('Remove {uname}?');\" "
-            f"style='background:#c0392b;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer'>Remove</button>"
+            f"<button onclick=\"return confirm('Delete {uname} and remove WireGuard peer? This cannot be undone.');\" "
+            f"style='background:#c0392b;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer'>Delete</button>"
             f"</form></td></tr>"
         )
     out += "</table><h2>Recent Submissions</h2><pre>"
@@ -812,6 +834,53 @@ def admin_delete_user(sap_username):
     db.commit()
     db.close()
     return redirect("/admin")
+
+@app.route("/admin/lock/<sap_username>", methods=["POST"])
+def admin_lock_user(sap_username):
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    db = get_db()
+    db.execute("UPDATE participants SET locked=1 WHERE sap_username=?", (sap_username.upper(),))
+    db.commit()
+    db.close()
+    app.logger.warning("Admin locked user %s", sap_username)
+    return redirect("/admin")
+
+
+@app.route("/admin/unlock/<sap_username>", methods=["POST"])
+def admin_unlock_user(sap_username):
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    db = get_db()
+    db.execute("UPDATE participants SET locked=0 WHERE sap_username=?", (sap_username.upper(),))
+    db.commit()
+    db.close()
+    return redirect("/admin")
+
+
+@app.route("/admin/kick/<sap_username>", methods=["POST"])
+def admin_kick_user(sap_username):
+    """
+    Mark the participant as kicked (records timestamp).
+    Their browser session cookie is based on REGISTER_CODE hash so we can't
+    revoke it server-side — but locking their account blocks all submissions.
+    Kick = lock + timestamp so the instructor can see who was ejected and when.
+    """
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    db = get_db()
+    from datetime import datetime
+    db.execute(
+        "UPDATE participants SET locked=1, kicked_at=? WHERE sap_username=?",
+        (datetime.utcnow().isoformat(timespec="seconds"), sap_username.upper()))
+    db.commit()
+    db.close()
+    app.logger.warning("Admin kicked user %s", sap_username)
+    return redirect("/admin")
+
 
 @app.route("/admin/reset", methods=["POST"])
 def reset():
