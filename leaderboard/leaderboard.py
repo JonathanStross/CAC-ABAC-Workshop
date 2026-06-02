@@ -500,6 +500,7 @@ LEADERBOARD_TEMPLATE = """
   <div class="container">
     <div class="nav">
       <a href="/">🏆 Leaderboard</a>
+      <a href="/levels">📖 Levels</a>
       <a href="/register">📝 Register</a>
       <a href="/submit">🔑 Submit Code</a>
     </div>
@@ -694,7 +695,7 @@ REGISTER_TEMPLATE = """
     </div>
   </div>
   <div class="container">
-    <div class="nav"><a href="/">← Back to Leaderboard</a></div>
+    <div class="nav"><a href="/">🏆 Leaderboard</a><a href="/levels">📖 Levels</a><a href="/submit">🔑 Submit Code</a></div>
     {% if success %}
       <div class="msg ok" style="font-size:1.1em">
         <strong>✅ You're registered!</strong><br><br>
@@ -855,7 +856,7 @@ SUBMIT_TEMPLATE = """
     </div>
   </div>
   <div class="container">
-    <div class="nav"><a href="/">← Back to Leaderboard</a></div>
+    <div class="nav"><a href="/">🏆 Leaderboard</a><a href="/levels">📖 Levels</a><a href="/register">📝 Register</a></div>
     {% if msg %}<div class="msg {{ msg_type }}">{{ msg }}</div>{% endif %}
     <form method="POST">
       <h2 style="margin-top:0">Level Completion</h2>
@@ -889,7 +890,7 @@ ACCESS_CODE_TEMPLATE = """
     </div>
   </div>
   <div class="container">
-    <div class="nav"><a href="/">← Back to Leaderboard</a></div>
+    <div class="nav"><a href="/">🏆 Leaderboard</a><a href="/register">📝 Register</a></div>
     {% if error %}<div class="msg err">{{ error }}</div>{% endif %}
     <form method="POST">
       <h2 style="margin-top:0">🔐 Enter access code</h2>
