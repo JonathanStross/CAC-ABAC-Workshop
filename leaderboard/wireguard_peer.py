@@ -19,6 +19,7 @@ Environment variables:
 
 import os
 import re
+import shutil
 import subprocess
 import logging
 
@@ -30,10 +31,12 @@ WG_SSH_KEY_PATH = os.environ.get("WG_SSH_KEY_PATH", "/secrets/wg_ssh_key")
 WG_PEERS_DIR    = os.environ.get("WG_PEERS_DIR",    "/wg-peers")
 WG_ADD_PEER_CMD = os.environ.get("WG_ADD_PEER_CMD", "/etc/wireguard/add-peer.sh")
 
-WG_AVAILABLE = os.path.exists(WG_SSH_KEY_PATH)
+WG_AVAILABLE = os.path.exists(WG_SSH_KEY_PATH) and shutil.which("ssh") is not None
 
-if not WG_AVAILABLE:
+if not os.path.exists(WG_SSH_KEY_PATH):
     logger.warning("WireGuard SSH key not found at %s — WG peer auto-creation disabled", WG_SSH_KEY_PATH)
+elif shutil.which("ssh") is None:
+    logger.warning("'ssh' binary not found in PATH — WG peer auto-creation disabled")
 
 
 def _ssh(remote_cmd: str) -> tuple[int, str, str]:

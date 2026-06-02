@@ -14,8 +14,11 @@ ENV SAPNWRFC_HOME=/nwrfcsdk
 
 WORKDIR /app
 
-# Install Flask (always required)
-RUN pip install --no-cache-dir flask
+# Install Flask (always required) + openssh-client for WireGuard peer creation
+RUN pip install --no-cache-dir flask && \
+    apt-get update -qq && \
+    apt-get install -y --no-install-recommends openssh-client && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install pyrfc from SAP GitHub source if the NW RFC SDK is present.
 # All PyPI releases are yanked for Python 3.11 — source build required.

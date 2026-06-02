@@ -149,7 +149,6 @@ def create_workshop_user(
                 "GLTGB": USER_VALID_TO,
             },
             PASSWORD={"BAPIPWD": temp_password},
-            PASSWORDX={"BAPIPWD": "X"},   # change-flag required for password
             ADDRESS={
                 "FIRSTNAME": first_name[:25],
                 "LASTNAME":  last_name[:25],
