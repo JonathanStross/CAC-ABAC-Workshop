@@ -51,9 +51,9 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 | # | Action | What you see |
 |---|---|---|
 | 1 | Run **`/N/APPSDM/ABAC`** | Pathlock ABAC main screen |
-| 2 | Click the **Functional Configuration** tab **(first tab)** | Left tree shows Functional Configuration items |
-| 3 | Expand **Functional Configuration** in the left tree | Sub-items appear |
-| 4 | Click **Data Attribute Master** | List of data attributes |
+| 2 | Click the **Functional Configuration** tab **(first tab)** | Left tree updates |
+| 3 | Expand **Policy Information Point** in the left tree | Sub-items appear |
+| 4 | **Double-click** on **Data Attribute Master** | List of data attributes |
 | 5 | Find and open **`DATA.S_EMAIL`** | Attribute detail screen opens |
 | 6 | Read the **Attribute ID** field at the top — **note it down** | `DATA.S_EMAIL` — this is your completion code |
 
@@ -63,9 +63,10 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | Click the **Technical Configuration** tab (second tab at the top) | The left menu tree changes — new items appear |
-| 2 | In the left tree, click **Technical Mapping** | List of mappings for this attribute |
-| 3 | Find the entry for `DATA.S_EMAIL` — note the SAP Data Element shown | You should see **`S_EMAIL`** — the same element you found in Step 1 ✅ |
+| 1 | Click the **Technical Configuration** tab **(second tab)** | Left tree updates |
+| 2 | Expand **Data Attribute Config** in the left tree | Sub-items appear |
+| 3 | Click **Technical Mapping** | Mapping entries for `DATA.S_EMAIL` |
+| 4 | Find the entry for `DATA.S_EMAIL` — note the SAP Data Element shown | You should see **`S_EMAIL`** — the same element you found in Step 1 ✅ |
 
 > **The "aha":** DAC bridges the gap between a business concept (`DATA.S_EMAIL`) and the SAP technical layer (`S_EMAIL`). You found both ends yourself.
 
@@ -79,10 +80,11 @@ A **User Attribute** defines *who* the policy applies to. Again, this has been p
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In **`/N/APPSDM/ABAC`**, make sure you are on the **Functional Configuration** tab **(first tab)** | Left tree shows Functional Configuration items |
-| 2 | Click **User Attribute Master** in the left tree | List of user attributes |
-| 3 | Find and open **`USER.ID`** | Attribute detail screen |
-| 4 | Read its description — this attribute holds the **logged-in user's SAP username** at runtime | — |
+| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(first tab)** | Left tree updates |
+| 2 | Expand **Policy Information Point** in the left tree | Sub-items appear |
+| 3 | **Double-click** on **User Attribute Master** | List of user attributes |
+| 4 | Find and open **`USER.ID`** | Attribute detail screen |
+| 5 | Read its description — this attribute holds the **logged-in user's SAP username** at runtime | — |
 
 > **Convention:** All User Attributes start with `USER.`
 
@@ -94,8 +96,8 @@ A **Policy** is the container that holds the masking rules and links them to the
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In **`/N/APPSDM/ABAC`**, make sure you are on the **Functional Configuration** tab **(first tab)** | Left tree shows Functional Configuration items |
-| 2 | Click **Policy Administration Point** in the left tree | A list of all existing policies |
+| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(first tab)** | Left tree updates |
+| 2 | **Double-click** on **Policy Administration Point** in the left tree | List of all existing policies opens |
 | 3 | Click **New Entry** (top toolbar) | A blank policy form opens |
 | 4 | Enter the **Policy Name**: `MASK_EMAIL_<YOURUSERNAME>` — e.g. `MASK_EMAIL_AMUELLER` | Field fills in |
 | 5 | Enter the **Description**: `Mask passenger email for my user` | Field fills in |
@@ -111,9 +113,9 @@ A **Rule Condition** tells the policy *when* it should fire. Without one, the po
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | Open your policy `MASK_EMAIL_<YOURUSERNAME>` from the list | Policy detail screen |
-| 2 | Make sure you are on the **Functional Configuration** tab **(first tab)** | Left tree shows Functional Configuration items |
-| 3 | Find the **Rules** section / tab | Empty rules list |
+| 1 | In the left tree, expand **Policy Administration Point** | Your policy is listed |
+| 2 | Expand your policy `MASK_EMAIL_<YOURUSERNAME>` | Sub-items appear, including **Rules** |
+| 3 | **Double-click** on **Rules** | Rules list opens |
 | 4 | Click **New Entry** | A blank rule row appears |
 | 5 | Set **User Attribute** to `USER.ID` | Attribute selector fills |
 | 6 | Set **Operator** to `EQ` (equals) | Operator set |
@@ -131,9 +133,9 @@ The **Policy Enforcement Point** (PEP) is where you activate the masking action 
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In **`/N/APPSDM/ABAC`**, make sure you are on the **Functional Configuration** tab **(first tab)** | Left tree shows Functional Configuration items |
-| 2 | Click **Policy Enforcement Point** in the left tree | Sub-items appear |
-| 3 | Click **Data Masking** | List of all active masking enforcement points |
+| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(first tab)** | Left tree updates |
+| 2 | **Double-click** on **Policy Enforcement Point** in the left tree | Sub-items appear: **Data Masking** and **Data Blocking** |
+| 3 | **Double-click** on **Data Masking** | List of all active masking enforcement points |
 | 4 | Click **New Entry** | A blank row appears |
 | 5 | In the **Policy** field, select or type `MASK_EMAIL_<YOURUSERNAME>` | Your policy linked |
 | 6 | In the **Attribute** field, select or type `DATA.S_EMAIL` | Data attribute linked |
