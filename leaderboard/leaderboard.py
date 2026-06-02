@@ -330,7 +330,6 @@ LEADERBOARD_TEMPLATE = """
 <html>
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="10">
   <title>DAC Workshop — Leaderboard</title>
   """ + STYLE + """
 </head>
@@ -362,7 +361,7 @@ LEADERBOARD_TEMPLATE = """
         <div style="margin-left:28px;margin-top:4px;margin-bottom:4px;line-height:1.8">
           &bull; &nbsp;<a href="https://www.wireguard.com/install/" target="_blank" style="color:#2ecc71">WireGuard</a> &nbsp;<span style="color:#aaa;font-size:0.9em">— VPN client (phone only if tethering)</span><br>
           &bull; &nbsp;<a href="https://support.sap.com/en/product/connectors/sapgui.html" target="_blank" style="color:#2ecc71">SAP GUI</a> &nbsp;<span style="color:#aaa;font-size:0.9em">— to work in SAP transactions</span><br>
-          &bull; &nbsp;<strong style="color:#fff">Google Chrome</strong> or <strong style="color:#fff">Microsoft Edge</strong> &nbsp;<span style="color:#aaa;font-size:0.9em">— required for SAP Fiori / UI5 (Firefox and Safari are not fully supported)</span>
+          &bull; &nbsp;<strong style="color:#fff">Google Chrome</strong> or <strong style="color:#fff">Microsoft Edge</strong> &nbsp;<span style="color:#aaa;font-size:0.9em">— recommended for SAP Fiori / UI5 (best compatibility; Firefox also works)</span>
         </div>
         <span style="color:#2ecc71">②</span> &nbsp;Go to <a href="/register" style="color:#2ecc71">Register</a> — enter the <strong style="color:#fff">access code your instructor announced</strong>, fill in your details and choose a SAP username<br>
         <span style="color:#2ecc71">③</span> &nbsp;Download your personal <strong style="color:#fff">WireGuard VPN config</strong> from the registration confirmation page and import it into the WireGuard app<br>
@@ -376,33 +375,84 @@ LEADERBOARD_TEMPLATE = """
       </div>
     </div>
 
-    {% if rows %}
-    <table>
-      <tr>
-        <th>#</th><th>Participant</th><th>SAP User</th><th>Score</th><th>Levels</th><th>Last Activity</th>
-      </tr>
-      {% for r in rows %}
-      <tr class="rank-{{ loop.index if loop.index <= 3 else '' }}">
-        <td>
-          {% if loop.index == 1 %}🥇
-          {% elif loop.index == 2 %}🥈
-          {% elif loop.index == 3 %}🥉
-          {% else %}{{ loop.index }}{% endif %}
-        </td>
-        <td><strong>{{ r.name }}</strong></td>
-        <td style="color:#aaa;font-size:0.85em">{{ r.sap_username }}</td>
-        <td><strong>{{ r.total }} pts</strong></td>
-        <td>{{ r.levels_done }} / {{ total_levels }}</td>
-        <td style="color:#666; font-size:0.85em">{{ r.last_submission or 'Just registered' }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-    {% else %}
-    <p style="text-align:center; color:#666; padding: 40px">No participants yet — be the first to register!</p>
-    {% endif %}
+    <div id="lb-container">
+      {% if rows %}
+      <table id="lb-table">
+        <tr>
+          <th>#</th><th>Participant</th><th>SAP User</th><th>Score</th><th>Levels</th><th>Last Activity</th>
+        </tr>
+        {% for r in rows %}
+        <tr class="rank-{{ loop.index if loop.index <= 3 else '' }}">
+          <td>
+            {% if loop.index == 1 %}🥇
+            {% elif loop.index == 2 %}🥈
+            {% elif loop.index == 3 %}🥉
+            {% else %}{{ loop.index }}{% endif %}
+          </td>
+          <td><strong>{{ r.name }}</strong></td>
+          <td style="color:#aaa;font-size:0.85em">{{ r.sap_username }}</td>
+          <td><strong>{{ r.total }} pts</strong></td>
+          <td>{{ r.levels_done }} / {{ total_levels }}</td>
+          <td style="color:#666; font-size:0.85em">{{ r.last_submission or 'Just registered' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <p id="lb-empty" style="text-align:center; color:#666; padding: 40px">No participants yet — be the first to register!</p>
+      {% endif %}
+    </div>
 
-    <p class="refresh-note">Auto-refreshes every 10 seconds</p>
+    <p class="refresh-note">Live &mdash; updated <span id="last-updated">just now</span></p>
   </div>
+
+  <script>
+    const TOTAL_LEVELS = {{ total_levels }};
+    const MEDALS = ['🥇','🥈','🥉'];
+
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function renderTable(rows) {
+      const container = document.getElementById('lb-container');
+      if (!rows || rows.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#666;padding:40px">No participants yet — be the first to register!</p>';
+        return;
+      }
+      let html = '<table id="lb-table"><tr><th>#</th><th>Participant</th><th>SAP User</th><th>Score</th><th>Levels</th><th>Last Activity</th></tr>';
+      rows.forEach((r, i) => {
+        const rank = i + 1;
+        const rankClass = rank <= 3 ? 'rank-' + rank : '';
+        const medal = rank <= 3 ? MEDALS[i] : rank;
+        html += '<tr class="' + rankClass + '">'
+          + '<td>' + medal + '</td>'
+          + '<td><strong>' + esc(r.name) + '</strong></td>'
+          + '<td style="color:#aaa;font-size:0.85em">' + esc(r.sap_username) + '</td>'
+          + '<td><strong>' + r.total + ' pts</strong></td>'
+          + '<td>' + r.levels_done + ' / ' + TOTAL_LEVELS + '</td>'
+          + '<td style="color:#666;font-size:0.85em">' + esc(r.last_submission || 'Just registered') + '</td>'
+          + '</tr>';
+      });
+      html += '</table>';
+      container.innerHTML = html;
+    }
+
+    function updateTimestamp() {
+      const el = document.getElementById('last-updated');
+      if (el) el.textContent = new Date().toLocaleTimeString();
+    }
+
+    function poll() {
+      fetch('/api/leaderboard')
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (data) { renderTable(data.rows); updateTimestamp(); }
+        })
+        .catch(function() {});
+    }
+
+    setInterval(poll, 10000);
+  </script>
 </body>
 </html>
 """
@@ -625,6 +675,15 @@ def index():
     return render_template_string(LEADERBOARD_TEMPLATE,
         rows=rows,
         total_levels=len(codes))
+
+@app.route("/api/leaderboard")
+def api_leaderboard():
+    rows = get_leaderboard()
+    codes = load_codes()
+    return jsonify({
+        "total_levels": len(codes),
+        "rows": [dict(r) for r in rows],
+    })
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
