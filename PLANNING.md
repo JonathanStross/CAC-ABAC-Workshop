@@ -1,521 +1,626 @@
-# DAC Workshop — Interactive ABAC Class
-**Status:** Planning / Pre-development  
-**Target Duration:** Session 1: 2 hours (L0–L5) | Session 2: 1.5 hours (L6–L9) | Fast finishers: L10+  
-**Author:** CAC Admin  
-**Created:** 2026-06-01  
+# DAC Workshop — Pathlock ABAC Interactive Class
+**Status:** Active — Session ready for L0–L1, L2–L9 in prep  
+**Target Duration:** Session 1: 2 hours (L0–L5) | Session 2: 1.5 hours (L6–L9) | Fast finishers: L10–L13  
+**Last Updated:** 2026-06-03  
+**Infrastructure:** Live — server `152.53.187.143`, SAP A4H, Pathlock DAC 2025 Q4
 
 ---
 
-## Concept
+## Purpose of This Document
 
-A **narrative-driven, competitive, hands-on workshop** built around a realistic audit scenario. Participants play the role of a data security team at **Meridian AG** — a fictive international airline holding company — that has just received a **damning external audit report**.
+This document is the **expert briefing and preparation guide** for the workshop. It describes:
+- What each level teaches and **why it matters** to a customer audience
+- What needs to be **pre-configured in DAC** before the session
+- What **SAP users, data, and attributes** need to exist
+- What the **completion code** is and how participants find it
+- The **compliance narrative** that frames each finding
 
-The demo data is **SFLIGHT** — SAP's built-in airline dataset — giving us realistic passenger PII, booking records, payment data, and flight operations data to work with across all levels.
-
-Participants race through levels, enter **completion codes** into a shared **leaderboard** to score points. Fast finishers always have more levels waiting. The leaderboard creates healthy competition and keeps the energy high throughout the session.
+Audience: Pathlock SEs, consultants and technical leads who will co-run or validate the session.
 
 ---
 
-## SFLIGHT Data Model (used across all levels)
+## Workshop Concept
 
-| Table | Content | PII / sensitive fields |
+A **narrative-driven, competitive, hands-on workshop** built around a realistic audit scenario. Participants play the role of a data security team at **Meridian AG** — a fictive international airline holding company — that has just received a **damning external audit report** from an external DPA-mandated auditor.
+
+The demo data is **SFLIGHT** — SAP's built-in airline dataset — giving us realistic passenger PII, booking records, payment data and flight operations data to work with across all levels.
+
+Participants race through levels, find **completion codes hidden inside SAP or Pathlock**, and submit them to a shared **live leaderboard** to score points. Fast finishers always have more levels. The leaderboard creates healthy competition and keeps energy high.
+
+**The narrative arc:**
+> *Day 1: The audit report lands. 9 findings. No current controls.*  
+> *L0–L5: First responder mode — fix the critical findings.*  
+> *L6–L9: Deep remediation — scalable, future-proof architecture.*  
+> *L10–L13: Bonus — go beyond remediation, build a programme.*
+
+---
+
+## Infrastructure (Live)
+
+| Component | Detail |
+|---|---|
+| **Server** | `152.53.187.143` (public), `10.8.0.1` (VPN gateway) |
+| **SAP** | Container `abaptrial`, SID `A4H`, client `001`, instance `00` |
+| **Pathlock DAC** | `/N/APPSDM/ABAC` — version 2025 Q4 |
+| **Leaderboard** | `http://152.53.187.143:9000` — Flask/SQLite, Docker |
+| **VPN** | WireGuard — each participant gets a unique peer config + IP (`10.8.0.x`) |
+| **Admin** | `http://152.53.187.143:9000/admin` — jonathan.stross@pathlock.com |
+| **Access gate** | Registration code: `Rotterdam` |
+
+---
+
+## SFLIGHT Data Model
+
+| Table | Content | PII / Sensitive fields |
 |---|---|---|
-| `SCUSTOM` | Customer master | Name, address, phone, email, credit card number |
-| `SBOOK` | Flight bookings | Customer ref, class, price, smoking preference |
-| `SFLIGHT` | Flight instances | Price, seats occupied/free — revenue data |
-| `SPFLI` | Flight schedule | Routes, times — operational data |
-| `SCARR` | Airline carriers | Public reference data (no PII) |
+| `SCUSTOM` | Passenger master | `NAME`, `STREET`, `POSTCODE`, `TELEPHONE`, `EMAIL`, `LOCCURAM` (credit card) |
+| `SBOOK` | Flight bookings | Customer ref, class, price, `LOCCURAM`, `FORCURAM` |
+| `SFLIGHT` | Flight instances | `PAYMENTSUM`, `SEATSOCC`, `SEATSMAX` — revenue data |
+| `SPFLI` | Flight schedule | Routes, departure times — operational |
+| `SCARR` | Airline carriers | `CARRID`, `CARRNAME` — public reference, no PII |
 
-**Why SFLIGHT is perfect:**
-- Available on every SAP system via `SAPBC_DATA_GENERATOR`
-- `SCUSTOM` has real PII-like fields: name, address, phone, email, `LOCCURAM` (credit card)
-- `SBOOK` ties customers to bookings — relational PII
-- Finance angle: `SFLIGHT.PAYMENTSUM`, revenue per route
-- Operational angle: seat availability, overbooking — SOX-relevant
+**Why SFLIGHT is the right dataset:**
+- Pre-loaded on every SAP ABAP trial system (`SAPBC_DATA_GENERATOR`)
+- `SCUSTOM` mimics a customer/HR master — name, address, phone, email, payment reference
+- Multi-carrier structure (`LH`, `AA`, `UA`, etc.) enables entity isolation scenarios
+- Revenue data (`SFLIGHT.PAYMENTSUM`) enables SOX/finance access scenarios
+- Operational data (`SPFLI`) enables least-privilege read scenarios
 
 ---
 
-## The Leaderboard System
+## Scoring & Leaderboard
 
-### Concept
-Each level ends with a **completion code** — a value participants find or derive inside SAP/Pathlock as proof they solved the level correctly. They enter it at:
-
-```
-http://10.8.0.1:9000
-```
-
-The leaderboard app:
-- Shows all registered participants and their level progress in real time
-- Timestamps each code entry — faster = more points
-- Bonus points for optional challenge levels
-- Visible on a shared screen at the front of the room during the session
-
-### Completion code design
-Each code is something the participant must **find inside the system** — not guessable:
-- A specific masked value pattern from a Pathlock audit log entry
-- A count of rows returned by a specific SE16N query
-- A policy ID generated when they save a DAC rule
-- A hash or ticket number from a Pathlock finding
-
-This means you can't just Google the answer — you have to actually do the work.
-
-### Tech stack (to build)
-- **Backend:** Python Flask or Node.js — runs as a Docker container on `10.8.0.1:9000`
-- **Frontend:** Simple HTML/CSS leaderboard, auto-refreshes every 10 seconds
-- **Storage:** SQLite (lightweight, no setup)
-- **Routes:**
-  - `GET /` — leaderboard display (public, shown on screen)
-  - `GET /register` — participant registration form
-  - `POST /submit` — code submission with validation
-  - `GET /admin` — instructor view with all codes, reset button
-- **Code validation:** Each level's valid code(s) stored in a config file — instructor can set them before the session
-
-### Scoring
 | Action | Points |
 |---|---|
-| Level completion (correct code) | 100 pts |
-| Speed bonus (first to complete) | +50 pts |
-| Second place | +25 pts |
-| Optional challenge completed | +75 pts |
-| Wrong code attempt | -5 pts (discourages guessing) |
+| Level completion (correct code) | 100–200 pts (varies by level) |
+| 1st to complete a level | +50 pts speed bonus |
+| 2nd to complete | +25 pts |
+| Wrong code attempt | −5 pts |
+
+The leaderboard polls every 10 seconds and is visible on the main screen throughout the session.
 
 ---
 
 ## Session Structure
 
-### Session 1 — "The Audit" (2 hours, L0–L5)
-*Suitable for: first PoC, mixed technical/business audience*
+### Session 1 — "The Audit" (2 hours)
+*Target audience: mixed technical/business, first PoC, partner workshop*
 
-| Time | Level | Finding | Guidance |
-|---|---|---|---|
-| 0:00–0:15 | Setup | VPN, SAP GUI, Pathlock, leaderboard registration | — |
-| 0:15–0:25 | **L0** | Orientation — explore Meridian AG's SAP system | 🟢 Guided |
-| 0:25–0:45 | **L1** | F-01: Passenger PII visible to all staff | 🟢 Guided |
-| 0:45–1:05 | **L2** | F-02: Booking agents see payment data outside shifts | 🟡 Hints |
-| 1:05–1:20 | **L3** | F-03: Dev team has real passenger data | 🟡 Hints |
-| 1:20–1:35 | **L4** | F-04: Overprivileged revenue analyst role | 🔴 Independent |
-| 1:35–2:00 | **L5** | F-05: Passenger list export + no classification | 🔴 Independent |
+| Time | Level | Audit Finding | Pathlock Concept | Guidance |
+|---|---|---|---|---|
+| 0:00–0:15 | Setup | — | VPN + SAP GUI setup | — |
+| 0:15–0:25 | **L0** | None — orientation | Explore the system | Guided |
+| 0:25–0:50 | **L1** | F-01: Passenger PII visible to all | First masking policy | Guided |
+| 0:50–1:15 | **L2** | F-02: Access from unknown network | Network/IP-based context | Hints |
+| 1:15–1:30 | **L3** | F-03: Dev team has real passenger data | Scrambling / pseudonymisation | Hints |
+| 1:30–1:45 | **L4** | F-04: Overprivileged revenue analyst | Resource attribute scoping | Independent |
+| 1:45–2:00 | **L5** | F-05: Export + no classification | Download block + data classification | Independent |
 
-### Session 2 — "Deep Dive" (1.5 hours, L6–L9)
-*Suitable for: technical champions, partner enablement, second session*
+### Session 2 — "Deep Dive" (1.5 hours)
+*Target audience: technical champions, architects, partner enablement*
 
 | Time | Level | Theme | Guidance |
 |---|---|---|---|
-| 0:00–0:25 | **L6** | F-06: Cross-airline data leakage (multi-entity ABAC) | 🔴 Independent |
-| 0:25–0:50 | **L7** | F-07: Fiori/UI5 masking — data visible in browser DevTools | 🔴 Independent |
-| 0:50–1:10 | **L8** | F-08: Audit trail gap — no evidence of who saw what | 🔴 Independent |
-| 1:10–1:30 | **L9** | F-09: Classification-driven policy — future-proof framework | 🔴 Independent |
+| 0:00–0:25 | **L6** | F-06: Cross-airline data leakage | Independent |
+| 0:25–0:50 | **L7** | F-07: OData / Fiori — DevTools bypass | Independent |
+| 0:50–1:10 | **L8** | F-08: No audit trail | Independent |
+| 1:10–1:30 | **L9** | F-09: Classification-driven architecture | Independent |
 
-### Fast Finisher Levels (bonus, no time limit)
-*Always available — keeps fast participants busy*
+### Fast Finisher Levels (always available)
 
 | Level | Theme |
 |---|---|
-| **L10** | Build a GDPR Art. 30 records-of-processing report from the Pathlock audit log |
-| **L11** | Design a policy that satisfies 3 frameworks simultaneously — document the mapping |
-| **L12** | The "too powerful role" deep dive — MSCHMIDT cost centre scenario |
-| **L13** | Simulate a data breach: access as an attacker, then build the control that would have stopped it |
+| **L10** | GDPR Art. 30 processing record |
+| **L11** | Compliance multiplier — one policy, four frameworks |
+| **L12** | Too powerful role — `MSCHMIDT` scenario |
+| **L13** | Red team / Blue team race |
 
 ---
 
-## Levels (Full Detail)
+## Levels — Expert Detail
 
 ---
 
 ### Level 0 — Orientation: Welcome to Meridian AG
-**Audit finding:** None — setup  
-**Guidance:** 🟢 Fully guided  
-**Data used:** `SCARR`, `SPFLI`, `SCUSTOM`
+**Points:** 100 | **Guidance:** Fully guided | **Time:** 10 min
 
-Meridian AG is a fictive airline holding. You've joined their IT security team the day the audit report landed. Your first task: understand what's actually in the system.
+#### What participants do
+Connect to the VPN, log into SAP, register on the leaderboard. Browse the SFLIGHT dataset using transaction `SE16`. Observe that all PII fields are fully visible with no controls. Find the login screen info text which contains the completion code.
 
-**Steps:**
-1. Connect VPN, log into SAP GUI, log into Pathlock
-2. Register on the leaderboard: `http://10.8.0.1:9000/register`
-3. Open SE16N → browse `SCARR` (airlines), `SPFLI` (routes), `SCUSTOM` (passengers)
-4. In `SCUSTOM`: note fields `NAME`, `STREET`, `POSTCODE`, `TELEPHONE`, `EMAIL`, `LOCCURAM` (credit card)
-5. Observe: no masking. Everything visible.
-6. In Pathlock: confirm no active DAC policies
-7. **Completion code:** The number of rows in `SCUSTOM` (enter in SE16N, note the count)
+#### Why this level exists
+Sets context. Participants need to *see the problem* before they fix it. It also ensures everyone has a working environment before the competitive portion starts. The completion code (`42.`) is found in `SE61` → `LOGIN_SCREEN_INFO` — a detail only someone who actually explored the system would find.
 
----
+#### What needs to be pre-configured
+- `SE61` → `LOGIN_SCREEN_INFO` text must contain `42.` (enter before session)
+- All SFLIGHT tables loaded with data (`SAPBC_DATA_GENERATOR`)
+- Leaderboard live and accessible at `http://152.53.187.143:9000`
+- WireGuard peer configs ready for distribution
 
-### Level 1 — F-01: Passenger PII Visible to All Staff 🔴
-**Guidance:** 🟢 Fully guided  
-**Data:** `SCUSTOM` — `NAME`, `TELEPHONE`, `EMAIL`, `LOCCURAM`
+#### ABAC concepts introduced
+None — pure exploration.
 
-> *"All staff with SE16N or customer transaction access can view full passenger PII including credit card numbers and contact details. No field-level restriction exists. GDPR Art. 5(1)(c) violation."*
+#### Compliance narrative
+> *"The auditor's first finding: no one at Meridian AG could tell us what data is in the system or who can access it. You have 10 minutes to answer both questions."*
 
-**Steps (fully instructed):**
-1. Pathlock DAC → new masking policy
-2. Table: `SCUSTOM`, fields: `TELEPHONE`, `EMAIL`, `LOCCURAM`
-3. Condition: `user.role != 'CUSTOMER_SERVICE_SENIOR'`
-4. Mask type: partial mask (`****` last 4 digits for LOCCURAM, `j***@***.com` for email)
-5. Activate → verify in SE16N as `DEMO_USER_A`
-6. Check audit log — find the masked access event
-7. **Completion code:** The masked value shown for `LOCCURAM` field (first 4 chars + asterisks pattern)
-
-**ABAC:** `user.role` | **Framework:** GDPR Art. 5(1)(c), ISO 27001 A.8.11
+#### Completion code
+`42.` — found in the SAP login screen info text (`SE61` → `LOGIN_SCREEN_INFO`)
 
 ---
 
-### Level 2 — F-02: Booking Agents See Payment Data Outside Shifts 🟠
-**Guidance:** 🟡 Hints only  
-**Data:** `SBOOK` — `LOCCURAM`, `FORCURAM` (foreign currency amount)
+### Level 1 — F-01: Passenger PII Visible to All Staff
+**Points:** 100 | **Guidance:** Fully guided | **Time:** 20–25 min
 
-> *"Booking agents can access passenger payment data and booking prices at any time, including nights and weekends from home networks. No time or location constraint exists. GDPR Art. 32."*
+#### Audit finding
+> *"All authenticated users can view the full email address of every passenger in table SCUSTOM without restriction. No masking or access control is applied at the field level. GDPR Art. 5(1)(c) — data minimisation violation."*
 
-**Hints:**
-- You need to combine `user.role` with `environment.time` — business hours = Mon–Fri 07:00–19:00
-- Network condition: `environment.network` must match `10.8.0.0/24` (inside VPN)
-- Think: is this a new policy or an extension of L1?
-- Test by checking the policy log — does it show "context condition not met"?
-- **Completion code:** The Pathlock policy ID of the rule you create (shown after saving)
+#### What participants do
+Navigate Pathlock DAC (`/N/APPSDM/ABAC`) to:
+1. Explore the pre-created Data Attribute `DATA.S_EMAIL` — read its Attribute ID and trace its technical mapping to SAP data element `S_EMAIL` in table `SCUSTOM`
+2. Explore the pre-created User Attribute `USER.ID` — understand it resolves to the logged-in SAP username at runtime
+3. Create a masking policy `MASK_EMAIL_<username>` under Policy Administration Point
+4. Add a rule condition: `USER.ID EQ <their own username>` — policy scoped to themselves only
+5. Add a Policy Enforcement Point: Data Masking → `DATA.S_EMAIL` mapped to their policy, action = Deny, active = yes
+6. Log out and back in → verify `SE16` → `SCUSTOM` shows `***` in the EMAIL column
+7. Ask a colleague to confirm their screen is unaffected — demonstrating scope
 
-**ABAC:** `user.role + environment.time + environment.network` | **Framework:** GDPR Art. 32, NIS2
+#### Why this level exists
+The core skill: **create a masking policy**. By scoping it to their own user first, participants learn the `USER.ID` attribute and understand that DAC policies are precise — not blunt instruments. The "ask your neighbour" test makes the scoping concept visceral and memorable.
 
----
+The step-by-step navigation through the DAC tree (Functional Config → Policy Information Point → Data Attribute Master / User Attribute Master → Policy Administration Point → Policy Enforcement Point) establishes the mental model used in every subsequent level.
 
-### Level 3 — F-03: Developers Have Real Passenger Data 🟠
-**Guidance:** 🟡 Hints only  
-**Data:** `SCUSTOM`, `SBOOK` — all PII fields
+#### What needs to be pre-configured
+- `DATA.S_EMAIL` Data Attribute created in DAC:
+  - Attribute ID: `DATA.S_EMAIL`
+  - Technical Mapping (Technical Config tab → Data Attribute Config → Technical Mapping): `S_EMAIL`
+- `USER.ID` User Attribute created in DAC
+- Both visible to participants (read access sufficient)
+- `SCUSTOM` table has email data loaded
 
-> *"Developer accounts (`DEVELOPER` role) have read access to production passenger and booking data including names, addresses and credit card references. Test scenarios use real customer identities. GDPR Art. 25."*
+#### ABAC concepts introduced
+- Data Attribute (what to protect)
+- User Attribute (who the policy applies to)
+- Policy Administration Point (the rule)
+- Policy Enforcement Point — Data Masking (the action)
+- Rule condition (`USER.ID EQ value`)
+- Session-based policy evaluation (must re-login)
 
-**Hints:**
-- Masking (`****`) breaks developer tests — they need realistic formats
-- Look for the "scrambling" / "pseudonymization" option in Pathlock — not masking
-- After scrambling: `MÜLLER, HANS` → `FISCHER, KARL` | IBAN-format card → different valid-format card
-- Verify: run the same SE16N query as `DEVELOPER` — data looks real but isn't
-- Why is scrambling better here than masking? Be ready to answer.
-- **Completion code:** First 3 characters of the scrambled `NAME` value for `SCUSTOM` client `00000001`
+#### Completion code
+`DATA.S_EMAIL` — the Attribute ID of the data attribute they configured. Found by reading the Attribute ID field in Data Attribute Master. Submission question: *"What was the Attribute ID of the field you masked?"*
 
-**ABAC:** `user.role + data.classification` | **Framework:** GDPR Art. 25, Art. 5(1)(e)
-
----
-
-### Level 4 — F-04: Overprivileged Revenue Analyst 🔴
-**Guidance:** 🔴 Independent  
-**Data:** `SFLIGHT` — `PAYMENTSUM`, `SEATSOCC`, `SEATSMAX` | `SBOOK` — all fields
-
-> *"User `RANALYST` holds role `Z_REVENUE_ANALYST_ALL` granting read access to all flight revenue data, booking records and passenger details across all airline codes — including carriers outside Meridian AG's own portfolio. Role cleanup: 9 months. No compensating control. SOX Section 404 deficiency."*
-
-**No instructions. You know what to do.**
-
-Consider: what attribute limits `RANALYST` to only Meridian AG's own carriers? (hint: `SCARR.CARRID` — Meridian AG operates `LH`, `AA`).
-
-**Completion code:** The number of `SFLIGHT` rows visible to `RANALYST` *after* your policy is applied (run count via SE16N)
-
-**ABAC:** `user.role + user.airline_scope + resource.carrid` | **Framework:** SOX 404, GDPR Art. 5(1)(c)
+#### Framework
+GDPR Art. 5(1)(c) — data minimisation | ISO 27001 A.8.11 — data masking
 
 ---
 
-### Level 5 — F-05: Passenger List Export + No Classification 🟡
-**Guidance:** 🔴 Independent  
-**Data:** All tables
+### Level 2 — F-02: Access from an Unknown Network Location
+**Points:** 100 | **Guidance:** Hints only | **Time:** 20–25 min
 
-> *"Users can export SCUSTOM and SBOOK data to local Excel files. No data classification exists — the system cannot distinguish between SCARR (public) and SCUSTOM (PII). Data leaves without audit trail. ISO 27001 A.8.12, GDPR Art. 32."*
+#### Audit finding
+> *"Booking agents can access passenger email data from any network location — including personal home networks and public Wi-Fi — without restriction. The control implemented in F-01 applies only to a specific named user. A network-aware policy is required. GDPR Art. 32 — technical measures must account for access context."*
 
-**Part A:** Block downloads when context contains PII-classified data (ok-codes: `%EX`, `%PC`, `&XXL`)  
-**Part B:** Classify `SCUSTOM` fields as `Restricted-PII`, `SBOOK` as `Internal-Financial`, `SCARR` as `Public`  
-**Part C:** Update your L1–L4 policies to be classification-driven, not field-by-field
+#### What participants do
+1. Understand that the L1 policy is user-scoped — it does not prevent the same user from accessing data from an untrusted network, nor does it cover other users
+2. Explore the pre-created User Attribute `USER.NETWORK` — confirm it resolves to the client source IP at session start
+3. **Create a new SAP test user** and register it on the leaderboard (generates a new WireGuard peer → a different IP `10.8.0.y`)
+4. Log in as the new user — observe EMAIL is fully visible (no policy covers this user yet)
+5. Create a new masking policy with condition: `USER.NETWORK NOT IN 10.8.0.0/24`
+   - Meaning: mask EMAIL for anyone connecting from *outside* the trusted corporate VPN range
+6. Test scenario A: new user inside VPN (`10.8.0.y`) → EMAIL visible (trusted network)
+7. Test scenario B: disconnect VPN → reconnect to SAP directly → EMAIL masked (`***`)
+8. Discuss: all staff must use VPN — the system enforces it automatically, zero SAP role changes
 
-**Completion code:** The classification tag you assigned to `SCUSTOM.LOCCURAM` (exact string from Pathlock)
+#### Why this level exists
+Introduces **contextual / environmental ABAC** — the key differentiator between static RBAC and dynamic ABAC. The same user gets *different data* depending on where they connect from. This requires zero SAP changes.
 
-**ABAC:** Full | **Framework:** ISO 27001 A.8.12, GDPR Art. 32, PCI DSS Req. 3
+The "create a second user, get a new IP" exercise makes the network dimension concrete and testable in the room. Two sessions side by side — one masked, one not — based purely on network location is a high-impact customer demo moment.
 
----
+**This level answers the question every customer asks:** *"We can't change SAP roles quickly enough. Can Pathlock protect us right now based on context?"* — Yes.
 
-### Level 6 — F-06: Cross-Airline Data Leakage (Multi-Entity) 🔴
-**Guidance:** 🔴 Independent  
-**Data:** `SFLIGHT`, `SBOOK` across multiple `CARRID` values
+#### What needs to be pre-configured
+- `USER.NETWORK` User Attribute created in DAC — resolves to client source IP at session start
+- Description of `USER.NETWORK` attribute contains the L2 completion code (pre-enter before session)
+- WireGuard allows multiple peers; a second registration produces a distinct `10.8.0.y` IP
+- Trusted range defined: `10.8.0.0/24` (all WireGuard VPN peers)
 
-> *"Meridian AG operates as a holding for multiple airline brands. Staff from carrier `LH` can view booking and revenue data for carrier `AA` and vice versa. Employees should only see data for their own airline entity. GDPR Art. 5(1)(c) — purpose limitation."*
+#### ABAC concepts introduced
+- Environmental / contextual attributes (`USER.NETWORK`)
+- Network-based access policy (IP/subnet condition)
+- Dynamic policy evaluation — same user, different context, different result
+- The difference between identity-based and context-based control
 
-Design an ABAC policy that enforces **entity isolation** — `user.employer_carrid = resource.carrid`.
+#### Completion code
+The `USER.NETWORK` Attribute ID — pre-entered in the description field of the `USER.NETWORK` attribute by the instructor before the session. Participants find it the same way they found the L1 code: Policy Information Point → User Attribute Master → open `USER.NETWORK` → read description.
 
-**Completion code:** Policy condition string you configured (exact syntax from Pathlock)
-
----
-
-### Level 7 — F-07: Fiori/UI5 — Data Visible in Browser DevTools 🔴
-**Guidance:** 🔴 Independent  
-**Data:** `SEPMRA_C_SO` (Sales Orders) via OData service — Fiori Manage Sales Orders app
-
-> **Scene:** *Mid-session, the instructor takes a call and steps out.*
-> *"Sorry everyone — emergency, another client. Back in 20. You know what to do."*
->
-> *The audit finding is already on the board: a junior consultant opened the Manage Sales Orders Fiori app and noticed that net amounts and customer IDs appear masked in the UI. He closed the ticket — job done. Except he didn't check the network tab.*
->
-> *Open browser DevTools → Network → filter for OData. The raw JSON response from `SEPMRA_C_SO` contains every unmasked field in plain text. The mask was CSS only. GDPR Art. 32 — technical measures must be effective at the data layer, not the display layer.*
-
-Configure Pathlock DAC to mask the sensitive fields (`NetAmount`, `CustomerID`) at the **OData response layer**.  
-Prove it: the DevTools network response must show masked/omitted values, not the real ones.
-
-**App URL:** `http://10.8.0.1:50000/sap/bc/ui2/flp?sap-client=001#SalesOrder-manage`  
-**OData service:** `SEPMRA_C_SO_SalesOrder` (confirm via `/iwfnd/maint_service`)
-
-**Completion code:** The HTTP response header name that Pathlock injects to mark a masked OData call
+#### Framework
+GDPR Art. 32 — technical security measures | NIS2 Art. 21 — access control | ISO 27001 A.8.11
 
 ---
 
-### Level 8 — F-08: No Audit Trail — Who Saw What? 🔴
-**Guidance:** 🔴 Independent  
-**Data:** Pathlock audit log
+### Level 3 — F-03: Developers Have Real Passenger Data
+**Points:** 100 | **Guidance:** Hints only | **Time:** 15 min
 
-> *"The auditor asked: who accessed passenger credit card data in the last 30 days? Meridian AG could not answer. No audit trail of data access events exists. GDPR Art. 30 (records of processing), SOX Section 404."*
+#### Audit finding
+> *"Developer accounts have read access to production passenger data in SCUSTOM including real names, addresses and credit card references. Test scenarios are run against live PII. GDPR Art. 25 — privacy by design and by default."*
 
-Configure Pathlock to log all access to `SCUSTOM.LOCCURAM`. Then:
-1. Generate 5 access events as different users
-2. Export the audit log filtered to this field
-3. Produce a one-page "who saw what" summary that could be given to an auditor
+#### What participants do
+1. Understand why masking is the wrong solution: developers need realistic-format data (correct length, valid structure) to test with — `***` breaks test code
+2. Find the **scrambling** option in Pathlock DAC — a different enforcement type from Data Masking
+3. Configure a scrambling policy for `SCUSTOM` name/address fields scoped to the `DEVELOPER` role
+4. Verify: the same table now shows realistic but fictitious values — `MÜLLER, HANS` → `FISCHER, KARL`
+5. Explain to the room: why is scrambling better than masking for dev environments?
 
-**Completion code:** The number of distinct users in your audit log export
+#### Why this level exists
+Teaches the distinction between **masking** (hide the value) and **scrambling** (replace with realistic fake). Masked data is useless for testing; real PII in dev is a GDPR violation. Scrambling solves both.
+
+Also introduces **role-based** policy conditions (`USER.ROLE EQ DEVELOPER`) as contrast to L1's user-specific and L2's network-based conditions. By level 3, participants have seen three distinct ABAC condition types.
+
+#### What needs to be pre-configured
+- `USER.ROLE` User Attribute created in DAC — resolves to the SAP role of the logged-in user
+- `DEVELOPER` role assigned to the demo user (or a dedicated test user)
+- Scrambling configuration available and licensed on this DAC instance (verify before session)
+
+#### ABAC concepts introduced
+- Scrambling / pseudonymisation (vs masking)
+- Role-based user attribute (`USER.ROLE`)
+- Privacy by design (GDPR Art. 25)
+
+#### Completion code
+TBD — suggested: the first scrambled customer name in `SCUSTOM` row 1 after the policy activates. Instructor sets after confirming scrambling output on this instance.
+
+#### Framework
+GDPR Art. 25 — privacy by design | GDPR Art. 5(1)(e) — storage limitation
 
 ---
 
-### Level 9 — F-09: Future-Proof Classification Framework 🔴
-**Guidance:** 🔴 Independent  
-**Data:** All tables
+### Level 4 — F-04: Overprivileged Revenue Analyst
+**Points:** 150 | **Guidance:** Independent | **Time:** 15 min
 
-> *"All existing policies are field-by-field. When Meridian AG adds new SAP modules next year, every policy must be manually extended. There is no scalable classification-driven approach. ISO 27001 A.8.3 — information classification."*
+#### Audit finding
+> *"User RANALYST holds a role granting read access to flight revenue data, booking records and passenger details across ALL airline codes — including carriers outside Meridian AG's own portfolio. Role cleanup is 9 months away. No compensating control exists. SOX Section 404 deficiency."*
 
-Design a **3-tier classification scheme** (`Public` / `Internal` / `Restricted`) that:
-- Covers all SFLIGHT tables
-- Makes every existing policy classification-driven
-- Means a new table only needs a classification tag — not a new policy
+#### What participants do
+No instructions given. They must independently:
+1. Identify the right attribute to scope by: `SFLIGHT.CARRID` / `SBOOK.CARRID` — Meridian AG operates `LH` and `AA` only
+2. Create a policy that restricts `RANALYST`'s view of `SFLIGHT` and `SBOOK` to only rows where `CARRID IN {LH, AA}`
+3. Verify: row count of `SFLIGHT` visible to `RANALYST` drops after the policy is applied
+4. Submit the post-restriction row count as the completion code
 
-**Completion code:** Number of distinct classification tags active in your Pathlock instance after this level
+#### Why this level exists
+First fully independent level. Tests whether participants can apply the ABAC pattern without scaffolding. The "role cleanup is 9 months away" framing is a real-world scenario — **ABAC as a compensating control** resonates strongly with customers mid-way through a GRC programme who can't wait for role engineering.
+
+#### What needs to be pre-configured
+- `RANALYST` user created in SAP with overprivileged role
+- `SFLIGHT` and `SBOOK` loaded with data for multiple carriers including non-Meridian ones
+- `DATA.CARRID` Data Attribute created in DAC — maps to `CARRID` field on `SFLIGHT`, `SBOOK`
+
+#### ABAC concepts introduced
+- Resource/data attributes (not just user attributes)
+- Row-level filtering (not just field masking)
+- ABAC as a compensating control for role issues
+
+#### Completion code
+Row count of `SFLIGHT` visible to `RANALYST` after the scoping policy is applied. Instructor records this number after pre-config.
+
+#### Framework
+SOX Section 404 — ITGC compensating controls | GDPR Art. 5(1)(c)
 
 ---
 
-### Level 10 (Fast Finisher) — GDPR Art. 30 Report
-Build a processing activity record for "Passenger Booking Management" using Pathlock audit data. Must include: purpose, data categories, retention period, recipients, technical controls. Format: one A4 page.
+### Level 5 — F-05: Passenger List Export & No Data Classification
+**Points:** 150 | **Guidance:** Independent | **Time:** 20 min
+
+#### Audit finding
+> *"Users can export SCUSTOM and SBOOK data to local Excel files via SE16. No data classification exists — Pathlock cannot distinguish between SCARR (public reference data) and SCUSTOM (PII). Data leaves the system without restriction or audit trail. ISO 27001 A.8.12, GDPR Art. 32, PCI DSS Req. 3."*
+
+#### What participants do
+
+**Part A — Block the download:**
+1. Identify the SAP GUI ok-codes that trigger data exports
+2. Configure a Pathlock DAC **Data Blocking** policy (Policy Enforcement Point → Data Blocking — distinct from Data Masking)
+3. Scope the block: fire only when the current table is classified as `PII` or `Restricted`
+4. Verify: attempting to export `SCUSTOM` is blocked; exporting `SCARR` (public data) still succeeds
+
+**Part B — Classify the tables:**
+1. Assign data classifications in Pathlock:
+   - `SCUSTOM` → `Restricted-PII`
+   - `SBOOK` → `Internal-Financial`
+   - `SCARR` → `Public`
+2. Confirm the download block fires automatically based on classification — no per-table rules needed
+
+#### Why this level exists
+**Data leaving the system is the most common real-world breach vector.** This level teaches:
+1. **Data Blocking** — a different enforcement type from masking (prevents the action, not just hides the value)
+2. **Data Classification** — the foundation for scalable, future-proof governance
+
+The "classification drives the block" model is a strong product message: tag the data once, the controls follow automatically. The distinction between `SCARR` (allowed to export) and `SCUSTOM` (blocked) makes the logic immediately intuitive.
+
+#### Technical detail — Download block
+
+SAP GUI downloads are triggered by ok-codes:
+- `%EX` — Export to local file
+- `%PC` — PC download
+- `&XXL` — Excel/spreadsheet export
+
+Pathlock intercepts these at the DAC layer before SAP processes the action:
+1. Detects the ok-code
+2. Evaluates `data.classification` of the active screen context
+3. Blocks if `classification IN (PII, Restricted)` AND `user.role != DATA_STEWARD`
+
+The block fires before the file is written. No data leaves the system; user receives a policy-triggered denial message.
+
+#### What needs to be pre-configured
+- Data Classification feature enabled in Pathlock (confirm on this instance before session)
+- Classification tags `Restricted-PII`, `Internal-Financial`, `Public` available
+- Policy Enforcement Point → Data Blocking node accessible to participants
+
+#### ABAC concepts introduced
+- Data Blocking (vs Masking — prevents action vs hides value)
+- Data Classification — table-level and field-level tags
+- Classification-driven policies (policy fires based on tag, not explicit field list)
+- Export/download control
+
+#### Completion code
+The exact classification tag assigned to `SCUSTOM.LOCCURAM` in Pathlock — instructor sets before session.
+
+#### Framework
+ISO 27001 A.8.12 — data leakage prevention | GDPR Art. 32 | PCI DSS v4.0 Req. 3
+
+---
+
+### Level 6 — F-06: Cross-Airline Data Leakage (Multi-Entity ABAC)
+**Points:** 175 | **Guidance:** Independent | **Time:** 25 min
+
+#### Audit finding
+> *"Meridian AG operates as a holding for multiple airline brands. Staff from carrier LH can view booking and revenue data for carrier AA and vice versa. No entity isolation exists at the data layer. GDPR Art. 5(1)(c) — purpose limitation."*
+
+#### What participants do
+Design and implement an ABAC policy that enforces **entity isolation** using a dynamic attribute match:
+- User attribute: `USER.EMPLOYER_CARRID` (the carrier the logged-in user works for)
+- Data attribute: `DATA.CARRID` (the carrier field on `SFLIGHT` and `SBOOK`)
+- Policy condition: `USER.EMPLOYER_CARRID EQ DATA.CARRID`
+
+Verify: LH staff sees only LH rows. AA staff sees only AA rows.
+
+#### Why this level exists
+Introduces **data attribute vs user attribute matching** — the most powerful ABAC pattern. Instead of hardcoding values (`CARRID = LH`), the policy uses a *dynamic comparison* between a user property and a data property. This scales to any number of carriers without changing the policy.
+
+This pattern directly addresses the multi-entity / group holding use case common in enterprise SAP installations.
+
+#### What needs to be pre-configured
+- `USER.EMPLOYER_CARRID` User Attribute created in DAC — resolved from SAP user master data
+- `DATA.CARRID` Data Attribute created in DAC — maps to `CARRID` field on `SFLIGHT`, `SBOOK`
+- Test users assigned different `EMPLOYER_CARRID` values
+
+#### Completion code
+Policy condition string as configured and saved in Pathlock — instructor records before session.
+
+#### Framework
+GDPR Art. 5(1)(c) — purpose limitation | ISO 27001 A.5.15 — access control
+
+---
+
+### Level 7 — F-07: Fiori / OData — CSS Mask Is Not a Data Control
+**Points:** 175 | **Guidance:** Independent | **Time:** 25 min
+
+#### Audit finding
+> *"A junior consultant reviewed the Manage Sales Orders Fiori app and confirmed that sensitive fields appear masked in the UI. The finding was closed as remediated. The auditor re-opened it: browser DevTools shows the raw OData JSON response contains all unmasked values in plaintext. GDPR Art. 32 — technical measures must be effective at the data layer."*
+
+#### Instructor staging
+At the start of this level, the instructor steps out briefly. Participants must work through it with zero support — mirroring the real scenario where a junior team member closed the finding.
+
+#### What participants do
+1. Open the Fiori Sales Orders app — fields appear masked visually
+2. Open browser DevTools → Network tab → filter for OData requests
+3. Find the `$batch` or entity request → inspect the JSON response
+4. Observe: `"NetAmount":"14850.00"` — real values in the HTTP response despite the UI mask
+5. Configure Pathlock DAC to mask `NetAmount`, `GrossAmount`, `CustomerID` at the **OData response layer** (server-side, before JSON leaves the backend)
+6. Verify: DevTools now shows `"NetAmount":"***"` — the protection is real
+
+#### Why this level exists
+Challenges the assumption that "it looks masked in the app" = "it is protected". CSS/JS masking is a display trick — the data is in the HTTP response and recoverable with basic developer tools. Pathlock masks at the **data layer**, not the display layer.
+
+#### What needs to be pre-configured
+- Fiori launchpad accessible: `http://152.53.187.143:50000/sap/bc/ui2/flp`
+- `SEPMRA_C_SO_SalesOrder` OData service active (`/iwfnd/maint_service`)
+- OData masking feature enabled in Pathlock for this service
+
+#### Completion code
+TBD — suggested: the name of the Pathlock response header injected on masked OData calls.
+
+#### Framework
+GDPR Art. 32 — technical security measures at data layer
+
+---
+
+### Level 8 — F-08: No Audit Trail
+**Points:** 175 | **Guidance:** Independent | **Time:** 20 min
+
+#### Audit finding
+> *"When asked to provide evidence of who accessed passenger credit card data (SCUSTOM.LOCCURAM) in the last 30 days, Meridian AG could not answer. No access logging exists at the field level. GDPR Art. 30 — records of processing activities. SOX Section 404."*
+
+#### What participants do
+1. Enable Pathlock access logging for `SCUSTOM.LOCCURAM`
+2. Generate 5 access events across different users
+3. Navigate to the Pathlock audit log → filter by attribute/field
+4. Export the log
+5. Produce a one-paragraph "who saw what, when" summary suitable for an auditor
+
+#### Why this level exists
+The audit trail question is frequently the first thing a DPO or external auditor asks. Most SAP installations have no answer. Pathlock provides it automatically once logging is enabled — and the evidence is complete: user, timestamp, transaction, field, masked/unmasked flag.
+
+#### What needs to be pre-configured
+- Pathlock audit log feature enabled
+- Demo users active with access to `SCUSTOM`
+
+#### Completion code
+Number of distinct users in the participant's audit log export.
+
+#### Framework
+GDPR Art. 30 — records of processing | SOX Section 404 | ISO 27001 A.8.15 — logging
+
+---
+
+### Level 9 — F-09: Future-Proof Classification Architecture
+**Points:** 200 | **Guidance:** Independent | **Time:** 20 min
+
+#### Audit finding
+> *"All existing Pathlock policies are configured field-by-field. When Meridian AG onboards new SAP modules next year, every policy must be manually extended. As remediations go, this is a liability — not an asset. ISO 27001 A.8.3 — information classification."*
+
+#### What participants do
+Design and implement a 3-tier classification scheme:
+- `Public` — `SCARR`, `SPFLI`
+- `Internal-Financial` — `SFLIGHT`, `SBOOK`
+- `Restricted-PII` — `SCUSTOM`, selected `SBOOK` fields
+
+Then refactor all policies from L1–L6 to be classification-driven:
+- Instead of "mask `DATA.S_EMAIL` when `USER.ID EQ X`" → "mask all `Restricted-PII` fields when `USER.CLEARANCE LT Restricted`"
+- New tables automatically inherit the right controls when tagged
+
+#### Why this level exists
+The strategic capstone. Shows that Pathlock is not just a point tool but an **information governance architecture**. Classification-driven policy is the answer to "what happens when we add S/4HANA next year?"
+
+#### What needs to be pre-configured
+- Data Classification feature enabled
+- Sufficient time for participants (best for Session 2 or fast finishers after L8)
+
+#### Completion code
+Total number of distinct classification tags active in the participant's Pathlock instance after this level.
+
+#### Framework
+ISO 27001 A.8.3 — information classification | GDPR Art. 25 — privacy by design
+
+---
+
+### Level 10 (Fast Finisher) — GDPR Art. 30 Processing Record
+**Points:** 75
+
+Build a Records of Processing Activities entry for "Passenger Booking Management" using the Pathlock audit log as evidence. Must include: purpose, legal basis, data categories, retention period, recipients, technical controls implemented.
+
+**Why:** GDPR Art. 30 is one of the most commonly cited DPA audit gaps. This shows Pathlock data can directly feed ROPA documentation.
+
+---
 
 ### Level 11 (Fast Finisher) — Compliance Multiplier
-Pick one policy you've built. Map it to at least 4 compliance frameworks simultaneously. Write the mapping as an audit response paragraph.
+**Points:** 75
+
+Take one policy built during the session. Map it to at least 4 compliance frameworks simultaneously (GDPR Art. 5 + ISO 27001 A.8.11 + SOX 404 + NIS2 Art. 21). Write the mapping as an audit response paragraph.
+
+**Why:** "Configure once, tick multiple boxes" is the most efficient ROI message. This makes it personal and concrete.
+
+---
 
 ### Level 12 (Fast Finisher) — The Too Powerful Role
-Deep dive: `MSCHMIDT` Finance Controller scenario. Cost centre scoping. See bonus scenario in this document.
+**Points:** 75
+
+User `MSCHMIDT` is a Finance Controller with role `Z_FI_ALL` — all company codes and cost centres. Role cleanup is blocked by the business. Use Pathlock DAC to restrict `MSCHMIDT`'s view to cost centre `1000` only, without touching the SAP role.
+
+**Why:** The most common real-world scenario. ABAC as an immediate compensating control.
+
+---
 
 ### Level 13 (Fast Finisher) — Red Team / Blue Team
-One participant acts as an attacker (`SAP_ALL` user, no Pathlock). Another configures Pathlock to stop them. The attacker tries to exfiltrate passenger credit card data. Race.
+**Points:** 100
+
+Two participants. Attacker: `SAP_ALL` user, Pathlock disabled for their session. Defender: Pathlock config access. The attacker tries to exfiltrate `SCUSTOM.LOCCURAM`. The defender must stop them using DAC policies before the attacker succeeds.
+
+**Why:** Competitive, high-energy finale. Makes the threat model real. The defender wins when the attacker's screen shows `***`.
 
 ---
 
+## Pre-Session Preparation Checklist
+
+### SAP System
+- [ ] SFLIGHT data loaded (`SAPBC_DATA_GENERATOR`)
+- [ ] `SE61` → `LOGIN_SCREEN_INFO` text contains `42.` (L0 code)
+- [ ] SAP users created: `DEVELOPER`, `RANALYST`, `MSCHMIDT`, demo users per level
+- [ ] Roles assigned: `DEVELOPER` role to dev user, overprivileged role to `RANALYST`
+- [ ] Fiori launchpad accessible, `SEPMRA_C_SO` OData service active (L7)
+
+### Pathlock DAC (`/N/APPSDM/ABAC`)
+- [ ] **L1:** `DATA.S_EMAIL` Data Attribute created with Technical Mapping to SAP data element `S_EMAIL`
+- [ ] **L1:** `USER.ID` User Attribute created
+- [ ] **L2:** `USER.NETWORK` User Attribute created (resolves to client source IP)
+- [ ] **L2:** Description of `USER.NETWORK` attribute contains the L2 completion code
+- [ ] **L3:** `USER.ROLE` User Attribute created
+- [ ] **L4:** `DATA.CARRID` Data Attribute created with `CARRID` field mapping
+- [ ] **L5:** Data Classification feature enabled; download block capability confirmed
+- [ ] **L6:** `USER.EMPLOYER_CARRID` User Attribute created
+- [ ] **L7:** OData masking enabled for `SEPMRA_C_SO_SalesOrder`
+- [ ] **L8:** Access logging enabled
+- [ ] All participant workshop users assigned role `/APPSDM/POL_CHANGE`
+
+### Leaderboard
+- [ ] Server running at `http://152.53.187.143:9000`
+- [ ] Level codes set in `/opt/cac-workshop/leaderboard/level_codes.json`
+- [ ] Admin credentials confirmed
+- [ ] Registration access code: `Rotterdam`
+- [ ] WireGuard peer generation working (test with one registration)
+
+### Participant Materials
+- [ ] Level guides deployed (L0 and L1 complete, L2 in prep)
+- [ ] Student exercise sheet updated
+- [ ] VPN config distribution method confirmed
+
 ---
 
-## Compliance Frameworks Reference
+## Completion Codes Summary
 
-*Instructor picks the relevant ones based on customer industry.*
+| Level | Code | Found by |
+|---|---|---|
+| L0 | `42.` | `SE61` → `LOGIN_SCREEN_INFO` — SAP login screen text |
+| L1 | `DATA.S_EMAIL` | Attribute ID field in Data Attribute Master |
+| L2 | TBD | Description of `USER.NETWORK` attribute (pre-enter before session) |
+| L3 | TBD | Scrambled value in `SCUSTOM` row 1 after policy activates |
+| L4 | TBD | Row count of `SFLIGHT` visible to `RANALYST` after scoping |
+| L5 | TBD | Classification tag assigned to `SCUSTOM.LOCCURAM` |
+| L6 | TBD | Policy condition string as saved in Pathlock |
+| L7 | TBD | Pathlock HTTP response header on masked OData calls |
+| L8 | TBD | Distinct user count in audit log export |
+| L9 | TBD | Number of active classification tags in instance |
+| L10–L13 | TBD | Set before session |
 
-### Core frameworks (always relevant)
+---
 
-| Framework | Region | Key articles / controls | DAC/ABAC mapping |
+## ABAC Attributes Required
+
+| Attribute | Type | Used in | Resolves to |
 |---|---|---|---|
-| **GDPR** | EU | Art. 5(1)(c) minimisation, Art. 25 privacy by design, Art. 32 technical measures, Art. 83 penalties | Masking, scrambling, default-deny, audit log |
-| **DSGVO** | Germany | Same as GDPR + §26 employee data | Same + stronger HR angle |
-| **ISO 27001:2022** | Global | A.5.15 Access control, A.8.11 Data masking, A.8.12 Data leakage prevention | Direct control implementation |
-| **SOX Section 404** | US / listed | ITGC — access evidence, segregation of duties | Audit log, compensating control for overprivileged roles |
+| `USER.ID` | User | L1 | Logged-in SAP username |
+| `USER.NETWORK` | User | L2 | Client source IP address at session start |
+| `USER.ROLE` | User | L3 | SAP role of the logged-in user |
+| `USER.EMPLOYER_CARRID` | User | L6 | Carrier code from user master |
+| `DATA.S_EMAIL` | Data | L1 | SAP data element `S_EMAIL` on `SCUSTOM` |
+| `DATA.CARRID` | Data | L4, L6 | `CARRID` field on `SFLIGHT`, `SBOOK`, `SCARR` |
 
-### Industry-specific
+---
 
-| Framework | Sector | Key requirement | Demo angle |
-|---|---|---|---|
-| **HIPAA** | Healthcare (US) | Minimum necessary standard for PHI, audit controls | Mask patient/employee health data |
-| **PCI DSS v4.0** | Payments (global) | Req. 3 protect stored data, Req. 7 least privilege | Mask PAN, CVV in SAP customer master |
-| **DORA** | EU Finance | Art. 9 access control, operational resilience | Access control + full audit trail |
-| **NIS2** | EU critical infra | Art. 21 access control as mandatory technical measure | ABAC as NIS2 technical control |
+## Compliance Framework Reference
 
-### German / DACH market
-
-| Framework | Notes |
+| Framework | Key controls demonstrated |
 |---|---|
-| **BDSG** (Bundesdatenschutzgesetz) | Supplements GDPR, stricter employee data rules — strong resonance in German HR demos |
-| **BSI IT-Grundschutz** | Federal baseline — access control (ORP.4) and logging (DER.2) controls map directly |
-
-### The "compliance multiplier" pitch
-
-One Pathlock policy simultaneously satisfies multiple frameworks:
-
-> A DAC rule that masks salary + IBAN + DOB for unauthorised roles covers:
-> - GDPR Art. 5(1)(c) — minimisation ✅
-> - ISO 27001 A.8.11 — data masking control ✅
-> - SOX ITGC — access evidence ✅
-> - DSGVO §26 — employee data protection ✅
-> - NIS2 Art. 21 — technical access control ✅
-
-**Configure once. Tick multiple audit boxes.**
+| **GDPR** Art. 5(1)(c) | Data minimisation — L1, L4, L6 |
+| **GDPR** Art. 25 | Privacy by design — L3, L9 |
+| **GDPR** Art. 30 | Records of processing — L8, L10 |
+| **GDPR** Art. 32 | Technical security measures — L2, L5, L7 |
+| **ISO 27001** A.8.11 | Data masking — L1, L2 |
+| **ISO 27001** A.8.12 | Data leakage prevention — L5 |
+| **ISO 27001** A.8.3 | Information classification — L5, L9 |
+| **SOX** Section 404 | ITGC compensating controls — L4, L8 |
+| **NIS2** Art. 21 | Technical access control measures — L2 |
+| **PCI DSS** Req. 3 | Protect stored cardholder data — L1, L5 |
 
 ---
 
-- [ ] WireGuard VPN connected (`10.8.0.x`)
-- [ ] SAP GUI installed (or Fiori via browser)
-- [ ] Two demo users pre-created: `DEMO_USER_A`, `DEMO_USER_B`
-- [ ] Demo dataset loaded (HR records with PII fields)
-- [ ] Pathlock DAC policies pre-configured for levels 0–3 (levels 4–5 done live)
-- [ ] Pathlock admin access for the instructor
+## Key Messages Per Level (SE / instructor talking points)
 
----
-
-## Demo Users to Create
-
-| User | Role | Purpose |
-|---|---|---|
-| `DEMO_USER_A` | Basic / Clerk | Sees masked data |
-| `DEMO_USER_B` | Manager | Sees unmasked data (within context) |
-| `DEMO_ADMIN` | Pathlock Admin | Instructor account for live config |
-
----
-
-## Data to Prepare
-
-- HR master records with: Name, DOB, SSN/NI, IBAN, Salary, Cost Center
-- Customer master with: Name, Address, Phone, Email, Credit limit
-- Ideally loaded via `SAPBC_DATA_GENERATOR` or a custom Z-program
-
----
-
-## Download Block — Technical Note
-
-SAP GUI download is triggered by ok-codes such as:
-- `%EX` — Export to local file
-- `%PC` — Download  
-- `&XXL` — Excel download
-
-Pathlock intercepts these at the DAC layer. The block policy should be configured to:
-1. Detect the ok-code
-2. Check `data.classification` of the current screen context
-3. Block if `classification = PII or Restricted` AND `user.role != data_steward`
-
----
-
-## UI5 Masking — Technical Note (L7)
-
-**App:** Manage Sales Orders (`SEPMRA_C_SO`) — standard Fiori app on the trial system  
-**OData service:** `SEPMRA_C_SO_SalesOrder`  
-**Sensitive fields:** `NetAmount`, `GrossAmount`, `CustomerID`
-
-Pathlock DAC for Fiori masks at the **OData response layer**, not the UI layer:
-- The backend filters/masks field values *before* sending JSON to the browser
-- The browser never receives the real value — cannot be recovered via DevTools
-- CSS/JS masking (the bad approach) hides the value in the DOM but the data is still in the HTTP response
-
-**Demonstrate the vulnerability (before fix):**
-1. Open the Fiori app — fields appear masked or blank visually
-2. Open browser DevTools → Network → filter OData → click the `$batch` or entity request
-3. In the Response tab: `"NetAmount":"14850.00"` — unmasked in plain JSON
-
-**Demonstrate the fix (after Pathlock DAC config):**
-1. Same steps — Response tab now shows `"NetAmount":"***"` or field absent entirely
-2. This is the evidence you submit to the auditor
-
-**Instructor note — "emergency call" framing:**  
-At this point in the session, step out briefly. Students tackle L7 fully unsupported.  
-This is intentional — it mirrors a real engagement where a junior consultant closes a finding without fully verifying it.
-
----
-
-### Bonus Scenario — GDPR Data Minimisation in Default Views
-**Goal:** Show how Pathlock enforces the GDPR **data minimisation principle** (Art. 5(1)(c)) by making masked/restricted views the *default* — not an afterthought.
-
-**The regulatory angle:**
-- GDPR Art. 5(1)(c): _"Personal data shall be adequate, relevant and limited to what is necessary in relation to the purposes for which they are processed"_
-- Most SAP systems do the opposite: show everything by default, restrict only if someone complains
-- Auditors and DPOs increasingly ask: _"How do you enforce minimisation technically, not just in policy documents?"_
-
-**The Pathlock answer — "Secure by Default":**
-- DAC flips the model: **masked is the default state**
-- Access to unmasked data requires a justified ABAC attribute match (role + purpose + context)
-- If no policy grants access → data stays masked, automatically
-- This is provable to an auditor with a single screenshot + policy export
-
-**Workshop exercise:**
-1. Create a new user `DEMO_GDPR` with no special attributes
-2. Open a transaction with personal data (name, DOB, email, IBAN)
-3. Without any explicit deny rule — data is masked because no policy *grants* access
-4. Show the Pathlock policy log: _"No matching grant policy → default mask applied"_
-5. Add attribute `user.purpose = HR_PROCESSING` → fields unmask
-6. Remove attribute → fields mask again instantly
-
-**Key data categories to highlight (GDPR Art. 9 special categories):**
-| Field | Classification | Default view |
-|---|---|---|
-| Date of birth | PII | `****` |
-| National ID / SSN | PII – Special | `***-**-****` |
-| Salary / Bank IBAN | Financial + PII | `****` |
-| Health / disability | Special Category | Fully hidden |
-| Email / Phone | PII | `j***@***.com` |
-
-**Compliance talking points:**
-- **Art. 25 — Privacy by Design:** DAC makes privacy the architectural default, not a bolt-on
-- **Art. 32 — Security of processing:** Technical measure to prevent unauthorised access to personal data
-- **Art. 30 — Records of processing:** Pathlock audit log = evidence of who accessed what, when
-- **DSGVO (German GDPR):** Same principles, same demo — resonates strongly with German customers
-
-**Key message for the customer:**
-> _"With Pathlock, you don't configure minimisation — it's the default. You configure the exceptions."_
-
----
-
-### Bonus Scenario — The "Too Powerful Role" Problem
-**Goal:** Show ABAC/DAC as a mitigation when you *can't* or *won't* redesign a bloated SAP role.
-
-**The real-world problem:**
-- A user has a role like `Z_HR_ALL` or `SAP_ALL` — too broad, but politically or operationally untouchable
-- Role cleanup would take 6–12 months, a re-auth project, or cross-department sign-off
-- The business says: _"We can't remove the access, but we need to control what they actually see"_
-
-**The Pathlock answer:**
-- ABAC/DAC sits **on top of** SAP authorizations as a second enforcement layer
-- The role still grants access to the transaction — but DAC masks, blocks, or scrambles the sensitive fields
-- No role change, no basis project, no re-certification needed
-- Policy is: _"User has Z_HR_ALL but is NOT in the HR department → mask salary, SSN, IBAN"_
-
-**Workshop exercise:**
-1. Log in as `DEMO_USER_A` — has a broad role, can open PA20
-2. Without DAC: sees everything (salary, bank data, DOB)
-3. Enable DAC policy: `role = Z_HR_ALL AND department != HR → mask PII fields`
-4. Refresh — same role, same transaction, sensitive fields now masked
-5. Show the audit log: access was attempted, data was protected
-
-**ABAC attributes used:** `user.role + user.department + data.classification`
-
-**Key message for the customer:**
-> _"You don't have to fix your roles to fix your data risk. Pathlock gives you a fast lane."_
-
-This is a **high-impact slide / demo moment** — maps directly to what most customers are actually living with.
-
----
-
-## Open Items / To Build
-
-- [ ] ABAP program to load demo HR/customer dataset
-- [ ] Pathlock DAC policy export/import for each level (so session is reproducible)
-- [ ] Student handout / exercise sheet (PDF or markdown)
-- [ ] Instructor guide with talking points per level
-- [ ] Reset script — wipe demo user state between sessions
-- [ ] WireGuard customer configs for workshop attendees
-
----
-
-## Folder Structure (planned)
-
-```
-dac-workshop/
-├── PLANNING.md              ← this file
-├── policies/                ← Pathlock DAC policy configs per level
-│   ├── level0-basic-masking.json
-│   ├── level1-role-masking.json
-│   ├── level2-contextual.json
-│   ├── level3-scrambling.json
-│   ├── level4-classification.json
-│   └── level5-complex.json
-├── abap/                    ← ABAP programs
-│   ├── ZDAC_LOAD_DEMO_DATA.abap
-│   └── ZDAC_RESET_DEMO.abap
-├── handouts/                ← Student-facing materials
-│   ├── student-exercise-sheet.md
-│   └── instructor-guide.md
-└── screenshots/             ← Reference screenshots per level
-```
+| Level | Customer-facing message |
+|---|---|
+| L1 | *"One policy. One attribute. One field protected. This is how it starts."* |
+| L2 | *"The same user gets different data depending on where they connect from. Zero SAP changes."* |
+| L3 | *"Developers need real-format data to test. They do not need real data."* |
+| L4 | *"You cannot clean up the role for 9 months. We fixed the risk in 15 minutes."* |
+| L5 | *"The data leaving the building is the breach. We stopped it at the door."* |
+| L6 | *"One policy covers all carriers. Add a new airline tomorrow — the control is already there."* |
+| L7 | *"If it is in the HTTP response, it is not masked. Pathlock protects the data, not the display."* |
+| L8 | *"The auditor asked who saw the credit card data last month. Now you have the answer."* |
+| L9 | *"Tag the data once. Every policy follows automatically. This is what scalable governance looks like."* |
