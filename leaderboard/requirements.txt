@@ -1,4 +1,5 @@
 flask>=3.0
+gunicorn>=22.0
 # pyrfc requires the SAP NW RFC SDK to be present at build time (vendor/nwrfcsdk/)
 # If the SDK is missing the leaderboard still starts — SAP user creation is disabled
 pyrfc>=3.3

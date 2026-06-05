@@ -14,8 +14,8 @@ ENV SAPNWRFC_HOME=/nwrfcsdk
 
 WORKDIR /app
 
-# Install Flask (always required) + openssh-client for WireGuard peer creation + markdown for level guides
-RUN pip install --no-cache-dir flask markdown && \
+# Install Flask + gunicorn (always required) + openssh-client for WireGuard peer creation + markdown for level guides
+RUN pip install --no-cache-dir flask gunicorn markdown && \
     apt-get update -qq && \
     apt-get install -y --no-install-recommends openssh-client && \
     rm -rf /var/lib/apt/lists/*
@@ -42,4 +42,5 @@ COPY pathlock-logo.svg .
 VOLUME ["/data"]
 EXPOSE 9000
 
-CMD ["python3", "leaderboard.py"]
+# 4 workers, 120s timeout (SAP RFC calls can be slow)
+CMD ["gunicorn", "--workers=4", "--timeout=120", "--bind=0.0.0.0:9000", "leaderboard:app"]
