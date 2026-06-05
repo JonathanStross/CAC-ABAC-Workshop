@@ -1,0 +1,11 @@
+Kindly follow the steps outlined below to successfully install the Pathlock DAC - Data Scrambling solution:
+
+Product Installation: 
+Step 1: Proceed with the software installation by importing the transports provided in Section 2 - 'Pathlock DAC Installation' of the 'Installation Guide' document available in folder - 'Pathlock DAC' if not yet installed.
+Step 2: Install the Data Scrambling Software by importing the transports provided in Section 2 - 'Pathlock DAC Data Scrambling – Installation' of the 'Installation Guide' document available in folder - 'Pathlock DAC - Data Scrambling'.
+Step 3: If the Pathlock DAC team is responsible for implementation, please grant them access to the system, including the necessary roles and authorizations as specified in Section 1.2 of the 'Deployment Guide'. Additionally, ensure the installation is reviewed by the Pathlock DAC team before the workshop session. For assistance, contact the Project Manager.
+
+Additional Information:
+To become familiar with the configuration steps please refer the Section 4 - 'Sample Implementation' of the 'Deployment Guide' document.
+
+If you encounter any issues or have any questions during the installation process, please do not hesitate to reach out to us for assistance.

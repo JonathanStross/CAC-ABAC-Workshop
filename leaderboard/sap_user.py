@@ -87,6 +87,23 @@ def _sap_connection():
     )
 
 
+def _sap_connection_for(conn_params: dict | None = None):
+    """
+    Create an RFC connection using *conn_params* overrides.
+
+    conn_params keys (all optional, fall back to env vars):
+      host, sysnr, client, user, passwd
+    """
+    p = conn_params or {}
+    return pyrfc.Connection(
+        ashost=p.get("host",   SAP_HOST),
+        sysnr= p.get("sysnr",  SAP_SYSNR),
+        client=p.get("client", SAP_CLIENT),
+        user=  p.get("user",   SAP_USER),
+        passwd=p.get("passwd", SAP_PASSWD),
+    )
+
+
 def _parse_bapiret(return_table) -> list[str]:
     """Return list of error messages from BAPI RETURN table."""
     return [
@@ -105,6 +122,7 @@ def create_workshop_user(
     first_name: str,
     last_name: str,
     email: str,
+    conn_params: dict | None = None,
 ) -> tuple[bool, str, str]:
     """
     Create a SAP dialog user for a workshop participant.
@@ -117,6 +135,9 @@ def create_workshop_user(
     first_name   : str
     last_name    : str
     email        : str
+    conn_params  : dict | None
+        Optional RFC connection overrides (host, sysnr, client, user, passwd).
+        When provided the user is created on that specific server/client.
 
     Returns
     -------
@@ -127,7 +148,8 @@ def create_workshop_user(
     if not SAP_AVAILABLE:
         return False, "", "pyrfc not installed — SAP user creation is disabled on this server"
 
-    if not SAP_PASSWD:
+    passwd = (conn_params or {}).get("passwd", SAP_PASSWD)
+    if not passwd:
         return False, "", "SAP_PASSWORD environment variable is not set"
 
     sap_username = sap_username.upper().strip()
@@ -137,7 +159,7 @@ def create_workshop_user(
     temp_password = _generate_password()
 
     try:
-        conn = _sap_connection()
+        conn = _sap_connection_for(conn_params)
 
         # ---- Create user ------------------------------------------------
         result = conn.call(
@@ -193,15 +215,15 @@ def create_workshop_user(
         return False, "", str(exc)
 
 
-def user_exists(sap_username: str) -> bool:
+def user_exists(sap_username: str, conn_params: dict | None = None) -> bool:
     """
     Return True if the SAP username already exists.
     Uses BAPI_USER_EXISTENCE_CHECK — NUMBER 088 = exists, 124 = does not exist.
     """
-    if not SAP_AVAILABLE or not SAP_PASSWD:
+    if not SAP_AVAILABLE or not (conn_params or {}).get("passwd", SAP_PASSWD):
         return False
     try:
-        conn = _sap_connection()
+        conn = _sap_connection_for(conn_params)
         result = conn.call("BAPI_USER_EXISTENCE_CHECK", USERNAME=sap_username.upper())
         conn.close()
         ret = result.get("RETURN", {})
@@ -211,15 +233,15 @@ def user_exists(sap_username: str) -> bool:
         return False
 
 
-def lock_sap_user(sap_username: str) -> tuple[bool, str]:
+def lock_sap_user(sap_username: str, conn_params: dict | None = None) -> tuple[bool, str]:
     """
     Lock a SAP user via BAPI_USER_LOCK.
     Returns (success, error_msg).
     """
-    if not SAP_AVAILABLE or not SAP_PASSWD:
+    if not SAP_AVAILABLE or not (conn_params or {}).get("passwd", SAP_PASSWD):
         return False, "SAP not available"
     try:
-        conn = _sap_connection()
+        conn = _sap_connection_for(conn_params)
         result = conn.call("BAPI_USER_LOCK", USERNAME=sap_username.upper())
         conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
         conn.close()
@@ -233,15 +255,15 @@ def lock_sap_user(sap_username: str) -> tuple[bool, str]:
         return False, str(exc)
 
 
-def unlock_sap_user(sap_username: str) -> tuple[bool, str]:
+def unlock_sap_user(sap_username: str, conn_params: dict | None = None) -> tuple[bool, str]:
     """
     Unlock a SAP user via BAPI_USER_UNLOCK.
     Returns (success, error_msg).
     """
-    if not SAP_AVAILABLE or not SAP_PASSWD:
+    if not SAP_AVAILABLE or not (conn_params or {}).get("passwd", SAP_PASSWD):
         return False, "SAP not available"
     try:
-        conn = _sap_connection()
+        conn = _sap_connection_for(conn_params)
         result = conn.call("BAPI_USER_UNLOCK", USERNAME=sap_username.upper())
         conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
         conn.close()
@@ -255,20 +277,21 @@ def unlock_sap_user(sap_username: str) -> tuple[bool, str]:
         return False, str(exc)
 
 
-def kick_sap_user(sap_username: str) -> tuple[bool, str]:
+def kick_sap_user(sap_username: str, conn_params: dict | None = None) -> tuple[bool, str]:
     """
     Terminate all active SAP sessions for a user via TH_DELETE_USER.
     Correct signature: EXPORTING USER = <bname>, CLIENT = <mandt>
     Returns (success, error_msg).
     """
-    if not SAP_AVAILABLE or not SAP_PASSWD:
+    if not SAP_AVAILABLE or not (conn_params or {}).get("passwd", SAP_PASSWD):
         return False, "SAP not available"
+    target_client = (conn_params or {}).get("client", SAP_CLIENT)
     try:
-        conn = _sap_connection()
+        conn = _sap_connection_for(conn_params)
         conn.call(
             "TH_DELETE_USER",
             USER=sap_username.upper(),
-            CLIENT=SAP_CLIENT,
+            CLIENT=target_client,
         )
         conn.close()
         logger.info("SAP sessions terminated for %s", sap_username)
@@ -278,19 +301,20 @@ def kick_sap_user(sap_username: str) -> tuple[bool, str]:
         return False, str(exc)
 
 
-def delete_sap_user(sap_username: str) -> tuple[bool, str]:
+def delete_sap_user(sap_username: str, conn_params: dict | None = None) -> tuple[bool, str]:
     """
     Delete a SAP user via BAPI_USER_DELETE.
     Also terminates any active sessions first (best-effort).
     Returns (success, error_msg).
     """
-    if not SAP_AVAILABLE or not SAP_PASSWD:
+    if not SAP_AVAILABLE or not (conn_params or {}).get("passwd", SAP_PASSWD):
         return False, "SAP not available"
+    target_client = (conn_params or {}).get("client", SAP_CLIENT)
     try:
-        conn = _sap_connection()
+        conn = _sap_connection_for(conn_params)
         # Kill active sessions first — best effort, ignore errors
         try:
-            conn.call("TH_DELETE_USER", USER=sap_username.upper(), CLIENT=SAP_CLIENT)
+            conn.call("TH_DELETE_USER", USER=sap_username.upper(), CLIENT=target_client)
         except Exception:
             pass
         result = conn.call("BAPI_USER_DELETE", USERNAME=sap_username.upper())

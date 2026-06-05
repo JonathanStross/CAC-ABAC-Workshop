@@ -71,6 +71,24 @@ SAP_CLIENT       = os.environ.get("SAP_CLIENT",  "001")
 _sap_port        = f"32{SAP_SYSNR.zfill(2)}"
 SAP_CONN_DISPLAY = f"{SAP_HOST}  |  Instance {SAP_SYSNR}  |  Client {SAP_CLIENT}"
 
+# ---------------------------------------------------------------------------
+# Multi-server slot assignment
+# ---------------------------------------------------------------------------
+# One entry per SAP workshop server.
+# SAP_HOST (above) is the WireGuard VPN IP shown to participants — it's always
+# 10.8.0.1 regardless of which physical server they're on.
+# These backend hosts are used only for RFC connections from the leaderboard.
+SAP_SERVERS: dict[str, dict] = {
+    "sap2": {"host": os.environ.get("SAP2_HOST", "159.195.81.132"), "sysnr": "00"},
+    "sap3": {"host": os.environ.get("SAP3_HOST", "159.195.82.197"), "sysnr": "00"},
+    "sap4": {"host": os.environ.get("SAP4_HOST", "159.195.80.156"), "sysnr": "00"},
+    "sap5": {"host": os.environ.get("SAP5_HOST", "159.195.80.181"), "sysnr": "00"},
+}
+# Slot seeding order: round-robin across servers for each client group
+# sap2/100 → sap3/100 → sap4/100 → sap5/100 → sap2/200 → … → sap5/500
+SLOT_SERVERS = list(SAP_SERVERS.keys())           # ['sap2','sap3','sap4','sap5']
+SLOT_CLIENTS = ["100", "200", "300", "400", "500"]
+
 # Simple in-memory rate limiter  {ip: [timestamp, ...]}
 # Max MAX_REG_PER_HOUR registration POSTs per IP per hour
 MAX_REG_PER_HOUR = 5
@@ -400,15 +418,79 @@ def init_db():
             points       INTEGER DEFAULT 0,
             submitted_at TEXT DEFAULT (datetime('now'))
         );
+        CREATE TABLE IF NOT EXISTS slots (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            server      TEXT NOT NULL,
+            sap_client  TEXT NOT NULL,
+            assigned_to TEXT,
+            assigned_at TEXT
+        );
     """)
-    # Migrate older DBs
+    # Migrate older DBs — add any missing columns
     existing = {row[1] for row in db.execute("PRAGMA table_info(participants)")}
-    for col, typedef in [("wg_ip", "TEXT"), ("wg_conf", "TEXT"),
-                         ("locked", "INTEGER DEFAULT 0"), ("kicked_at", "TEXT")]:
+    for col, typedef in [
+        ("wg_ip",      "TEXT"),
+        ("wg_conf",    "TEXT"),
+        ("locked",     "INTEGER DEFAULT 0"),
+        ("kicked_at",  "TEXT"),
+        ("server",     "TEXT"),
+        ("sap_client", "TEXT"),
+    ]:
         if col not in existing:
             db.execute(f"ALTER TABLE participants ADD COLUMN {col} {typedef}")
     db.commit()
+    _seed_slots(db)
     db.close()
+
+
+def _seed_slots(db):
+    """Populate the slots table on first run. No-op if already seeded."""
+    count = db.execute("SELECT COUNT(*) FROM slots").fetchone()[0]
+    if count > 0:
+        return
+    for cli in SLOT_CLIENTS:
+        for srv in SLOT_SERVERS:
+            db.execute("INSERT INTO slots (server, sap_client) VALUES (?, ?)", (srv, cli))
+    db.commit()
+    app.logger.info("Seeded %d slots (%s × %s)",
+                    len(SLOT_SERVERS) * len(SLOT_CLIENTS),
+                    SLOT_SERVERS, SLOT_CLIENTS)
+
+
+def _assign_slot(sap_username: str) -> tuple[str | None, str | None]:
+    """
+    Atomically claim the next free slot for *sap_username*.
+
+    Uses BEGIN IMMEDIATE so concurrent registrations can't grab the same slot.
+
+    Returns (server_alias, sap_client) or (None, None) when fully booked.
+    """
+    conn = sqlite3.connect(DB)
+    conn.row_factory = sqlite3.Row
+    conn.isolation_level = None   # manual transaction mode
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT id, server, sap_client FROM slots "
+            "WHERE assigned_to IS NULL ORDER BY id LIMIT 1"
+        ).fetchone()
+        if not row:
+            conn.execute("ROLLBACK")
+            return None, None
+        conn.execute(
+            "UPDATE slots SET assigned_to=?, assigned_at=? WHERE id=?",
+            (sap_username, datetime.utcnow().isoformat(timespec="seconds"), row["id"]),
+        )
+        conn.execute("COMMIT")
+        return row["server"], row["sap_client"]
+    except Exception:
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
+        raise
+    finally:
+        conn.close()
 
 def load_codes():
     if os.path.exists(CONFIG_FILE):
@@ -1032,17 +1114,33 @@ def register():
         db.close()
         return err(f"SAP username '{sap_username}' is already taken — choose another.")
 
-    # ---- Check SAP live ----------------------------------------------------
-    if SAP_AVAILABLE and user_exists(sap_username):
+    # ---- Assign a slot (server + SAP client) --------------------------------
+    # Must happen before SAP/WG creation so we know which server to target.
+    server_alias, slot_client = _assign_slot(sap_username)
+    if server_alias is None:
+        db.close()
+        return err("The workshop is fully booked — no slots remaining. Contact your instructor.")
+
+    # Build per-slot SAP RFC connection params
+    srv_info = SAP_SERVERS.get(server_alias, {})
+    slot_conn_params = {
+        "host":   srv_info.get("host",  SAP_HOST),
+        "sysnr":  srv_info.get("sysnr", SAP_SYSNR),
+        "client": slot_client,
+    }
+
+    # ---- Check SAP live (on the assigned slot) ------------------------------
+    if SAP_AVAILABLE and user_exists(sap_username, conn_params=slot_conn_params):
         db.close()
         return err(f"SAP user '{sap_username}' already exists on the system — choose another username.")
 
-    # ---- Create SAP user ---------------------------------------------------
+    # ---- Create SAP user (on the assigned server + client) -----------------
     sap_ok, temp_password, sap_error = create_workshop_user(
         sap_username=sap_username,
         first_name=name.split()[0] if name.split() else name,
         last_name=" ".join(name.split()[1:]) if len(name.split()) > 1 else "",
         email=email,
+        conn_params=slot_conn_params,
     )
 
     sap_warn = None
@@ -1050,8 +1148,11 @@ def register():
         sap_warn = f"SAP user could not be created automatically: {sap_error}. Your instructor will create it manually."
         temp_password = "(see instructor)"
 
-    # ---- Create WireGuard peer ---------------------------------------------
-    wg_ok, wg_ip, wg_conf, wg_error = create_customer_peer(display_name=name)
+    # ---- Create WireGuard peer (on the assigned server) --------------------
+    wg_ok, wg_ip, wg_conf, wg_error = create_customer_peer(
+        display_name=name,
+        server_alias=server_alias,
+    )
 
     wg_warn = None
     if not wg_ok:
@@ -1062,8 +1163,11 @@ def register():
     # ---- Save to DB --------------------------------------------------------
     try:
         db.execute(
-            "INSERT INTO participants (name, email, sap_username, company, sap_created, wg_ip, wg_conf) VALUES (?,?,?,?,?,?,?)",
-            (name, email, sap_username, company, 1 if sap_ok else 0, wg_ip, wg_conf))
+            "INSERT INTO participants "
+            "(name, email, sap_username, company, sap_created, wg_ip, wg_conf, server, sap_client) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            (name, email, sap_username, company, 1 if sap_ok else 0,
+             wg_ip, wg_conf, server_alias, slot_client))
         db.commit()
     except sqlite3.IntegrityError as exc:
         db.close()
@@ -1077,7 +1181,7 @@ def register():
         sap_warn=sap_warn,
         sap_host=SAP_HOST,
         sap_sysnr=SAP_SYSNR,
-        sap_client=SAP_CLIENT,
+        sap_client=slot_client,
         wg_ip=wg_ip,
         wg_conf=wg_conf,
         wg_warn=wg_warn,
@@ -1163,11 +1267,12 @@ def admin():
     db = get_db()
     subs = db.execute("SELECT * FROM submissions ORDER BY submitted_at DESC LIMIT 100").fetchall()
     parts = db.execute("SELECT * FROM participants ORDER BY registered_at DESC").fetchall()
+    slots = db.execute("SELECT * FROM slots ORDER BY id").fetchall()
     db.close()
     codes = load_codes()
     td = "style='padding:4px 10px'"
     th = "style='text-align:left;padding:4px 10px;color:#aaa'"
-    out = f"<h2>Participants</h2><table style='border-collapse:collapse;width:100%'><tr><th {th}>Username</th><th {th}>Name</th><th {th}>Email</th><th {th}>SAP</th><th {th}>VPN IP</th><th {th}>Registered</th><th></th></tr>"
+    out = f"<h2>Participants</h2><table style='border-collapse:collapse;width:100%'><tr><th {th}>Username</th><th {th}>Name</th><th {th}>Email</th><th {th}>SAP</th><th {th}>Server</th><th {th}>Client</th><th {th}>VPN IP</th><th {th}>Registered</th><th></th></tr>"
     for p in parts:
         sap_icon = "&#x2705;" if p["sap_created"] else "manual"
         wg_icon  = p["wg_ip"] if p["wg_ip"] else "no VPN"
@@ -1194,6 +1299,8 @@ def admin():
             f"<td {td}>{p['name']}</td>"
             f"<td {td} style='color:#aaa'>{p['email']}</td>"
             f"<td {td}>{sap_icon} {status_badge}</td>"
+            f"<td {td} style='color:#aaa'>{p['server'] or '—'}</td>"
+            f"<td {td} style='color:#aaa'>{p['sap_client'] or '—'}</td>"
             f"<td {td}>{wg_icon}</td>"
             f"<td {td} style='color:#aaa'>{p['registered_at']}</td>"
             f"<td {td} style='white-space:nowrap'>"
@@ -1205,14 +1312,39 @@ def admin():
             f"style='background:#c0392b;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer'>Delete</button>"
             f"</form></td></tr>"
         )
-    out += "</table><h2>Recent Submissions</h2><pre>"
+    out += "</table>"
+
+    # ---- Slot occupancy grid -----------------------------------------------
+    out += "<h2>Slot Occupancy</h2>"
+    out += "<table style='border-collapse:collapse;margin-bottom:20px'>"
+    out += f"<tr><th {th}>Client</th>"
+    for srv in SLOT_SERVERS:
+        out += f"<th {th}>{srv}</th>"
+    out += "</tr>"
+    # Build lookup: (server, sap_client) → assigned_to
+    slot_map = {(s["server"], s["sap_client"]): s["assigned_to"] for s in slots}
+    free_count = sum(1 for s in slots if s["assigned_to"] is None)
+    for cli in SLOT_CLIENTS:
+        out += f"<tr style='border-top:1px solid #333'><td {td}><strong>{cli}</strong></td>"
+        for srv in SLOT_SERVERS:
+            owner = slot_map.get((srv, cli))
+            if owner:
+                out += (f"<td {td} style='background:#1a3a1a;color:#2ecc71'>"
+                        f"&#x2705; {owner}</td>")
+            else:
+                out += f"<td {td} style='color:#555'>free</td>"
+        out += "</tr>"
+    out += "</table>"
+    out += f"<p style='color:#aaa;font-size:0.85em'>{free_count} / {len(slots)} slots free</p>"
+
+    out += "<h2>Recent Submissions</h2><pre>"
     for s in subs:
         status = "OK" if s["correct"] else "WRONG"
         out += f"[{status}] {s['participant']} | {s['level']} | {s['code']} | {s['points']}pts | {s['submitted_at']}\n"
     out += "</pre><h2>Active Codes</h2><pre>"
     for lvl, info in codes.items():
         out += f"{lvl}: {info['code']} ({info['points']} pts)\n"
-    out += "</pre><br><form method='POST' action='/admin/reset' onsubmit=\"return confirm('Reset ALL data? This also removes all WireGuard peers.');\" ><button style='background:#c0392b;color:#fff;border:none;padding:8px 20px;border-radius:4px;cursor:pointer;font-size:1em'>Reset Everything</button></form>" 
+    out += "</pre><br><form method='POST' action='/admin/reset' onsubmit=\"return confirm('Reset ALL data? This also removes all WireGuard peers and frees all slots.');\" ><button style='background:#c0392b;color:#fff;border:none;padding:8px 20px;border-radius:4px;cursor:pointer;font-size:1em'>Reset Everything</button></form>"
     return f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>{out}</body></html>"
 
 @app.route("/admin/delete/<sap_username>", methods=["POST"])
@@ -1222,21 +1354,35 @@ def admin_delete_user(sap_username):
         return auth_err
     uname = sap_username.upper()
     db = get_db()
-    row = db.execute("SELECT wg_ip FROM participants WHERE sap_username=?", (uname,)).fetchone()
+    row = db.execute("SELECT wg_ip, server, sap_client FROM participants WHERE sap_username=?", (uname,)).fetchone()
+
+    # Build per-participant SAP connection params
+    p_server = row["server"] if row else None
+    p_client = row["sap_client"] if row else None
+    conn_params = None
+    if p_server and p_client and p_server in SAP_SERVERS:
+        conn_params = {
+            "host":   SAP_SERVERS[p_server]["host"],
+            "sysnr":  SAP_SERVERS[p_server]["sysnr"],
+            "client": p_client,
+        }
 
     # 1. Delete SAP user (kills sessions + BAPI_USER_DELETE)
-    sap_ok, sap_err = delete_sap_user(uname)
+    sap_ok, sap_err = delete_sap_user(uname, conn_params=conn_params)
     if not sap_ok:
         app.logger.warning("SAP user deletion failed for %s: %s", uname, sap_err)
 
     # 2. Remove WireGuard peer
     wg_ok, wg_err = True, ""
     if row and row["wg_ip"]:
-        wg_ok, wg_err = remove_customer_peer(row["wg_ip"])
+        wg_ok, wg_err = remove_customer_peer(row["wg_ip"], server_alias=p_server)
         if not wg_ok:
             app.logger.warning("WG peer removal failed for %s: %s", uname, wg_err)
 
-    # 3. Remove from leaderboard DB (always — no inconsistent states)
+    # 3. Free the slot
+    db.execute("UPDATE slots SET assigned_to=NULL, assigned_at=NULL WHERE assigned_to=?", (uname,))
+
+    # 4. Remove from leaderboard DB (always — no inconsistent states)
     db.execute("DELETE FROM submissions WHERE participant=?", (uname,))
     db.execute("DELETE FROM participants WHERE sap_username=?", (uname,))
     db.commit()
@@ -1252,13 +1398,17 @@ def admin_lock_user(sap_username):
     if auth_err:
         return auth_err
     uname = sap_username.upper()
-    # Lock in leaderboard DB
     db = get_db()
     db.execute("UPDATE participants SET locked=1 WHERE sap_username=?", (uname,))
     db.commit()
+    row = db.execute("SELECT server, sap_client FROM participants WHERE sap_username=?", (uname,)).fetchone()
     db.close()
-    # Lock in SAP via BAPI_USER_CHANGE
-    ok, err = lock_sap_user(uname)
+    conn_params = None
+    if row and row["server"] and row["sap_client"] and row["server"] in SAP_SERVERS:
+        conn_params = {"host": SAP_SERVERS[row["server"]]["host"],
+                       "sysnr": SAP_SERVERS[row["server"]]["sysnr"],
+                       "client": row["sap_client"]}
+    ok, err = lock_sap_user(uname, conn_params=conn_params)
     if not ok:
         app.logger.warning("SAP lock failed for %s (leaderboard lock still applied): %s", uname, err)
     app.logger.warning("Admin locked user %s", uname)
@@ -1274,9 +1424,14 @@ def admin_unlock_user(sap_username):
     db = get_db()
     db.execute("UPDATE participants SET locked=0, kicked_at=NULL WHERE sap_username=?", (uname,))
     db.commit()
+    row = db.execute("SELECT server, sap_client FROM participants WHERE sap_username=?", (uname,)).fetchone()
     db.close()
-    # Unlock in SAP
-    ok, err = unlock_sap_user(uname)
+    conn_params = None
+    if row and row["server"] and row["sap_client"] and row["server"] in SAP_SERVERS:
+        conn_params = {"host": SAP_SERVERS[row["server"]]["host"],
+                       "sysnr": SAP_SERVERS[row["server"]]["sysnr"],
+                       "client": row["sap_client"]}
+    ok, err = unlock_sap_user(uname, conn_params=conn_params)
     if not ok:
         app.logger.warning("SAP unlock failed for %s: %s", uname, err)
     return redirect("/admin")
@@ -1292,19 +1447,24 @@ def admin_kick_user(sap_username):
     if auth_err:
         return auth_err
     uname = sap_username.upper()
-    from datetime import datetime
     db = get_db()
     db.execute(
         "UPDATE participants SET locked=1, kicked_at=? WHERE sap_username=?",
         (datetime.utcnow().isoformat(timespec="seconds"), uname))
     db.commit()
+    row = db.execute("SELECT server, sap_client FROM participants WHERE sap_username=?", (uname,)).fetchone()
     db.close()
+    conn_params = None
+    if row and row["server"] and row["sap_client"] and row["server"] in SAP_SERVERS:
+        conn_params = {"host": SAP_SERVERS[row["server"]]["host"],
+                       "sysnr": SAP_SERVERS[row["server"]]["sysnr"],
+                       "client": row["sap_client"]}
     # Terminate active SAP sessions
-    ok, err = kick_sap_user(uname)
+    ok, err = kick_sap_user(uname, conn_params=conn_params)
     if not ok:
         app.logger.warning("SAP session kill failed for %s: %s", uname, err)
     # Lock the SAP account so they can't log back in
-    ok, err = lock_sap_user(uname)
+    ok, err = lock_sap_user(uname, conn_params=conn_params)
     if not ok:
         app.logger.warning("SAP lock after kick failed for %s: %s", uname, err)
     app.logger.warning("Admin kicked user %s", uname)
@@ -1317,13 +1477,14 @@ def reset():
     if auth_err:
         return auth_err
     db = get_db()
-    parts = db.execute("SELECT wg_ip FROM participants WHERE wg_ip IS NOT NULL").fetchall()
+    parts = db.execute("SELECT wg_ip, server FROM participants WHERE wg_ip IS NOT NULL").fetchall()
     for p in parts:
-        ok, err = remove_customer_peer(p["wg_ip"])
+        ok, err = remove_customer_peer(p["wg_ip"], server_alias=p["server"])
         if not ok:
             app.logger.warning("WG peer removal failed for %s during reset: %s", p["wg_ip"], err)
     db.execute("DELETE FROM submissions")
     db.execute("DELETE FROM participants")
+    db.execute("UPDATE slots SET assigned_to=NULL, assigned_at=NULL")
     db.commit()
     db.close()
     return redirect("/admin")

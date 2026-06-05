@@ -1,0 +1,853 @@
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+Version: 2025 Q4
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+Copyright Notice
+©2025 Pathlock Inc. All Rights Reserved.
+The software and any support from Pathlock Inc. are provided “as-is” and without warranty, express or implied.
+Pathlock Inc. specifically disclaims all warranties, express or implied, of any kind including, but not limited to,
+implied warranties of merchantability and fitness for a particular purpose. Additional disclaimers, limitations and
+other terms and conditions applicable to the software, any support from and your relationship with Pathlock Inc.
+are included in your License Agreement with Pathlock Inc.
+©2023 Pathlock Inc. All Rights Reserved. Page | 2
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+Table of Contents
+1 Overview ............................................................................................................................................ 4
+1.1 Purpose .................................................................................................................................. 4
+1.2 1.3 Mandatory Upgrade Requirements (Existing DAC Customers) ............................................ 4
+Required Roles and Authorization Objects ............................................................................ 4
+2 Configuring Pathlock DAC .............................................................................................................. 7
+2.1 Functional Configuration ........................................................................................................ 7
+2.2 Technical Configuration ....................................................................................................... 12
+3 Other Functionalities in DAC ........................................................................................................ 15
+3.1 Field Finder .......................................................................................................................... 15
+3.2 3.3 Data Masking / Restriction API ............................................................................................ 20
+Data Attributes BADI Implementation .................................................................................. 22
+3.4 Lists ...................................................................................................................................... 25
+3.5 Data Classification ............................................................................................................... 27
+3.6 Data Classification Simulation ............................................................................................. 30
+3.7 Policy Simulator ................................................................................................................... 33
+3.8 Data Discovery ..................................................................................................................... 35
+4. Limitations ....................................................................................................................................... 37
+5. Sample Implementation ................................................................................................................. 38
+5.1 5.2 5.3 5.4 5.5 5.6 5.7 5.8 5.9. Use Case 1 .......................................................................................................................... 38
+Use Case 2 .......................................................................................................................... 45
+Use Case 3 .......................................................................................................................... 49
+Use Case 4 .......................................................................................................................... 51
+Use Case 5 .......................................................................................................................... 53
+Use Case 6 .......................................................................................................................... 58
+Use Case 7 .......................................................................................................................... 62
+Use Case 8 .......................................................................................................................... 68
+Use Case 9 .......................................................................................................................... 72
+©2023 Pathlock Inc. All Rights Reserved. Page | 3
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+1 Overview
+SAP ECC/S4HANA maintains security with its role-based access controls, assisting organizations in preventing
+unauthorized access and mitigating risk violations.
+Pathlock DAC functions as an additional security layer for SAP users within the ECC/S4HANA application. This
+extra layer, acting as an add-on, provides users with a granular approach to secure their ECC/S4HANA
+environments.
+1.1 Purpose
+This guide provides information regarding Pathlock DAC deployment.
+1.2 Mandatory Upgrade Requirements (Existing DAC Customers)
+Customers upgrading from a DAC release earlier than DAC 2025 Q3 must run the Policy Migration Utility before
+using the DAC Policy Studio
+Mandatory Prerequisite:
+Before configuring policies in DAC Policy Studio (/APPSDM/ABAC), you must execute the policy migration.
+Skipping this step may lead to missing or inconsistent policy behavior.
+Action Required:
+1. 2. Execute migration using transaction - /APPSDM/POL_MIGRATE
+After successful migration, proceed with configuration in DAC Policy Studio(/APPSDM/ABAC).
+Note: This is a one-time step for upgrades only. This step is not required for first time installations.
+1.3 Required Roles and Authorization Objects
+The following PFCG Roles are essential for accessing the Pathlock DAC application:
+PFCG Roles Purpose T-Code Assigned
+/APPSDM/DAC_ADMIN This super-user role grants
+extensive access for performing
+DAC configurations,
+centralization processes, master
+data maintenance, and viewing
+logs.
+▪ /APPSDM/ABAC - ABAC configuration
+▪ /APPSDM/FF - Field Finder
+▪ /APPSDM/SR - System Readiness Check
+▪ /APPSDM/CENTRAL - ABAC Centralization
+Process
+▪ /APPSDM/USER_MASTER - User Master
+Maintenance
+©2023 Pathlock Inc. All Rights Reserved. Page | 4
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+PFCG Roles Purpose T-Code Assigned
+▪ /APPSDM/DC - Data Classification
+▪ /APPSDM/EXEC_LOGS - Policy Execution
+Logs
+▪ /APPSDM/MAINT_ACTION – Maintain
+Actions
+▪ /APPSDM/C_SETTINGS – Centralization
+Settings
+▪ /APPSDM/LIST - List of Static Values
+▪ /APPSDM/DC_SIMU – Data Classification
+Simulation
+▪ /APPSDM/POLVH – Policy Version History
+▪ /APPSDM/POL_SIMU – Policy Simulator
+▪ /APPSDM/DISC – Data Discovery
+▪ /APPSDM/TECH_CONFIG - Additional
+Technical Configuration
+▪ /APPSDM/ALVCONFIG - ALV Grid
+Technical Configuration
+/APPSDM/POL_CHANGE Business users require this role
+to execute administrative tasks
+such as DAC configurations,
+centralization processes, and
+the Field Finder utility.
+▪ /APPSDM/ABAC - ABAC configuration
+▪ /APPSDM/FF - Field Finder
+▪ /APPSDM/CENTRAL - ABAC Centralization
+Process
+/APPSDM/DC_CHANGE Business users need this role to
+manage Data Classification
+configurations.
+▪ /APPSDM/DC - Data Classification
+/APPSDM/UM_CHANGE Business users require this role
+to maintain the user master.
+▪ /APPSDM/USER_MASTER - User Master
+Maintenance
+/APPSDM/ADV_CHANGE Business users require this role
+to maintain T-codes with actions
+and view the advanced
+configuration tab.
+▪ /APPSDM/MAINT_ACTION - Maintain
+Actions
+/APPSDM/IT_CHANGE Business users require this role
+to access System Readiness
+and Centralization Settings.
+▪ /APPSDM/SR - System Readiness Check
+▪ /APPSDM/C_SETTINGS - ABAC
+Centralization Settings
+/APPSDM/LOG_CHANGE Business users require this role
+to access the Policy Execution
+Logs Display.
+▪ /APPSDM/EXEC_LOGS - Policy Execution
+Logs
+©2023 Pathlock Inc. All Rights Reserved. Page | 5
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+Authorization objects required to access Pathlock DAC UI:
+Authorization Object Activity PFCG Roles
+Y&DAC_POL 02 (Change)
+03 (Display)
+/APPSDM/POL_CHANGE - Pathlock ABAC: Change Role for Policy
+Admin
+Y&DAC_UM 02 (Change)
+03 (Display)
+/APPSDM/UM_CHANGE - Pathlock ABAC: Change Role for User
+Master Maintenance
+Y&DAC_ADV 02 (Change) /APPSDM/ADV_CHANGE - Pathlock ABAC: Change Role for
+Advanced Config
+Y&DAC_LOG 03 (Display) /APPSDM/LOG_CHANGE - Pathlock ABAC: Access Logs
+Y&DAC_IT 02 (Change)
+03 (Display)
+/APPSDM/IT_CHANGE - Pathlock ABAC: Change Role for IT
+Y&DAC_DC 02 (Change)
+03 (Display)
+/APPSDM/DC_CHANGE - Pathlock ABAC: Change Role for Data
+Classification
+Y&DAC_LT 02 (Change)
+03 (Display)
+/APPSDM/LT_CHANGE - Pathlock ABAC: Change Role for List
+©2023 Pathlock Inc. All Rights Reserved. Page | 6
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+2 Configuring Pathlock DAC
+To enable field masking / restriction in the system for unauthorized users, configure the Pathlock DAC using the
+tool - Pathlock: ABAC. This tool can be accessed via transaction - /N/APPSDM/ABAC or through the user menu
+path - Pathlock DAC > Pathlock ABAC.
+The configurations are divided into two sections:
+▪ Functional Configuration
+▪ Technical Configuration
+2.1 Functional Configuration
+Business users perform the functional configuration using the configuration steps below:
+▪ Activate ‘Masking/Data Restriction’ Functionality: This functionality can be activated by enabling the
+'Active' checkbox and vice versa. This configuration activity requires customizing transport requests to
+capture and move the configuration into the respective target systems.
+▪ Data Attribute Master: Define data attributes for data objects such as Business partner, Sales
+document, Employee Salary, Country, etc.
+Note: Use 'DATA.' as a prefix to define all Data Attributes.
+©2023 Pathlock Inc. All Rights Reserved. Page | 7
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+▪ User Attribute Master: Define user attributes for user-specific data, including User ID, PFCG role, User
+country, User IP, etc.
+Note: Use 'USER.' as a prefix to define all user attributes.
+▪ Policy Administration Point: It involves defining a set of rules using one or more conditions that rely on
+user and Data Attributes within the system. These rule conditions are dynamically evaluated based on the
+available user and Data Attributes during runtime. Additionally, the DAC policy engine offers a customer-
+specific implementation that allows the derivation of Data & User Attributes as required. In the Policy
+Administration process, User and Data Attributes are assigned to the policy, forming the foundation for
+defining policy rule conditions.
+©2023 Pathlock Inc. All Rights Reserved. Page | 8
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+▪ Rules: Set of rules evaluated based on available User and Data Attributes at runtime.
+o Version History
+The users can now see all the versions that are created in policy configurations. So if any policy
+or its related functions like data classification or list has been created, modified or deleted, it can
+then be viewed in the version history using the version history button shown below:
+©2023 Pathlock Inc. All Rights Reserved. Page | 9
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+Alternatively, the version can also be viewed using transaction /APPSDM/POLVH.
+o Exposed Attribute: The "Exposed Attributes" option facilitates linking screen attributes, enabling
+the derivation of the actual Data Attribute (used in policy rule conditions) through the
+implementation of the Data Attribute BADI# /APPSDM/DATA_ATTRIBUTES.
+For Example - Masking 'Material Description' based on 'Material Type' in t-code# MM03. As 'Material
+Type' is not available on same screen as ‘Material Description’, the additional attribute 'Material
+Number' (available on-screen) can be used to derive 'Material Type' by implementing Data Attribute
+BADI# /APPSDM/DATA_ATTRIBUTES. This 'Material Number' needs to be exposed to the Policy via
+the button - "Exposed Attributes”.
+©2023 Pathlock Inc. All Rights Reserved. Page | 10
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+▪ Policy Enforcement Point: Assignment of Policy to the Attribute on which actions will be performed.
+o Data Restriction: Assignment of policies to the Attribute on which action (Allow/Deny) will be
+performed for Conditional Transaction/Data access.
+©2023 Pathlock Inc. All Rights Reserved. Page | 11
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+o Data Masking: Assignment of policies to the Attribute on which action (Allow/Deny) will be
+performed for Masking.
+2.2 Technical Configuration
+Technical users perform the technical configuration using the following steps:
+▪ Data Attribute Configuration:
+o Technical Mapping: Assign Data Elements to the Data Attributes using this configuration node.
+o Additional Configuration: Is a functionality that enables system users to specify technical
+addresses for a field within specific output options. The output options include Module Pool Programs
+(GUI transactions), ALVs/Tables, Search Helps, and UI5/Fiori scenarios.
+©2023 Pathlock Inc. All Rights Reserved. Page | 12
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+Notes: ‘Additional Configuration' becomes necessary when there is no data element available in the
+screen design.
+o Look Up: This feature enables the user to specify the context to be derived from database tables
+based on conditions specified under where condition as shown below. In the below given screenshot,
+material group is derived from the table MARA based on Material number. Here, the context for data
+restriction / masking is Material Group which is derived from table MARA using the field Material
+Number. In scenarios where only a simple SELECT query is needed, users can use Look Up
+functionality.
+o Custom Code for Data Attribute: This activity shows the Data Attribute BADI implementations
+implemented via custom code in the system. Implement the Data Attribute BADI#
+/APPSDM/DATA_ATTRIBUTES to derive the Context Attributes value in scenarios where complex
+logic is needed to derive context. In case of simple SELECT queries, the look up functionality can be
+used instead. If user-maintained configuration for both LOOK UP and BADIs, then the logic in BADI
+takes precedence.
+©2023 Pathlock Inc. All Rights Reserved. Page | 13
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+▪ User Attribute Configuration:
+o Custom Code for User Attribute: This activity shows the User Attribute BADI implementations
+implemented via custom code in the system. Implement the User Attribute BADI#
+/APPSDM/USER_ATTRIBUTES to derive the User Attributes value.
+©2023 Pathlock Inc. All Rights Reserved. Page | 14
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+3 Other Functionalities in DAC
+3.1 Field Finder
+Transaction Code to run Field Finder is /APPSDM/FF. To achieve Data Masking, users will need to find out the
+technical address of those fields that need to be masked on the screen to use it in a policy. Field finder is a tool
+that helps in the above process by recording technical details about fields. It is basically a recording tool.
+To start recording the technical address of each field in a given transaction, execute the following steps:
+1. Run the field finder application (/N/APPSDM/FF)
+2. Set the duration as shown below. Click on Maintain Duration Button.
+Click on F4 help provided in Record till Date and Time Field. Select the Date and Time from the pop-up.
+©2023 Pathlock Inc. All Rights Reserved. Page | 15
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+After selecting the date and time from pop-up click on execute button.
+3. After setting the duration, add the users for whom the recording will start. See the screenshots below.
+©2023 Pathlock Inc. All Rights Reserved. Page | 16
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+4. 5. After maintaining users, execute the transaction for which you want to do the recording.
+You can view the recording results in 'View Results' button in field finder.
+Below Screenshot shows the recording of Transaction BP.
+©2023 Pathlock Inc. All Rights Reserved. Page | 17
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+Use Case Capture technical details of the fields in “Change History” screen of the transaction “BP”
+Enable recording as described above.
+1. Execute the transaction BP and navigate to all those screens for which recording needs to be done. See
+the screenshot below.
+2. Open the field finder using transaction ‘/n/APPSDM/FF’ and click on ‘View Results’. Enter the username
+to see the recordings. The results are organized under different nodes based on technical objects
+©2023 Pathlock Inc. All Rights Reserved. Page | 18
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+3. Find the record you want to map and add it here. If it has a data element, use the Data Element from drop
+down under 'Mapped via' field to map it with Data Attribute. If there's no data element, use 'Additional
+Configuration' to map with Data Attribute. See the screenshots below.
+The configuration that is maintained in Field Finder will reflect automatically in Technical Mapping.
+(/N/APPSDM/ABAC > Technical Config > Technical Mapping > Additional configuration). See the
+screenshot below.
+©2023 Pathlock Inc. All Rights Reserved. Page | 19
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+3.2 Data Masking / Restriction API
+In scenarios where Masking / Data Restriction is not supported by default by DAC, we call an API at an
+appropriate code, to achieve masking. Before implementing the API, the given prerequisites must be completed:
+With the help of an ABAP Developer, Identify the place where the API should be inserted to enable masking.
+Before calling the API class, there should be a code to check the RZ11 parameter value
+with ‘ALL’.
+Inserting an API at an appropriate place involves calling the below class-method via an implicit enhancement or
+modification.
+CLASS /APPSDM/CL_INTERNAL_ABAC_API
+METHOD HANDLE_ABAC_CONTROL
+In the method ‘HANDLE_ABAC_CONTROL’, pass the reference of the internal table or work
+area or local variable that contains the data to be masked.
+©2023 Pathlock Inc. All Rights Reserved. Page | 20
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+Use Case In the BP T-Code to enable masking in Where-Used list under payment transaction.
+In the above scenario, the results are displayed as a simple tree where masking is not supported by DAC by
+default. For such cases, we call an API to achieve masking.
+The API is implemented via an implicit enhancement as shown in the below screenshot.
+©2023 Pathlock Inc. All Rights Reserved. Page | 21
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+3.3 Data Attributes BADI Implementation
+In some scenarios masking / restriction needs to be done based on the context of another field. In some
+scenarios, this required context may not be present on the screen and will then need to be derived
+programmatically. BADI is used in such cases to derive the data context.
+To understand this better, please refer to the below example:
+Use Case 1 Mask the Material Description in table MAKT for those materials whose Material Group is ‘WARHEAD’.
+In the above use case, the context for masking material description is Material group. However, the field material
+group is not present in table MAKT and will then have to be derived programmatically based on material number.
+To achieve this, we need to create a custom implementation for the Badi definition
+/APPSDM/DATA_ATTRIBUTES. The attribute to be derived should be passed as the Badi filter. In the above
+example, the attribute for material group will be assigned to the badi filter.
+In this custom Badi implementation, the context value for data masking / restriction can be derived via code. The
+attributes required to derive this context should be maintained under “Exposed Attributes”. When the user clicks
+on exposed attribute button, a screen pops up which is where it should be maintained. The exposed attributes are
+attributes which are already present on the screen and used to derive the context via code. In the above example,
+the attribute for Material number is the exposed attribute.
+©2023 Pathlock Inc. All Rights Reserved. Page | 22
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+See the screenshot below for reference.
+©2023 Pathlock Inc. All Rights Reserved. Page | 23
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+Evidence showing data is masked.
+©2023 Pathlock Inc. All Rights Reserved. Page | 24
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+3.4 Lists
+The transaction for List is /APPSDM/LIST and is used to maintain a set of static values against a List Attribute
+which can then be used in ABAC policies (in the transaction "/APPSDM/ABAC") and data classification (in the
+transaction /APPSDM/DC").
+An example of using Lists in DAC policy is as below:
+Given a policy MASK_BANK_DETAILS which masks sensitive bank details if the bank country is sensitive.
+Here, the bank country of the account that the customer is trying to view is validated against a list of countries to
+evaluate the given policy.
+The lists of countries are maintained in transaction /APPSDM/LIST under the list attribute LIST.COUNTRY as
+shown below:
+Using a list instead of maintaining static values directly in the policy have the following advantages:
+Reuse of lists in multiple policies and hence maintenance becomes easier.
+©2023 Pathlock Inc. All Rights Reserved. Page | 25
+Pathlock ABAC: Adaptive Data Access Control for SAP - Deployment Guide
+Sensitive values are not accessed by users viewing policies. They can be accessed only using the transaction
+/APPSDM/LIST the access of which can be given to users who can see sensitive values thereby protecting
+sensitive data.
+How to create a list:
+As mentioned above, the transaction to create / edit / display a list is /APPSDM/LIST. A List attribute should be
+created here, and a set of static values should be maintained against it. Click on the “Define Range” button to
+maintain multiple values for a given list. A List attribute name should always start with ‘LIST.’
+©2023 Pathlock Inc. All Rights Reserved. Page | 26
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+3.5 Data Classification
+Data Classification is used to classify data based on a set of rules (Data Classification Criteria) which are defined
+using one or more conditions of data attributes. This classification value of data can then be used in an ABAC
+policy. The transaction code used to access Data classification is /N/APPSDM/DC
+An example of Data classification is as shown below:
+Here, two data classifications are defined for Sensitive and Non-Sensitive materials. And these material
+classification values are determined based on material groups, used in data classification criteria.
+In the below screenshot, the materials belonging to groups WARHEAD are classified as “SENSITIVE”
+©2023 Pathlock Inc. All Rights Reserved. Page | 27
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+In the below screenshot, the materials belonging to groups 01 and 02 are classified as “SUPER- SENSITIVE”
+These classifications are then used in the policies as shown below:
+In the above shown policy ‘MASK_MATERIAL_DESC’, the class of material group decides if the
+Material description should be masked or not. The advantage of using data classification is:
+Reduce complexity of policies – The policy looks neat as the classification of data happens in the separate
+transaction for data classification /APPDM/DC. So, creation of multiple policy rule conditions inside the policy can
+be avoided.
+How to create a data classification:
+As mentioned above, the transaction to create / edit and display a list is /APPSDM/DC. A Data Classification
+attribute should be created here (Consider the attribute ‘DATA.CLASS_MATERIAL_GROUP given in the above
+example) and its value should be assigned (Consider the value SUPER-SENSITIVE in the above example).
+The name of a classified attribute must start with ‘DATA.CLASS_’
+Click on the “Classification Criteria” button to define rules for classification. In the above
+©2023 Pathlock Inc. All Rights Reserved. Page | 28
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+example, the rule is
+-1-
+IF DATA.MATERIAL_GROUP EQ 01, 02
+THEN DATA.CLASS_MATERIAL_GROUP EQ SUPER-SENSITIVE
+- 2 -
+IF DATA.MATERIAL_GROUP EQ WARHEAD
+THEN DATA.CLASS_MATERIAL_GROUP EQ SENSITIVE
+If the fields used in Data Classification is not present on the screen of a transaction, then they need to be derived via
+a BADI or LOOK UP. Hence that field needs to be added in the exposed attribute of data classification screen:
+©2023 Pathlock Inc. All Rights Reserved. Page | 29
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+3.6 Data Classification Simulation
+Data Classification Simulation works on table data. The Simulator will evaluate the conditions
+maintained in the Data Classification Criteria in transaction /APPSDM/DC. Data Classification
+simulation can be executed via transaction code /APPSDM/DC_SIMU.
+An example of Data Classification Simulation is as shown below:
+Here, materials are classified into 2 classes – Sensitive and Non-Sensitive. A set of rules shown below
+are defined to classify the material data.
+In the below screenshot, the materials with material groups 01 and 02 are classified as “SENSITIVE”
+©2023 Pathlock Inc. All Rights Reserved. Page | 30
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+In the below screenshot, the material group DIGIVEHI is classified as “SUPER-SENSITIVE”
+Now, to execute the data classification simulation on material data stored in mara table, execute data
+classification simulation transaction – /N/APPSDM/DC_SIMU by entering table name i.e. MARA for this
+case.
+On pressing the execute button, a selection screen opens up where the user can use selection criteria
+to filter results and then view the classified materials as per data classification configuration in
+/N/APPSDM/DC.
+©2023 Pathlock Inc. All Rights Reserved. Page | 31
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+Result: The output of the table display will carry out a simulation of data classification for each row of
+the table and will show the result of simulation with all data classifications and their values against each
+record. Only the primary key fields and the fields involved in data classification criteria will be displayed
+along with the simulation results.
+©2023 Pathlock Inc. All Rights Reserved. Page | 32
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+3.7 Policy Simulator
+The Policy Simulator enables policy administrators to simulate policy conditions for a specific SAP
+transaction and the currently logged-in user. This allows validation and testing of complex policies in a
+non-productive (test or quality) environment before deployment to production. The Policy Simulator can
+be accessed using transaction code - /APPSDM/POL_SIMU
+Important Behavior: If multiple policies are active in the system, only the policy explicitly selected and
+provided to the Policy Simulator is evaluated during simulation. All other active policies are ignored,
+even if they are enabled and applicable for the same transaction or user.
+This ensures isolated and accurate testing of individual policies without interference from other active
+configurations.
+An example of Policy Simulator is shown below with two different policies:
+Here we have two policies with the same rules. Policy Enforcement is active for both the policies under Data
+Masking node as shown below:
+©2023 Pathlock Inc. All Rights Reserved. Page | 33
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+Example Behavior:
+If the Policy Simulator is executed for the policy MASK_BP_TEL, the masking effect will be applied only
+to the Business Partner telephone number. Even if another policy (for example, a policy masking the
+country data attribute) is active in the system, it will not be considered during the simulation unless it is
+explicitly selected in the Policy Simulator.
+Now if policy simulator is executed for policy MASK_BP_TEL for GUI Transaction – BP, then the effect
+of masking can only be seen on telephone number, even policy on country data attribute is active.
+Result: Masking is applied exclusively to the telephone number for business partner. The country field
+remains unmasked, as only the policy MASK_BP_TEL is evaluated during the Policy Simulator
+execution.
+©2023 Pathlock Inc. All Rights Reserved. Page | 34
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+3.8 Data Discovery
+Data Discovery is used to identify all SAP artifacts where a specific data definition is used. Based on
+the selected search criteria, it retrieves the corresponding GUI applications, database tables, and
+OData services.
+Data Discovery supports searches using:
+• Data Element
+• Data Attribute
+• Field Description
+Only one search criterion can be selected at a time using the corresponding radio button.
+Data Discovery can be executed using transaction code: /N/APPSDM/DISC
+Search Scope and Behavior:
+Based on the selected radio button, Data Discovery searches for:
+• GUI Applications
+• Database Tables
+• OData Services
+where the specified data element, data attribute, or field description is used.
+Example: Data Discovery Using Data Element
+1. 2. 3. On the selection screen, select the Data Element radio button.
+Enter the required data element value for which data discovery needs to be performed.
+Execute the report to retrieve all related GUI applications, tables, and OData services.
+Similarly, users can perform Data Discovery by selecting:
+• Data Attribute, or
+• Description (description of the data element or a field)
+using their respective radio buttons and input fields.
+©2023 Pathlock Inc. All Rights Reserved. Page | 35
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+Prerequisite for OData Service Discovery
+To enable discovery of OData services, the following prerequisite must be completed:
+• Program /APPSS4H/DD_ODATA_SRV must be scheduled and executed in the background.
+• This is a one-time activity required to collect and store OData service metadata for the relevant
+data elements.
+Note: Without completing this prerequisite, OData services will not appear in the Data Discovery
+results.
+Here, for instance PRDNI data element is used to search GUI Applications, discovery report will show the
+possible applications wherever data element is used in the system.
+Result: We get all the Transcation codes where this data element is used. Similarly, we can execute discovery
+for DB Tables and OData Services.
+©2023 Pathlock Inc. All Rights Reserved. Page | 36
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+4. Limitations
+Pathlock DAC has the following current limitations:
+1. 2. Processing on masked data available in ALV output cannot be used for subsequent actions, which can
+lead to runtime errors. For example, creating a subsequent document using masked fields available in
+ALV output.
+Masking in download options is only supported in ALV Outputs. For example, Spreadsheet, export to a
+local file, etc.
+©2023 Pathlock Inc. All Rights Reserved. Page | 37
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+5. Sample Implementation
+This section explains the use cases that demonstrate data masking and data restriction in a business setting.
+These implementations protect sensitive information based on user attributes and data attributes.
+▪ Use Case 1: Masking ‘Bank Account’ for Business Partners based on User PFCG Role
+▪ Use Case 2: Masking ‘Material Description’ based on ‘Material Group’
+▪ Use Case 3: Masking ‘Material Description’ based on ‘Material Group’ for Specific Transactions
+▪ Use Case 4: Restricting Sensitive Material Group Changes with Data Restriction (Input blocking, Filtering,
+and Output blocking)
+▪ Use Case 5: Restrict Bank Account access based on User Country and Bank Country via Data Restriction
+in native UI5/Fiori Applications
+▪ Use Case 6: Restrict Material Access based on Data Plant and User Plant, maintained in User Master via
+Data Restriction
+▪ Use Case 7: Restrict Material BOM Access based on Material Classification determined by Material
+Number and Plant via Data Restriction
+▪ Use Case 8: Masking ‘Starting Balance’ based on ‘GL Account’
+▪ Use Case 9: Simulate Data Classification on Database Tables
+5.1 Use Case 1
+Masking ‘Bank Account’ for Business Partners based on User PFCG Role
+To implement the masking of the business partner's 'Bank Account,' the following configuration is required:
+1. Define a Data Attribute with the Attribute ID 'DATA.BANK
+_ACCOUNT' and its description as 'Bank
+Account.'
+©2023 Pathlock Inc. All Rights Reserved. Page | 38
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+2. Define a User Attribute named 'USER.ROLE' with the description 'User Role.'
+3. Create a Policy named 'RESTRICT_PII_DATA' along with its description.
+©2023 Pathlock Inc. All Rights Reserved. Page | 39
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+©2023 Pathlock Inc. All Rights Reserved. Page | 40
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+4. Define rule condition using User Attribute 'USER.ROLE' to the Policy 'RESTRICT_PII_DATA’.
+5. Click on the Details button to view the Policy details.
+©2023 Pathlock Inc. All Rights Reserved. Page | 41
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+6. Configure a Policy Enforcement Point for 'Data Masking' and link it to the Policy 'RESTRICT_PII_DATA'
+and the Attribute 'DATA.BANK_ACCOUNT.'
+7. Under the Technical Configuration tab, assign the Attribute 'DATA.BANK_ACCOUNT' to the Data
+Element 'BU_BANKN'.
+©2023 Pathlock Inc. All Rights Reserved. Page | 42
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+Expected Results:
+Upon implementing the Policy, the following screenshots demonstrate the expected outcomes of the enforcement.
+The masking will be applied across all output options, such as GUI Transactions (BP), SE16 table outputs,
+downloaded data in ALVs, search help, and Fiori/UI5 apps, wherever the Data Element 'BU_BANKN' is used:
+▪ Masking in Transaction – ‘BP’: The 'Bank Account' field will appear masked within the BP transaction.
+▪ Masking in SE16 ALV Grid, ALV List, and SE16 Standard List: The 'Bank Account' field will be
+masked in the SE16 data browser.
+©2023 Pathlock Inc. All Rights Reserved. Page | 43
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+Additionally, any data downloaded from these sources will also display the 'Bank Account' field as
+masked.
+▪ Masking in Search Help: In search help results, the 'Bank Account' field will be masked.
+▪ Masking in FIORI/UI5 App: Within Fiori/UI5 applications, the 'Bank Account' field in the results will also
+be masked.
+©2023 Pathlock Inc. All Rights Reserved. Page | 44
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+5.2 Use Case 2
+Masking ‘Material Description’ based on ‘Material Group.’
+To mask the 'Material Description,' follow the similar steps outlined in Use Case 1 to define Data Attributes, User
+Attributes, and Technical Configuration for Data Attributes. Additionally, implement the following steps:
+1. Define a rule condition in the new Policy ‘RESTRICT_MATERIAL_ACCESS’ defined to restrict material
+access.
+To enable material group using material ID, DATA.MATERIAL_ID is added in the exposed attribute and
+Data Attribute BADI is implemented for DATA.MATERIAL_GROUP.
+©2023 Pathlock Inc. All Rights Reserved. Page | 45
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+2. Configure Data Masking.
+3. Create a BADI implementation 'ZIMP_MATERIAL_GROUP' to add code for BADI
+'/APPSDM/DATA_ATTRIBUTES.' This implementation will appear in Technical Config > Custom Code
+for Data Attribute.
+©2023 Pathlock Inc. All Rights Reserved. Page | 46
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+Code Snippet
+Expected Results:
+Upon applying the Policy, the following screenshots exhibit the expected results of the enforcement. The masking
+will be applied across all output options (GUI Transaction – MM03, SE16 table outputs, downloaded data in ALVs,
+search help, and Fiori/UI5 apps) wherever the Data Element 'MAKTX' is used:
+▪ Masking ‘Material Description’: The field ‘Material Description’ will be masked in MM02/MM03
+transactions for materials belonging to the material group ‘01’.
+©2023 Pathlock Inc. All Rights Reserved. Page | 47
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+▪ Masking in SE16 ALV Grid, ALV List, and SE16 Standard List: The field ‘Material Description’ will be
+masked in the data browser (SE16N).
+Also, any downloaded data files will contain the masked data.
+▪ Masking in Search Help: In search help results, the ‘Material Description’ field will be masked.
+©2023 Pathlock Inc. All Rights Reserved. Page | 48
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+5.3 Use Case 3
+Masking ‘Material Description’ based on ‘Material Group’ for Specific Transactions
+To enable masking of the 'Material Description' based on the Material group for specific transactions, tables, and
+search helps, utilize the 'Additional configuration' feature in addition to the config from Use Case 2.
+Maintain Program name and screen field (using F1 help) related to Material transactions. Here Data Element is
+not maintained, masking will be applicable only for the maintained Program and screen field.
+Expected Results:
+Upon implementing the Policy, the following screenshots demonstrate the expected results of the enforcement.
+The masking will be applied only in the transaction code for which details have been maintained in the additional
+configuration, and in other places, the field will not be masked.
+©2023 Pathlock Inc. All Rights Reserved. Page | 49
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+▪ Masking ‘Material Description’: The field ‘Material Description’ will be masked in the MM02/MM03
+transaction for materials within the material group ‘01’.
+▪ Masking in SE16 ALV Grid, ALV List, and SE16 Standard List: The field ‘Material Description’ will not
+be masked in the data browser (SE16N).
+©2023 Pathlock Inc. All Rights Reserved. Page | 50
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+▪ Masking in Search Help: The field ‘Material Description’ in the search help results will not be masked.
+5.4 Use Case 4
+Restricting material access based on sensitive material Group with Data Restriction (Input
+blocking, Filtering, and Output blocking)
+To restrict Material creation/change/display based on the sensitive Material Group in transactions, tables, and
+search helps, follow the same policy applied in Use Case 2. Additionally, configure Data Restriction under Policy
+Enforcement Point.
+Note: If the same policy is active for both Data masking and Data Restriction, priority will be given to Data
+Restriction.
+©2023 Pathlock Inc. All Rights Reserved. Page | 51
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+Expected Results:
+Upon implementing the Data Restriction, the following screenshots demonstrate the expected results of the
+enforcement. The restrictions will be applied as follows:
+▪ Input Blocking: The creation and modification of materials within the sensitive Material group ‘01’ will be
+restricted.
+Users will be prohibited from creating or changing materials assigned to the sensitive Material group ‘01’.
+▪ Data Filtering:
+o Materials identified as ‘1’ within the sensitive Material group ‘01’ will be filtered out in Search help.
+©2023 Pathlock Inc. All Rights Reserved. Page | 52
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+o Materials identified as ‘1’ from the sensitive Material group ‘01’ will also be filtered out in table results.
+▪ Output Blocking: The display of Material ‘1’ belonging to the sensitive Material group ‘01’ will be
+restricted in the transaction MM03.
+5.5 Use Case 5
+Restrict Bank Account access based on User Country and Bank Country via Data Restriction in
+native UI5/Fiori Applications
+To implement the Data Restriction scenario for the business partner's 'Bank Account,' the following configuration
+is required:
+1. Define a Data Attribute with the Attribute ID 'DATA.BANK_COUNTRY' and its description as 'Country’.
+©2023 Pathlock Inc. All Rights Reserved. Page | 53
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+2. Define a User Attribute named 'USER.COUNTRY' with the description 'User Country' which is available in
+user master (T-code: SU01).
+©2023 Pathlock Inc. All Rights Reserved. Page | 54
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+3. Create a Policy named 'RESTRICT_BANK_ACCOUNT' along with its description.
+©2023 Pathlock Inc. All Rights Reserved. Page | 55
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+4. Define a rule condition using User Attribute 'USER.COUNTRY' to the Policy
+'RESTRICT_BANK_ACCOUNT’
+.
+5. Configure DAC Control for 'Data Restriction' and link it to the Policy 'RESTRICT_BANK_ACCOUNT'
+.
+©2023 Pathlock Inc. All Rights Reserved. Page | 56
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+6. Under the Technical Configuration tab, assign the Attribute 'DATA.BANK_COUNTRY' to the Data
+Element 'BU_BANKS’
+.
+Expected Results:
+Upon implementing the Policy, the following screenshot demonstrate the expected outcomes of the
+enforcement.
+©2023 Pathlock Inc. All Rights Reserved. Page | 57
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+5.6 Use Case 6
+Restrict Material based on Data Plant and User Plant, maintained in User Master via Data
+Restriction
+To restrict Material based on Data Plant and User Plant, maintained in User Master Maintenance, the following
+configuration is required:
+1. Define a Data Attribute with the Attribute ID 'DATA.PLANT' and its description as ‘Plant’.
+2. Define a User Attribute named 'USER.PLANT' with the description 'User Plant'.
+©2023 Pathlock Inc. All Rights Reserved. Page | 58
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+3. Create a Policy named 'RESTRICT_MATERIAL’ along with its description.
+4. Define rule condition using User Attribute 'USER.PLANT' and Data Attribute ‘DATA.PLANT’ in the Policy
+'RESTRICT_MATERIAL’
+.
+©2023 Pathlock Inc. All Rights Reserved. Page | 59
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+5. Configure DAC Control for 'Data Restriction' and link it to the Policy 'RESTRICT_MATERIAL'.
+6. Under the Technical Configuration tab, assign the Attribute ‘DATA.PLANT’ to the Data Element
+‘WERKS_D’.
+©2023 Pathlock Inc. All Rights Reserved. Page | 60
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+7. Maintain USER.PLANT -
+‘US01’ in User Master Maintenance.
+Expected Results:
+Upon implementing the Policy, the following screenshots demonstrate the expected outcomes of the policy
+enforcement for User ‘Tesla’ who has access to Plant – US01:
+▪ For ‘US01’ Plant:
+▪ For ‘US02’ Plant:
+©2023 Pathlock Inc. All Rights Reserved. Page | 61
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+5.7 Use Case 7
+Restrict Material BOM Access based on Material Classification determined by Material Number and Plant
+via Data Restriction
+To restrict Material BOM Access based on Material Classification, the following configurations are required:
+1. Define a Data Attribute with the Attribute ID 'DATA.MATERIAL_NO' and its description as ‘Material
+Number’.
+©2023 Pathlock Inc. All Rights Reserved. Page | 62
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+2. Define a Data Attribute named 'DATA.PLANT' with the description 'Plant'.
+©2023 Pathlock Inc. All Rights Reserved. Page | 63
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+3. Define a Data Attribute with the Attribute ID ‘DATA.MATERIAL_CLASSIFICATION’ with a value ‘SUPER-
+SENSITIVE’ and its description as ‘Super sensitive BOM Class’.
+4. Define Classification Criteria using the Data Attribute 'DATA.MATERIAL_NO' and 'DATA.PLANT’ for
+‘DATA.MATERIAL_CLASSIFICATION’.
+©2023 Pathlock Inc. All Rights Reserved. Page | 64
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+5. Create a Policy named 'RESTRICT_BOM’ along with its description.
+6. Define rule condition using the Data Attribute ‘DATA.MATERIAL_CLASSIFICATION’ in the Policy
+'RESTRICT_BOM’.
+©2023 Pathlock Inc. All Rights Reserved. Page | 65
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+7. Define the Data Attribute ‘DATA.MATERIAL_NO’ in the Exposed Attributes.
+8. Configure an DAC Control for 'Data Restriction' and link it to the Policy 'RESTRICT_BOM'.
+©2023 Pathlock Inc. All Rights Reserved. Page | 66
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+9. Under the Technical Configuration tab, assign the Data Attribute ‘DATA.MATERIAL_NO’ to the Data
+Element ‘MATNR’ and the Data Attribute ‘DATA.PLANT’ to the Data Element ‘WERKS_D’.
+Expected Results:
+Upon policy implementation, the provided screenshots illustrate the expected results of policy enforcement for
+Material Number 1 and Plant 0001.
+©2023 Pathlock Inc. All Rights Reserved. Page | 67
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+5.8 Use Case 8
+Masking ‘Starting Balance’ based on ‘G/L Account.’ In RSRT transaction andTrial Balance
+Application.
+To implement the masking of the 'Starting Balance,' the following configuration is required:
+1. Define a Data Attribute with the Attribute ID 'DATA.STARTINGBAL_BW' and its description as ‘Starting
+Balance.'
+2. Create a Policy named 'MASK_STARTINGBALANCE_BW' along with its description.
+©2023 Pathlock Inc. All Rights Reserved. Page | 68
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+3. Define rule condition using Data Attribute 'DATA.GLACC' to the Policy
+‘MASK_STARTINGBALANCE_BW’.
+4. Click on the Details button to view the Policy details.
+©2023 Pathlock Inc. All Rights Reserved. Page | 69
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+5. Under the Technical Configuration tab, assign the Attribute 'DATA.STARTINGBAL_BW' to the Data
+Element 'DECFLOAT34'.
+Expected Results:
+©2023 Pathlock Inc. All Rights Reserved. Page | 70
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+Upon implementing the Policy, the following screenshots demonstrate the expected outcomes of the enforcement.
+The masking will be applied across to output options, such as GUI Transactions (RSRT), Fiori/UI5 apps:
+Starting Balance in Company Code Currency is expected to be 0 since it is numeric value
+©2023 Pathlock Inc. All Rights Reserved. Page | 71
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+5.9. Use Case 9
+Simulate Data Classification in Database tables
+Users can now do a simulation of data classification on data base tables. This means that once a data
+classification has been configured in the system, the users can now check what classification applies to the fields
+of each record of a database table. Consider a scenario where the below classifications has been made:
+1. Classification of material as SUPER-SENSITIVE based on material group.
+2. Classification of material as SENSITIVE based on material type
+3. Classification of material based on material group and plant
+©2023 Pathlock Inc. All Rights Reserved. Page | 72
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+Let us know do a simulation of this classification on the following database tables:
+1. MARA
+2. MAKT
+In order to do a data classification simulation, execute the transaction /APPSDM/DC_SIMU and enter
+the table name MARA and click on execute button:
+A screen similar to SE16N table browser selection screen will be displayed.
+Enter the filter conditions / limit the number of records to be displayed as shown below and click on
+the execute button:
+©2023 Pathlock Inc. All Rights Reserved. Page | 73
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+As you can see below, a simulation of data classification is displayed along with the key fields and
+other fields involved in classification
+Repeat the same steps for table MAKT and the result is as given below:
+©2023 Pathlock Inc. All Rights Reserved. Page | 74
+Pathlock Native Cyber Security and GRC Suite
+Dynamic Access Controls
+Deployment Guide
+As you can see, the values of the fields which are not present on the screen such as plant are also
+derived by the application.
+©2023 Pathlock Inc. All Rights Reserved. Page | 75

@@ -27,10 +27,13 @@ services:
 
     volumes:
       - leaderboard_data:/data
-      # WireGuard: SSH key to call add-peer.sh on the host
+      # WireGuard: SSH keys for each SAP workshop server (sap2–sap5)
+      - /root/.ssh/netcup_sap2:/secrets/wg_sap2_key:ro
+      - /root/.ssh/netcup_sap3:/secrets/wg_sap3_key:ro
+      - /root/.ssh/netcup_sap4:/secrets/wg_sap4_key:ro
+      - /root/.ssh/netcup_sap5:/secrets/wg_sap5_key:ro
+      # Legacy single-server key (kept for offgrid fallback / backward compat)
       - /root/.ssh/id_ed25519:/secrets/wg_ssh_key:ro
-      # WireGuard: read generated .conf files back into the container
-      - /etc/wireguard/peers:/wg-peers:ro
       # Level guides: mount handouts/ from the git clone so content updates = git pull only
       - /opt/cac-workshop/handouts:/handouts:ro
       # Level codes: mount from git clone so codes update with workshop-pull (not baked into image)
