@@ -236,7 +236,7 @@ LEVEL_FILES = {
     2:  "level-02-contextual-access.md",
     3:  "level-03-scrambling.md",
     4:  "level-04-overprivileged-role.md",
-    5:  "level-05-export-classification.md",
+    5:  "level-05-export-block.md",
     6:  "level-06-multi-entity.md",
     7:  "level-07-fiori-masking.md",
     8:  "level-08-audit-trail.md",
