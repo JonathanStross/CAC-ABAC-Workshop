@@ -991,6 +991,8 @@ ACCESS_CODE_TEMPLATE = """
 # ---------------------------------------------------------------------------
 @app.route("/")
 def index():
+    if not _has_access_cookie():
+        return redirect("/register")
     rows = get_leaderboard()
     codes = load_codes()
     return render_template_string(LEADERBOARD_TEMPLATE,
@@ -999,6 +1001,8 @@ def index():
 
 @app.route("/api/leaderboard")
 def api_leaderboard():
+    if not _has_access_cookie():
+        return jsonify({"error": "unauthorized"}), 401
     rows = get_leaderboard()
     codes = load_codes()
     return jsonify({
@@ -1190,6 +1194,8 @@ def register():
 @app.route("/download/<sap_username>")
 def download_wg_conf(sap_username):
     """Serve the WireGuard .conf for a registered participant."""
+    if not _has_access_cookie():
+        return redirect("/register")
     db = get_db()
     row = db.execute(
         "SELECT wg_conf, name FROM participants WHERE sap_username=?",
@@ -1206,6 +1212,8 @@ def download_wg_conf(sap_username):
 
 @app.route("/submit", methods=["GET", "POST"])
 def submit():
+    if not _has_access_cookie():
+        return redirect("/register")
     msg, msg_type = None, "ok"
     codes = load_codes()
     if request.method == "POST":
