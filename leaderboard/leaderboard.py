@@ -793,11 +793,20 @@ HOME_TEMPLATE = """
     </div>
 
     <div class="catalog-section">
-      <h2>TDnR <span>Threat Detection &amp; Response</span></h2>
+      <h2>TD <span>Threat Detection</span></h2>
       <div class="course-row">
-        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TDnR</div><div class="cn">Practitioner</div><div class="cs">Threat patterns · Alert configuration · Incident triage</div></div>
-        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TDnR</div><div class="cn">Professional</div><div class="cs">Detection rules · SIEM integration · Response playbooks</div></div>
-        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TDnR</div><div class="cn">Master</div><div class="cs">Advanced threat hunting · SOC enablement</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TD</div><div class="cn">Practitioner</div><div class="cs">Threat patterns · Alert configuration · Incident triage</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TD</div><div class="cn">Professional</div><div class="cs">Detection rules · SIEM integration · Threat intelligence</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TD</div><div class="cn">Master</div><div class="cs">Advanced threat hunting · Behavioural analytics · SOC design</div></div>
+      </div>
+    </div>
+
+    <div class="catalog-section">
+      <h2>TR <span>Threat Response</span></h2>
+      <div class="course-row">
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TR</div><div class="cn">Practitioner</div><div class="cs">Incident handling · Containment procedures · Evidence collection</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TR</div><div class="cn">Professional</div><div class="cs">Response playbooks · Forensics · SIEM-driven automation</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TR</div><div class="cn">Master</div><div class="cs">Crisis management · Post-incident review · Regulatory reporting</div></div>
       </div>
     </div>
 
