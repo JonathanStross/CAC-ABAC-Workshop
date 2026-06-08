@@ -43,6 +43,8 @@ Make sure you have the following **installed** before you begin:
 
 > ⚠️ Your SAP **client number** is personal — it was assigned to you when you registered and is shown on your registration confirmation page. It is **not** the same for everyone.
 
+> 👥 **Shared client:** Depending on participant count, you may share a client with one or two other people. Please be considerate — keep time in change mode to a minimum (locks block others), and do not modify policies that are not your own.
+
 ---
 
 ## Step 1 — Connect to the VPN
