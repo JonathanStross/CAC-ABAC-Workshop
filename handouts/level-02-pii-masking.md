@@ -123,13 +123,15 @@ A **Rule Condition** tells the policy *when* it should fire. Without one, the po
 | 2 | Select or enter your policy `MASK_EMAIL_<YOURUSERNAME>` and confirm | The rules list for your policy opens |
 | 3 | Check whether you are already in edit mode — look for the toolbar buttons: **Check entries** (scale icon), **Append Row** (blank page icon), **+** and **−** above the condition columns. If those buttons are visible, you are already in edit mode. If not, click **Change Mode** (pencil icon) in the top toolbar. | Edit mode active |
 | 4 | Click the **Append Row** button (📄 blank page icon) to create a new condition | A blank condition row appears |
-| 5 | In the **Condition ID** column: type `1`, or press **F4** to open the value help and select `1` | Condition ID set to `1` |
-| 6 | In the **Attribute ID** column: press **F4** to open the value help, search for and select `USER.ID` | Attribute set to `USER.ID` |
-| 7 | **Setting the value** — choose one of two methods: | |
-| | **Direct input:** type your SAP username (e.g. `AMUELLER`) directly into the Value field — uppercase, exactly as you log in | Value field fills |
-| | **Via ranges:** click **Define Ranges** → in the **Single Values** section, enter your username → click **Accept** | Range dialog closes, value applied |
-| 8 | Click **Save** (💾 or Ctrl+S) | Condition row saved |
-| 9 | Click the **Check entries** button (⚖️ scale icon) to validate | System confirms the condition is valid — `USER.ID EQ <your username>` |
+| 5 | In the **Condition ID** field: type `1` directly, or press **F4** to open value help and select `1` | Condition ID set to `1` |
+| 6 | In the **Attribute ID** field: press **F4** to open value help, search for and select **`USER.ID`** | Attribute set |
+| 7 | The **Operator** defaults to `EQ` (equals) — leave it as-is | Operator set |
+| 8 | For the **Value**, you have two options: | |
+| | **Option A — Direct input:** type your SAP username directly into the value field (e.g. `AMUELLER`) | |
+| | **Option B — Ranges:** click **Define Ranges**, then in the **Single Values** section enter your username in the **`BNAME`** field (must be **uppercase**), click **Accept** | Value filled |
+| 9 | Click the **Check entries** button (⚖️ scale icon) to validate — no errors should appear | Validation passed |
+| 10 | Click **Save** | Condition row saved |
+| 11 | To review what you built: select the condition row and click **Details** (above the list) | DAC describes the condition in plain language — confirm it reads: *"User ID equals `<YOURUSERNAME>`"* |
 
 > This condition reads: *"Only apply this policy when the currently logged-in user ID equals AMUELLER."*  
 > Your colleagues' sessions will not be affected at all.
