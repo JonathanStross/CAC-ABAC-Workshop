@@ -72,7 +72,7 @@ This is how real-world data classification schemes work under ISO 27001 A.8.3 an
 |---|---|---|
 | `SCUSTOM` | `Restricted-PII` | Passenger names, addresses, phone, email, payment ref |
 | `SBOOK` | `Internal-Financial` | Booking records, prices, payment amounts |
-| `SCARR` | `Public` | Airline carrier names — public reference data |
+| `SCARR` | `Public` | Partner carrier names — public reference data |
 
 > ⚠️ If any entry is missing or wrong — tell your instructor before continuing.
 
@@ -212,7 +212,7 @@ Classification is a label system:
 |---|---|---|
 | `SCUSTOM` | `Restricted-PII` | Passenger names, addresses, phone, email, payment ref |
 | `SBOOK` | `Internal-Financial` | Booking records, prices, payment amounts |
-| `SCARR` | `Public` | Airline carrier names — public reference data |
+| `SCARR` | `Public` | Partner carrier names — public reference data |
 
 > ⚠️ If any of these are missing or wrong — tell your instructor before continuing.
 

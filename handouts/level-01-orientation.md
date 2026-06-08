@@ -141,7 +141,7 @@ You are now inside Meridian AG's live SAP environment. Take a few minutes to loo
 | # | Transaction / Action | What you see |
 |---|---|---|
 | 1 | Type `SE16N` in the command field (top-left) → **Enter** | General Table Display — your main tool throughout this workshop |
-| 2 | Enter table `SCARR` → **Execute (F8)** | Airline carrier master data — Meridian AG's flight network |
+| 2 | Enter table `SCARR` → **Execute (F8)** | Carrier master data — Meridian AG's partner airlines (LH, AA, QF and others) |
 | 3 | **F3** back → table `SCUSTOM` → **Execute** | Passenger records: names, addresses, phone numbers, emails, credit card references |
 | 4 | **F3** back → table `SBOOK` → **Execute** | Booking records: flight class, prices, payment data, customer references |
 

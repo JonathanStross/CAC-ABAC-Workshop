@@ -15,7 +15,7 @@
 
 ## The Scenario
 
-**Meridian AG** is a mid-size European airline group operating 14 routes across central Europe. They process passenger bookings, payments, and HR data entirely within SAP.
+**Meridian AG** is a European travel services and booking platform. They act as a distribution intermediary — processing reservations, passenger PII, and payment data on behalf of 12 partner carriers. All booking records, customer data, and financial settlements for carriers including Lufthansa, American Airlines, and Qantas flow through Meridian AG's central SAP instance. Meridian AG never flies a single aircraft; they are the system of record for everyone else's passengers.
 
 Three weeks ago, the German **Data Protection Authority (DPA)** completed a surprise audit. The findings were serious enough to trigger a formal warning — one step below an enforcement notice. Meridian AG has been given **30 days** to implement compensating controls or face regulatory action.
 
