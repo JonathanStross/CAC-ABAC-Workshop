@@ -235,16 +235,11 @@ LEVEL_FILES = {
     1:  "level-01-pii-masking.md",
     2:  "level-02-contextual-access.md",
     3:  "level-03-tcode-block.md",
-    4:  "level-04-overprivileged-role.md",
-    5:  "level-05-classification.md",
-    6:  "level-06-export-block.md",
-    7:  "level-07-fiori-masking.md",
-    8:  "level-08-audit-trail.md",
-    9:  "level-09-classification-framework.md",
-    10: "level-10-gdpr-art30.md",
-    11: "level-11-compliance-multiplier.md",
-    12: "level-12-too-powerful-role.md",
-    13: "level-13-red-blue-team.md",
+    4:  "level-04-audit-feed.md",
+    5:  "level-05-overprivileged-role.md",
+    6:  "level-06-classification.md",
+    7:  "level-07-export-block.md",
+    8:  "level-08-fiori-masking.md",
 }
 
 LEVEL_STYLE = """
@@ -384,7 +379,7 @@ def levels_index():
     return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level Guides</title>{LEVEL_STYLE}</head>
 <body>
   <div class='header'><img src='/logo' alt='Pathlock'>
-    <div class='header-text'><h1>Meridian AG — Level Guides</h1><p>DAC / ABAC Workshop</p></div>
+    <div class='header-text'><h1>Meridian AG — Level Guides</h1><p>DAC: Practitioner Level</p></div>
   </div>
   <div class='container'>
     <div class='nav'><a href='/'>← Leaderboard</a><a href='/submit'>Submit Code</a></div>
@@ -431,7 +426,7 @@ def level_guide(level_num):
   <div class='header'><img src='/logo' alt='Pathlock'>
     <div class='header-text'>
       <h1><span class='level-badge'>L{level_num}</span>{title}</h1>
-      <p>Meridian AG Audit Remediation &nbsp;|&nbsp; Pathlock DAC/ABAC Workshop</p>
+      <p>Meridian AG Audit Remediation &nbsp;|&nbsp; DAC: Practitioner Level</p>
     </div>
   </div>
   <div class='container'>
@@ -648,7 +643,7 @@ LEADERBOARD_TEMPLATE = """
 <html>
 <head>
   <meta charset="utf-8">
-  <title>DAC Workshop — Leaderboard</title>
+  <title>DAC: Practitioner Level — Leaderboard</title>
   """ + STYLE + """
 </head>
 <body>
@@ -656,7 +651,7 @@ LEADERBOARD_TEMPLATE = """
     <img src="/logo" class="logo" alt="Pathlock">
     <div class="header-text">
       <h1>Meridian AG — Audit Remediation</h1>
-      <p>DAC / ABAC Workshop Leaderboard &nbsp;|&nbsp; Pathlock Live Demo</p>
+      <p>DAC: Practitioner Level &nbsp;|&nbsp; Pathlock Live Workshop</p>
     </div>
   </div>
   <div class="container">
@@ -668,12 +663,16 @@ LEADERBOARD_TEMPLATE = """
     </div>
 
     <div style="background:#1a1a2e;border-radius:8px;padding:24px 28px;margin-bottom:28px;border-left:4px solid #c8102e">
-      <h2 style="margin:0 0 10px;color:#fff;font-size:1.2em">👋 Welcome to the Pathlock DAC/ABAC Workshop</h2>
+      <h2 style="margin:0 0 10px;color:#fff;font-size:1.2em">👋 Welcome to DAC: Practitioner Level</h2>
       <p style="margin:0 0 14px;color:#ccc;line-height:1.6">
         You are part of the <strong style="color:#fff">Meridian AG audit remediation team</strong>.
-        The DPA has issued a formal warning — five critical access control findings must be closed before end of day.
+        The DPA has issued a formal warning — critical access control findings must be closed before end of day.
         Work through the levels, find the completion codes inside SAP or Pathlock, and submit them here to earn points.
       </p>
+      <div style="background:#12120f;border:1px solid #f39c12;border-radius:6px;padding:12px 18px;margin-bottom:14px;font-size:0.9em;color:#f0c040;line-height:1.7">
+        🎓 <strong>Complete all 9 levels (L0–L8) to qualify for the Pathlock DAC: Practitioner Certificate.</strong><br>
+        <span style="color:#aaa">Next step after today: <em>DAC: Professional Level</em> — advanced policy architecture, multi-system rollout, and compliance automation.</span>
+      </div>
       <div style="background:#0f0f1a;border-radius:6px;padding:16px 20px;font-size:0.9em;color:#ccc;line-height:2">
         <strong style="color:#fff">How to get started:</strong><br>
         <span style="color:#2ecc71">①</span> &nbsp;Make sure you have the following installed on your <strong style="color:#fff">laptop</strong>:<br>
@@ -847,7 +846,7 @@ FLIP_TEMPLATE = """
 REGISTER_TEMPLATE = """
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Register — DAC Workshop</title>""" + STYLE + """</head>
+<head><meta charset="utf-8"><title>Register — DAC: Practitioner Level</title>""" + STYLE + """</head>
 <body>
   <div class="header">
     <img src="/logo" class="logo" alt="Pathlock">
@@ -1042,7 +1041,7 @@ SUBMIT_TEMPLATE = """
 ACCESS_CODE_TEMPLATE = """
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Register — DAC Workshop</title>""" + STYLE + """</head>
+<head><meta charset="utf-8"><title>Register — DAC: Practitioner Level</title>""" + STYLE + """</head>
 <body>
   <div class="header">
     <img src="/logo" class="logo" alt="Pathlock">

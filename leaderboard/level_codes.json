@@ -3,14 +3,9 @@
   "L1":  { "code": "DATA.S_EMAIL", "points": 100, "title": "PII Masking" },
   "L2":  { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Contextual Access" },
   "L3":  { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Time-Based TCode Block" },
-  "L4":  { "code": "SET_BEFORE_SESSION", "points": 150, "title": "Overprivileged Role (SoD + PCI)" },
-  "L5":  { "code": "Restricted-PII", "points": 100, "title": "Data Classification" },
-  "L6":  { "code": "BLOCK_DOWNLOAD_BY_CLASSIFICATION", "points": 100, "title": "Export Block" },
-  "L7":  { "code": "SET_BEFORE_SESSION", "points": 175, "title": "Fiori/UI5 Masking" },
-  "L8":  { "code": "SET_BEFORE_SESSION", "points": 175, "title": "Audit Trail" },
-  "L9":  { "code": "SET_BEFORE_SESSION", "points": 200, "title": "Classification Framework" },
-  "L10": { "code": "SET_BEFORE_SESSION", "points": 75,  "title": "GDPR Art.30 Report" },
-  "L11": { "code": "SET_BEFORE_SESSION", "points": 75,  "title": "Compliance Multiplier" },
-  "L12": { "code": "SET_BEFORE_SESSION", "points": 75,  "title": "Too Powerful Role" },
-  "L13": { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Red vs Blue Team" }
+  "L4":  { "code": "SET_BEFORE_SESSION", "points": 150, "title": "Audit Feed" },
+  "L5":  { "code": "SET_BEFORE_SESSION", "points": 150, "title": "Overprivileged Role (SoD + PCI)" },
+  "L6":  { "code": "Restricted-PII", "points": 100, "title": "Data Classification" },
+  "L7":  { "code": "BLOCK_DOWNLOAD_BY_CLASSIFICATION", "points": 100, "title": "Export Block" },
+  "L8":  { "code": "SET_BEFORE_SESSION", "points": 175, "title": "Fiori/UI5 Masking" }
 }

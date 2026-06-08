@@ -1,6 +1,6 @@
 # Level 0 — Orientation: Connect & Log In
 
-**Meridian AG Audit Remediation — Pathlock DAC/ABAC Workshop**
+**Meridian AG Audit Remediation — DAC: Practitioner Level**
 
 ---
 
