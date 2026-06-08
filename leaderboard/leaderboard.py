@@ -1150,8 +1150,6 @@ ACCESS_CODE_TEMPLATE = """
 # ---------------------------------------------------------------------------
 @app.route("/")
 def index():
-    if not _has_access_cookie():
-        return redirect("/register")
     rows = get_leaderboard()
     codes = load_codes()
     return render_template_string(LEADERBOARD_TEMPLATE,
