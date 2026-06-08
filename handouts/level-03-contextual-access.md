@@ -112,6 +112,18 @@ IF USER.NETWORK NOT EQ <YOUR VPN IP>
 
 > **What this means:** the policy fires (masking is applied) for all sessions where the VPN IP ≠ your IP. Your own session is exempt.
 
+> 💡 **Explore the operators.** The Operator dropdown offers more than just `NOT EQ` — try swapping it out and see what changes:
+>
+> | Operator | Meaning | Effect in this context |
+> |---|---|---|
+> | `EQ` | Equals | Only your own IP sees the masking |
+> | `NOT EQ` | Not equals | Everyone except your IP sees the masking |
+> | `IN` | Is one of (multi-value) | Mask for a specific list of IPs |
+> | `NOT IN` | Is not one of | Exempt a list of trusted IPs |
+> | `BT` | Between | Mask for an IP range |
+>
+> The same operators apply to every attribute — `USER.NETWORK`, `USER.ID`, `USER.ROLE`, time, date, and any custom attribute you define.
+
 ---
 
 ## Step 5 — Add the Data Action
