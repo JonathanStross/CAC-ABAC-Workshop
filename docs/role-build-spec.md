@@ -34,6 +34,7 @@ Four roles are needed. Build on **sap2**, transport to sap3/4/5.
 | Field | Values |
 |---|---|
 | `TCD` | `SE16` |
+| | `SE16N` |
 | | `FB01` |
 | | `SU01` |
 | | `/APPSDM/DC` |
