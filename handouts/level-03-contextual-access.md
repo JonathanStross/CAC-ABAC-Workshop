@@ -19,9 +19,9 @@ The DPA audit finding #2 reads:
 
 > *"The masking policy created for finding #1 is scoped to a specific user identity. It provides no protection when a different user accesses the same data, nor does it enforce any network-location requirement. An attacker with any valid SAP account can access full passenger PII from any network endpoint."*
 
-In Level 2 you created a policy that masks the `EMAIL` field for your own user. That approach is brittle: one policy per user, no network enforcement, and it only covers one field.
+In Level 2 you created a policy that masks the `EMAIL` field for your own user. That approach is brittle: one policy per user, no network enforcement, and it only covers one field. Also — `DATA.S_EMAIL` was pre-configured for you: the Data Attribute and its technical mapping to `SCUSTOM.EMAIL` were already in the system.
 
-**The goal of this level:** extend protection to the passenger `STREET` address field using **where** the connection comes from as the condition — not who the user is.
+**The goal of this level:** extend protection to the passenger `STREET` address field using **where** the connection comes from as the condition — not who the user is. This time you will also create the Data Attribute and its technical mapping yourself before building the policy.
 
 ---
 
@@ -62,7 +62,31 @@ A **User Attribute** in Pathlock DAC defines a piece of context about the user a
 
 ---
 
-## Step 3 — Create a Network-Based Masking Policy
+## Step 3 — Create the Data Attribute and Technical Mapping
+
+Before you can use `DATA.S_STREET` in a policy, it must exist in the **Data Attribute Master** with a mapping to the physical SAP field.
+
+| # | Action | What you see |
+|---|---|---|
+| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab | Left tree updates |
+| 2 | Expand **Policy Information Point** → double-click **Data Attribute Master** | List of all data attributes |
+| 3 | Enter Change Mode (pencil icon) | Edit mode |
+| 4 | Click the **Create** button (📄 blank page icon) | Blank attribute form |
+| 5 | **Attribute ID**: `DATA.S_STREET` | Field fills in |
+| 6 | **Description**: `Passenger street address` | Field fills in |
+| 7 | Click **Save** and navigate back to the list | Attribute appears in the list |
+| 8 | Open your new `DATA.S_STREET` attribute | Detail screen |
+| 9 | Navigate to the **Technical Mapping** tab | Mapping table (currently empty) |
+| 10 | Enter Change Mode → Insert Row (📄 blank page icon) | Blank mapping row |
+| 11 | **Table**: `SCUSTOM` | |
+| 12 | **Field**: `STREET` | |
+| 13 | **Save** | Mapping saved — `DATA.S_STREET` now resolves to `SCUSTOM.STREET` at runtime |
+
+> 💡 This is exactly what was pre-configured for `DATA.S_EMAIL` in Level 2 (mapped to `SCUSTOM.EMAIL`). Now you know how it works under the hood.
+
+---
+
+## Step 4 — Create a Network-Based Masking Policy
 
 Create a new masking policy — name it with your username to avoid collisions.
 
@@ -81,7 +105,7 @@ Create a new masking policy — name it with your username to avoid collisions.
 
 ---
 
-## Step 4 — Add the Network Condition
+## Step 5 — Add the Network Condition
 
 Now add a rule condition: mask EMAIL for anyone whose VPN IP is **not** yours.
 
@@ -126,7 +150,7 @@ IF USER.NETWORK NOT EQ <YOUR VPN IP>
 
 ---
 
-## Step 5 — Add the Data Action
+## Step 6 — Add the Data Action
 
 Link the policy to the data it should mask: `SCUSTOM.STREET` via `DATA.S_STREET`.
 
@@ -143,7 +167,7 @@ Link the policy to the data it should mask: `SCUSTOM.STREET` via `DATA.S_STREET`
 
 ---
 
-## Step 6 — Test It
+## Step 7 — Test It
 
 You already identified your lab partner in Step 1. Share your **client number** with them and ask them to log into SAP on your client from their machine — or share your credentials and use their machine, logging out immediately after.
 
