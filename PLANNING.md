@@ -198,38 +198,46 @@ GDPR Art. 5(1)(c) — data minimisation | ISO 27001 A.8.11 — data masking
 #### Audit finding
 > *"Booking agents can access passenger email data from any network location — including personal home networks and public Wi-Fi — without restriction. The control implemented in F-01 applies only to a specific named user. A network-aware policy is required. GDPR Art. 32 — technical measures must account for access context."*
 
+#### Revised scenario (SAP is VPN-only — no direct access possible)
+
+Since SAP is only reachable via WireGuard, each participant already has a unique `10.8.0.X` VPN IP. We use this to demonstrate contextual ABAC: create a policy scoped to **your own workstation IP**, then ask a lab partner on the same server (different IP) to test from theirs.
+
+The `/levels/2` page includes a **live "Find Your Lab Partner" widget** — participants enter their SAP username and see all colleagues on the same SAP server with their VPN IPs. This drives real interaction in the room.
+
 #### What participants do
-1. Understand that the L1 policy is user-scoped — it does not prevent the same user from accessing data from an untrusted network, nor does it cover other users
-2. Explore the pre-created User Attribute `USER.NETWORK` — confirm it resolves to the client source IP at session start
-3. **Create a new SAP test user** and register it on the leaderboard (generates a new WireGuard peer → a different IP `10.8.0.y`)
-4. Log in as the new user — observe EMAIL is fully visible (no policy covers this user yet)
-5. Create a new masking policy with condition: `USER.NETWORK NOT IN 10.8.0.0/24`
-   - Meaning: mask EMAIL for anyone connecting from *outside* the trusted corporate VPN range
-6. Test scenario A: new user inside VPN (`10.8.0.y`) → EMAIL visible (trusted network)
-7. Test scenario B: disconnect VPN → reconnect to SAP directly → EMAIL masked (`***`)
-8. Discuss: all staff must use VPN — the system enforces it automatically, zero SAP role changes
+1. Understand that the L1 policy is user-scoped only — no network enforcement
+2. Open the Level 2 page on the leaderboard → use the **Find Lab Partner** widget to identify a colleague on the same SAP server with a different `10.8.0.Y` IP
+3. Explore the pre-created `USER.NETWORK` User Attribute — read the **description field** (contains the completion code)
+4. Create a new masking policy with condition: `USER.NETWORK NOT EQ 10.8.0.X` (their own IP)
+   - Meaning: mask EMAIL for everyone whose VPN IP ≠ theirs — their own session is exempt
+5. **Test A**: run `SE16 → SCUSTOM` from their own session → EMAIL **visible** (IP matches exception)
+6. **Test B**: ask lab partner to log in with **their own** SAP credentials and run `SE16 → SCUSTOM` → EMAIL **masked** (`***`) — their IP ≠ the policy exception
+7. Discuss: extending condition to `USER.NETWORK NOT IN 10.8.0.0/24` protects against all non-VPN access at scale
 
 #### Why this level exists
-Introduces **contextual / environmental ABAC** — the key differentiator between static RBAC and dynamic ABAC. The same user gets *different data* depending on where they connect from. This requires zero SAP changes.
+Introduces **contextual / environmental ABAC** — the key differentiator between static RBAC and dynamic ABAC. Same table, same SAP role, different VPN IP → different result.
 
-The "create a second user, get a new IP" exercise makes the network dimension concrete and testable in the room. Two sessions side by side — one masked, one not — based purely on network location is a high-impact customer demo moment.
+The lab-partner exercise makes the contrast immediately visible: both participants run the same transaction simultaneously and see different data. High-impact demo moment, zero credential sharing required.
 
-**This level answers the question every customer asks:** *"We can't change SAP roles quickly enough. Can Pathlock protect us right now based on context?"* — Yes.
+**This level answers the question every customer asks:** *"Can Pathlock protect us based on context without changing SAP roles?"* — Yes.
+
+#### Leaderboard feature
+New API route: `GET /api/server-peers?sap_user=JSMITH`
+Returns `{ server, peers: [{name, sap_username, wg_ip, sap_client}] }` for all participants on the same SAP server. Rendered as an interactive lookup widget on the `/levels/2` page.
 
 #### What needs to be pre-configured
 - `USER.NETWORK` User Attribute created in DAC — resolves to client source IP at session start
-- Description of `USER.NETWORK` attribute contains the L2 completion code (pre-enter before session)
-- WireGuard allows multiple peers; a second registration produces a distinct `10.8.0.y` IP
-- Trusted range defined: `10.8.0.0/24` (all WireGuard VPN peers)
+- **Completion code** pre-typed into the **description field** of `USER.NETWORK` before the session
+- All participants on the same server share the same SAP instance — they can each see each other's policies
 
 #### ABAC concepts introduced
 - Environmental / contextual attributes (`USER.NETWORK`)
-- Network-based access policy (IP/subnet condition)
-- Dynamic policy evaluation — same user, different context, different result
-- The difference between identity-based and context-based control
+- Workstation-locked access policy (per-IP condition)
+- Dynamic policy evaluation — same user, different network context, different result
+- Scaling from per-IP to subnet: `NOT IN 10.8.0.0/24`
 
 #### Completion code
-The `USER.NETWORK` Attribute ID — pre-entered in the description field of the `USER.NETWORK` attribute by the instructor before the session. Participants find it the same way they found the L1 code: Policy Information Point → User Attribute Master → open `USER.NETWORK` → read description.
+Pre-entered in the **description field** of the `USER.NETWORK` User Attribute in DAC before the session. Participants find it: Functional Configuration → Policy Information Point → User Attribute Master → open `USER.NETWORK` → read Description.
 
 #### Framework
 GDPR Art. 32 — technical security measures | NIS2 Art. 21 — access control | ISO 27001 A.8.11

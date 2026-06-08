@@ -284,6 +284,84 @@ LEVEL_STYLE = """
 </style>
 """
 
+# ---------------------------------------------------------------------------
+# Level 2 — "Find Your Lab Partner" widget
+# Injected into the /levels/2 page; fetches /api/server-peers at runtime.
+# ---------------------------------------------------------------------------
+_L2_PEERS_WIDGET = """
+<div style="margin-top:2.5em;padding:1.5em;background:#0d1a0d;border:1px solid #2ecc71;border-radius:8px">
+  <h3 style="color:#2ecc71;margin-top:0">&#x1F517; Find Your Lab Partner</h3>
+  <p style="color:#ccc">For Step 6 you need a colleague on the <strong>same SAP server</strong> but
+  with a <strong>different VPN IP</strong>. Enter your SAP username to see your group:</p>
+  <div style="display:flex;gap:0.5em;margin-bottom:1em">
+    <input id="peers-input" type="text" placeholder="Your SAP username &#x2014; e.g. JSMITH"
+           style="flex:1;padding:0.65em 0.8em;background:#0a0a1a;color:#fff;border:1px solid #444;
+                  border-radius:4px;font-family:monospace;font-size:1em;text-transform:uppercase"
+           autocomplete="off" spellcheck="false" />
+    <button onclick="findPeers()"
+            style="padding:0.65em 1.4em;background:#2ecc71;color:#000;border:none;border-radius:4px;
+                   cursor:pointer;font-weight:bold;font-size:1em">Find</button>
+  </div>
+  <div id="peers-result"></div>
+</div>
+<script>
+document.getElementById('peers-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') findPeers();
+  this.value = this.value.toUpperCase();
+});
+function findPeers() {
+  var username = document.getElementById('peers-input').value.trim().toUpperCase();
+  if (!username) return;
+  var out = document.getElementById('peers-result');
+  out.innerHTML = '<p style="color:#888;font-size:0.9em">Looking up&#x2026;</p>';
+  fetch('/api/server-peers?sap_user=' + encodeURIComponent(username))
+    .then(function(r) {
+      if (!r.ok) throw new Error(r.status === 404
+        ? 'Username not found &#x2014; check your SAP username.'
+        : 'Server error ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      var html = '<p style="color:#aaa;font-size:0.9em">Server: <strong style="color:#fff">'
+               + data.server + '</strong> &nbsp;&middot;&nbsp; '
+               + data.peers.length + ' participant(s)</p>';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:0.9em">';
+      html += '<tr>'
+            + '<th style="text-align:left;padding:6px 10px;background:#1a2a1a;color:#aaa;border-bottom:1px solid #2a2a3e;font-weight:normal">Name</th>'
+            + '<th style="text-align:left;padding:6px 10px;background:#1a2a1a;color:#aaa;border-bottom:1px solid #2a2a3e;font-weight:normal">SAP User</th>'
+            + '<th style="text-align:left;padding:6px 10px;background:#1a2a1a;color:#aaa;border-bottom:1px solid #2a2a3e;font-weight:normal">VPN IP</th>'
+            + '<th style="text-align:left;padding:6px 10px;background:#1a2a1a;color:#aaa;border-bottom:1px solid #2a2a3e;font-weight:normal">SAP Client</th></tr>';
+      data.peers.forEach(function(p) {
+        var isMe  = (p.sap_username === username);
+        var rowBg = isMe ? 'background:#0a1e0a' : '';
+        var badge = isMe ? ' <span style="color:#2ecc71;font-size:0.75em">&#x25C4; you</span>' : '';
+        html += '<tr style="' + rowBg + '">'
+              + '<td style="padding:7px 10px;border-bottom:1px solid #1e1e2e">' + p.name + badge + '</td>'
+              + '<td style="padding:7px 10px;border-bottom:1px solid #1e1e2e;font-family:monospace;color:#e8c07d">' + p.sap_username + '</td>'
+              + '<td style="padding:7px 10px;border-bottom:1px solid #1e1e2e;font-family:monospace;color:#2ecc71">' + (p.wg_ip || '&mdash;') + '</td>'
+              + '<td style="padding:7px 10px;border-bottom:1px solid #1e1e2e;color:#aaa">' + (p.sap_client || '&mdash;') + '</td>'
+              + '</tr>';
+      });
+      html += '</table>';
+      if (data.peers.length > 1) {
+        html += '<p style="margin-top:0.8em;color:#aaa;font-size:0.85em">'
+              + '&#x1F4A1; Pick anyone from this list with a <strong style="color:#fff">different VPN IP</strong>'
+              + ' &mdash; that&apos;s your lab partner for Step 6. Go say hi!</p>';
+      } else {
+        html += '<p style="margin-top:0.8em;color:#f39c12;font-size:0.85em">'
+              + '&#x26A0;&#xFE0F; You&apos;re the only one on your server so far. '
+              + 'Ask a neighbour on a different server to also run SE16 after you activate your policy &mdash; '
+              + 'the effect is visible to anyone who opens SCUSTOM.</p>';
+      }
+      out.innerHTML = html;
+    })
+    .catch(function(err) {
+      out.innerHTML = '<p style="color:#e74c3c">' + err.message + '</p>';
+    });
+}
+</script>
+"""
+
 @app.route("/levels/")
 @app.route("/levels")
 def levels_index():
@@ -348,6 +426,7 @@ def level_guide(level_num):
     codes = load_codes()
     key = f"L{level_num}"
     title = codes.get(key, {}).get("title", f"Level {level_num}")
+    extra_widget = _L2_PEERS_WIDGET if level_num == 2 else ""
     return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level {level_num} — {title}</title>{LEVEL_STYLE}</head>
 <body>
   <div class='header'><img src='/logo' alt='Pathlock'>
@@ -359,6 +438,7 @@ def level_guide(level_num):
   <div class='container'>
     <div class='nav'><a href='/levels'>← All Levels</a><a href='/'>Leaderboard</a><a href='/submit'>Submit Code</a></div>
     {body_html}
+    {extra_widget}
     <div class='level-nav'>{prev_link}{next_link}</div>
   </div>
 </body></html>"""
@@ -1009,6 +1089,40 @@ def api_leaderboard():
     return jsonify({
         "total_levels": len(codes),
         "rows": [dict(r) for r in rows],
+    })
+
+@app.route("/api/server-peers")
+def api_server_peers():
+    """Return all participants on the same SAP server as the given sap_user.
+
+    GET /api/server-peers?sap_user=JSMITH
+    Response: { "server": "sap2", "peers": [{name, sap_username, wg_ip, sap_client}, ...] }
+
+    Used by the Level 2 "Find Your Lab Partner" widget so participants can
+    identify colleagues with a different VPN IP on the same physical server.
+    """
+    if not _has_access_cookie():
+        return jsonify({"error": "unauthorized"}), 401
+    sap_user = request.args.get("sap_user", "").upper().strip()
+    if not sap_user:
+        return jsonify({"error": "sap_user param required"}), 400
+    db = get_db()
+    row = db.execute(
+        "SELECT server FROM participants WHERE sap_username=?", (sap_user,)
+    ).fetchone()
+    if not row:
+        db.close()
+        return jsonify({"error": "not_found"}), 404
+    server = row["server"]
+    peers = db.execute(
+        "SELECT name, sap_username, wg_ip, sap_client "
+        "FROM participants WHERE server=? ORDER BY wg_ip",
+        (server,),
+    ).fetchall()
+    db.close()
+    return jsonify({
+        "server": server or "unknown",
+        "peers": [dict(p) for p in peers],
     })
 
 @app.route("/register", methods=["GET", "POST"])
