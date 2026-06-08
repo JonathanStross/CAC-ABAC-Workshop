@@ -422,7 +422,7 @@ GDPR Art. 5(1)(c) — purpose limitation | ISO 27001 A.5.15 — access control
 
 ---
 
-### Level 7 — F-07: Fiori / OData — CSS Mask Is Not a Data Control
+### Level 8 — F-08: Fiori / OData — CSS Mask Is Not a Data Control
 **Points:** 175 | **Guidance:** Independent | **Time:** 25 min
 
 #### Audit finding
@@ -432,26 +432,33 @@ GDPR Art. 5(1)(c) — purpose limitation | ISO 27001 A.5.15 — access control
 At the start of this level, the instructor steps out briefly. Participants must work through it with zero support — mirroring the real scenario where a junior team member closed the finding.
 
 #### What participants do
-1. Open the Fiori Sales Orders app — fields appear masked visually
-2. Open browser DevTools → Network tab → filter for OData requests
-3. Find the `$batch` or entity request → inspect the JSON response
-4. Observe: `"NetAmount":"14850.00"` — real values in the HTTP response despite the UI mask
-5. Configure Pathlock DAC to mask `NetAmount`, `GrossAmount`, `CustomerID` at the **OData response layer** (server-side, before JSON leaves the backend)
-6. Verify: DevTools now shows `"NetAmount":"***"` — the protection is real
+1. Open the Fiori Launchpad → navigate to the **Manage Sales Orders** app
+2. Confirm fields appear visually masked in the UI (a CSS-level mask is already applied)
+3. Open browser **DevTools** (F12) → **Network** tab → reload the app
+4. Filter requests for `odata` — find the `$batch` or entity set request
+5. Inspect the JSON response body: `"NetAmount":"14850.00"` — real values visible despite UI mask
+6. Screenshot the unmasked JSON as "proof the finding is still open"
+7. Configure Pathlock DAC OData masking for the `SEPMRA_C_SO_SalesOrder` service — mask `NetAmount`, `GrossAmount`, `CustomerID` at the **server-side response layer**
+8. Reload the app — verify DevTools now shows `"NetAmount":"***"` in the JSON response
+9. **Find the completion code** in the Pathlock OData masking configuration screen
 
 #### Why this level exists
 Challenges the assumption that "it looks masked in the app" = "it is protected". CSS/JS masking is a display trick — the data is in the HTTP response and recoverable with basic developer tools. Pathlock masks at the **data layer**, not the display layer.
 
+This is the most technically sophisticated level in Session 2. The DevTools moment — seeing real currency amounts in the JSON despite the UI showing `***` — is a recurring "aha" for both technical and business audiences.
+
 #### What needs to be pre-configured
-- Fiori launchpad accessible: `http://152.53.187.143:50000/sap/bc/ui2/flp`
-- `SEPMRA_C_SO_SalesOrder` OData service active (`/iwfnd/maint_service`)
+- Fiori launchpad accessible: `https://10.8.0.1:50001/sap/bc/ui2/flp` (via VPN)
+- `SEPMRA_C_SO_SalesOrder` OData service active and registered in `/IWFND/MAINT_SERVICE`
+- A CSS-level UI mask already applied to the app (to simulate the "false close" scenario)
 - OData masking feature enabled in Pathlock for this service
+- **Completion code** pre-entered in the description of the OData policy entry in Pathlock
 
 #### Completion code
-TBD — suggested: the name of the Pathlock response header injected on masked OData calls.
+Pre-entered in the **description field of the OData masking policy** in Pathlock DAC. Participants find it when they navigate to the OData masking configuration screen.
 
 #### Framework
-GDPR Art. 32 — technical security measures at data layer
+GDPR Art. 32 — technical security measures at data layer | PCI-DSS Req. 3 — protect data in transit
 
 ---
 
