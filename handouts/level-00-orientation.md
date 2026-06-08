@@ -15,15 +15,22 @@
 
 ## Prerequisites
 
-Make sure you have the following before you begin:
+Make sure you have the following **installed** before you begin:
 
-| | Requirement |
-|---|---|
-| 💻 | A laptop (Windows, macOS, or Linux) |
-| 📦 | **WireGuard** — [wireguard.com/install](https://www.wireguard.com/install/) |
-| 🖥️ | **SAP GUI** — [SAP Support downloads](https://support.sap.com/en/product/connectors/sapgui.html) |
-| 📄 | Your **WireGuard `.conf` file** — downloaded from the registration page |
-| 🔑 | Your **SAP credentials** — from your registration page (username + temporary password) |
+| | Requirement | Download |
+|---|---|---|
+| 💻 | A laptop (Windows, macOS, or Linux) | — |
+| 📦 | **WireGuard** installed and running | [wireguard.com/install](https://www.wireguard.com/install/) |
+| 🖥️ | **SAP GUI** installed | [SAP Support](https://support.sap.com/en/product/connectors/sapgui.html) — or ask your instructor for the installer |
+| 🌐 | **Google Chrome** or **Microsoft Edge** | [chrome](https://www.google.com/chrome/) / [edge](https://www.microsoft.com/edge) — needed for L8 Fiori |
+| 📄 | Your **WireGuard `.conf` file** | Downloaded from your registration confirmation page |
+| 🔑 | Your **SAP credentials** | From your registration confirmation page (username + temporary password + client number) |
+
+> ⚠️ **If you have not installed WireGuard or SAP GUI yet — do it now before continuing.**
+> Both require a standard installation on your laptop. No admin rights are needed on macOS;
+> on Windows you may need to click "Allow" on a UAC prompt.
+
+> 💡 **SAP GUI version:** Any version from SAP GUI 7.60 onwards works. If your company already has SAP GUI installed, use that.
 
 **SAP system parameters** — you will need these in Step 2:
 
