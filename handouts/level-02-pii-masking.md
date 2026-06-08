@@ -104,7 +104,10 @@ A **Policy** is the container that holds the masking rules and links them to the
 | 4 | Click the **Create** button (📄 blank page icon at the top of the policy list) | A blank policy form opens |
 | 5 | Enter the **Policy Name**: `MASK_EMAIL_<YOURUSERNAME>` — e.g. `MASK_EMAIL_AMUELLER` | Field fills in |
 | 6 | Enter the **Description**: `Mask passenger email for my user` | Field fills in |
-| 7 | Click **Save** (💾 or Ctrl+S) | Policy appears in the list |
+| 7 | Leave **Process Area** and **Application Area** empty | — |
+| 8 | Set the **Logging** dropdown to **`Do not log`** | Dropdown updates |
+| 9 | *(Optional)* In the **Long Text** field, write something about the workshop — feedback is always welcome 😄 | — |
+| 10 | Click **Save** (💾 or Ctrl+S) | Policy appears in the list |
 
 > ⚠️ If you get a "duplicate name" error, someone already used that name — double-check your username is in the policy name.
 
