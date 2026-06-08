@@ -697,10 +697,11 @@ STYLE = """
 # ---------------------------------------------------------------------------
 def _topbar(active: str = "") -> str:
     links = [
-        ("/",        "🏆",  "Leaderboard"),
-        ("/levels",  "📖",  "Levels"),
-        ("/register","📝",  "Register"),
-        ("/submit",  "🔑",  "Submit"),
+        ("/",            "�",  "Academy"),
+        ("/leaderboard", "�🏆",  "Leaderboard"),
+        ("/levels",      "📖",  "Levels"),
+        ("/register",    "📝",  "Register"),
+        ("/submit",      "🔑",  "Submit"),
     ]
     items = ""
     for href, icon, label in links:
@@ -711,12 +712,12 @@ def _topbar(active: str = "") -> str:
   <a class="brand" href="/">
     <img src="/logo" alt="Pathlock">
     <span class="brand-divider"></span>
-    <span class="brand-label">DAC: Practitioner Level</span>
+    <span class="brand-label">Pathlock Academy</span>
   </a>
   <nav>{items}</nav>
 </div>"""
 
-LEADERBOARD_TEMPLATE = """
+HOME_TEMPLATE = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -770,7 +771,7 @@ LEADERBOARD_TEMPLATE = """
     <div class="catalog-section">
       <h2>DAC <span>Dynamic Access Control</span></h2>
       <div class="course-row">
-        <a class="course-card" href="/register">
+        <a class="course-card" href="/levels">
           <span class="cbadge blive">Live now</span>
           <div class="ct">DAC</div>
           <div class="cn">Practitioner</div>
@@ -813,8 +814,29 @@ LEADERBOARD_TEMPLATE = """
 
   </div>
 
-  <div class="lb-section">
-    <h2>DAC: Practitioner — <span>Live Leaderboard</span></h2>
+</body>
+</html>
+"""
+
+
+# ---------------------------------------------------------------------------
+# Dedicated leaderboard page  (/leaderboard)
+# ---------------------------------------------------------------------------
+LEADERBOARD_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Leaderboard — DAC: Practitioner Level</title>
+  """ + STYLE + """
+</head>
+<body>
+  """ + _topbar("/leaderboard") + """
+  <div class="page-header">
+    <h1>Live Leaderboard</h1>
+    <p>DAC: Practitioner Level &nbsp;·&nbsp; Pathlock Academy</p>
+  </div>
+  <div class="container">
     <div id="lb-container">
       {% if rows %}
       <table id="lb-table">
@@ -831,19 +853,24 @@ LEADERBOARD_TEMPLATE = """
         {% endfor %}
       </table>
       {% else %}
-      <p style="text-align:center;color:#555;padding:40px">No participants yet — be the first to register!</p>
+      <p style="text-align:center;color:#555;padding:60px 40px">
+        No participants yet —
+        <a href="/register" style="color:#c8102e;text-decoration:none;font-weight:600">Register to be the first →</a>
+      </p>
       {% endif %}
     </div>
     <p class="refresh-note">Live &mdash; updated <span id="last-updated">just now</span></p>
   </div>
-
   <script>
     const TOTAL_LEVELS = {{ total_levels }};
     const MEDALS = ['🥇','🥈','🥉'];
     function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function renderTable(rows){
       const c=document.getElementById('lb-container'); if(!c) return;
-      if(!rows||rows.length===0){c.innerHTML='<p style="text-align:center;color:#555;padding:40px">No participants yet.</p>';return;}
+      if(!rows||rows.length===0){
+        c.innerHTML='<p style="text-align:center;color:#555;padding:60px 40px">No participants yet — <a href="/register" style="color:#c8102e;text-decoration:none;font-weight:600">Register to be the first →</a></p>';
+        return;
+      }
       let h='<table id="lb-table"><tr><th>#</th><th>Participant</th><th>SAP User</th><th>Score</th><th>Levels</th><th>Last Activity</th></tr>';
       rows.forEach((r,i)=>{
         const rank=i+1,rc=rank<=3?'rank-'+rank:'',medal=rank<=3?MEDALS[i]:rank;
@@ -1150,11 +1177,17 @@ ACCESS_CODE_TEMPLATE = """
 # ---------------------------------------------------------------------------
 @app.route("/")
 def index():
+    return render_template_string(HOME_TEMPLATE)
+
+
+@app.route("/leaderboard")
+def leaderboard_page():
     rows = get_leaderboard()
     codes = load_codes()
     return render_template_string(LEADERBOARD_TEMPLATE,
         rows=rows,
         total_levels=len(codes))
+
 
 @app.route("/api/leaderboard")
 def api_leaderboard():
