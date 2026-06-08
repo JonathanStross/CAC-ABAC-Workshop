@@ -92,11 +92,26 @@ Now add a rule condition: mask EMAIL for anyone whose VPN IP is **not** yours.
 |---|---|---|
 | 1 | In the left tree, double-click **Policy Administration Point → Rules** | Selection dialog for Rule ID |
 | 2 | Select your policy `MASK_NET_<YOURUSERNAME>` and confirm | Rules list for your policy |
-| 3 | Click **Change Mode** → **New** | Blank condition row |
-| 4 | **Attribute**: `USER.NETWORK` | Attribute selector |
-| 5 | **Operator**: `NOT EQ` (≠) | |
-| 6 | **Value**: `10.8.0.X` — your VPN IP from Step 1 | Condition set |
-| 7 | Save | |
+| 3 | Check whether edit mode is already active — look for the toolbar buttons: **Check entries** (scale icon), **Append Row** (blank page icon), **+** and **−**. If not, click **Change Mode** (pencil icon). | Edit mode active |
+| 4 | Click the **Append Row** button (📄 blank page icon) to create a new condition | A blank condition row appears |
+| 5 | In the **Condition ID** field: type `1` directly, or press **F4** and select `1` | Condition ID set to `1` |
+| 6 | In the **Attribute ID** field: press **F4**, search for and select **`USER.NETWORK`** | Attribute set |
+| 7 | Set the **Operator** to `NOT EQ` (≠) | Operator set |
+| 8 | In the **Value** field: type your VPN IP directly (e.g. `10.8.0.5` — from Step 1) | Value filled |
+| 9 | Click the **Check entries** button (⚖️ scale icon) to validate — no errors should appear | Validation passed |
+| 10 | Click **Save** | Condition saved |
+| 11 | Select the condition row and click **Details** (above the list) — confirm it reads: | |
+
+```
+Policy: MASK_NET_<YOURUSERNAME>
+Policy Name: Block EMAIL access from untrusted network endpoints
+
+*******************************************************************
+
+Rule:
+
+IF USER.NETWORK NOT EQ <YOUR VPN IP>
+```
 
 > **What this means:** the policy fires (masking is applied) for all sessions where the VPN IP ≠ your IP. Your own session is exempt.
 
