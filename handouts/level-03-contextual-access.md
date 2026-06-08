@@ -41,9 +41,13 @@ USER.NETWORK NOT EQ <your_VPN_IP>
 
 ## Step 1 — Find Your VPN IP and Your Lab Partner
 
-Use the **Find Your Lab Partner** widget at the **bottom of this page**. Enter your SAP username — it will show your own VPN IP and list everyone else on the same server.
+Scroll to the **bottom of this page** and use the **Find Your VPN IP & Lab Partner** widget. Enter your SAP username — it shows your own VPN IP and lists everyone on your server.
 
-> ⚠️ Write down your `10.8.0.X` address — you will need it in Step 4. While you are there, also note a colleague with a different IP — that is your lab partner for the test in Step 6.
+> ⚠️ Write down your `10.8.0.X` address — you will need it in Step 5. While you are there, note a colleague with a different IP — that is your lab partner for Step 7.
+
+**How the demo works:** Tell your partner your client number — they log into SAP on your client from their machine (or share your credentials and use their machine, logging out immediately after). They navigate to `SE16 → SCUSTOM` — their VPN IP differs from yours, so the network condition fires and they see the street address masked. You open the same table from your own session and see it unmasked. Same server, same client, same table, same role — different result.
+
+**No partner available?** Enter your own IP as the exception — you will see the data unmasked since your IP matches. Then swap the condition to a different IP and re-test: the masking will fire. That gives you both the positive and the negative test on your own.
 
 ---
 
@@ -169,7 +173,7 @@ Link the policy to the data it should mask: `SCUSTOM.STREET` via `DATA.S_STREET`
 
 ## Step 7 — Test It
 
-You already identified your lab partner in Step 1. Share your **client number** with them and ask them to log into SAP on your client from their machine — or share your credentials and use their machine, logging out immediately after.
+You already have everything you need from Step 1 — your VPN IP is in the condition and your lab partner is identified. Share your **client number** with them and ask them to log into SAP on your client from their machine — or share your credentials and use their machine, logging out immediately after.
 
 **No partner available?** Enter your own IP as the exception in the condition — you will see the data unmasked since your IP matches. Then swap the condition to a different IP and re-test: the masking will fire. That gives you both the positive and the negative test on your own.
 

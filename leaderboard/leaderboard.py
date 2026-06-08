@@ -305,16 +305,7 @@ LEVEL_STYLE = """
 _L2_PEERS_WIDGET = """
 <div style="margin-top:2.5em;padding:1.5em;background:#0d1a0d;border:1px solid #2ecc71;border-radius:8px">
   <h3 style="color:#2ecc71;margin-top:0">&#x1F91D; Find Your VPN IP &amp; Lab Partner</h3>
-  <p style="color:#ccc">Enter your SAP username to see your <strong>own VPN IP</strong> and everyone else on your server.
-  Note your IP for Step 4, and pick a colleague with a <strong>different IP</strong> as your lab partner for Step 6:</p>
-  <p style="color:#aaa;font-size:0.9em">&#x1F4CB; <strong>How the demo works:</strong>
-  Tell your partner your <strong>client number</strong> — they log into SAP on your client from their machine
-  (or you can share your credentials and use their machine, logging out immediately after).
-  They navigate to <code>SE16 &rarr; SCUSTOM</code> — their VPN IP differs from yours,
-  so the network condition fires and they see masked data. You open the same table from your own session and see it unmasked.
-  Same server, same client, same table, same role &mdash; different result.<br><br>
-  <strong>No partner available?</strong> Enter your own IP as the exception &mdash; you will see the data unmasked since your IP matches.
-  Then swap the condition to a different IP and re-test: the masking will fire. That gives you both the positive and the negative test on your own.</p>
+  <p style="color:#ccc">Enter your SAP username to see your <strong>own VPN IP</strong> and everyone on your server:</p>
   <div style="display:flex;gap:0.5em;margin-bottom:1em">
     <input id="peers-input" type="text" placeholder="Your SAP username &#x2014; e.g. JSMITH"
            style="flex:1;padding:0.65em 0.8em;background:#0a0a1a;color:#fff;border:1px solid #444;
