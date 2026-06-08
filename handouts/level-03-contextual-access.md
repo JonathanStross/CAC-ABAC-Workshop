@@ -39,13 +39,11 @@ USER.NETWORK NOT EQ <your_VPN_IP>
 
 ---
 
-## Step 1 — Find Your VPN IP
+## Step 1 — Find Your VPN IP and Your Lab Partner
 
-Your VPN IP is in the credentials you received at registration. You can also find it in the leaderboard:
-- Go to the **leaderboard home page** (`https://pathlock.academy`)
-- Your IP is shown in your registration confirmation, or check the WireGuard tunnel on your machine
+Use the **Find Your Lab Partner** widget at the **bottom of this page**. Enter your SAP username — it will show your own VPN IP and list everyone else on the same server.
 
-> ⚠️ Write down your `10.8.0.X` address — you will need it in Step 4.
+> ⚠️ Write down your `10.8.0.X` address — you will need it in Step 4. While you are there, also note a colleague with a different IP — that is your lab partner for the test in Step 6.
 
 ---
 
@@ -135,7 +133,7 @@ Link the policy to the data it should mask: `SCUSTOM.STREET` via `DATA.S_STREET`
 
 ## Step 6 — Test It
 
-Use the **Find Your Lab Partner** widget at the bottom of this page to see who is on your server. Pick any colleague and share your **client number** with them. They log into SAP on your client from their machine — or you can share your credentials and use their machine, logging out immediately after.
+You already identified your lab partner in Step 1. Share your **client number** with them and ask them to log into SAP on your client from their machine — or share your credentials and use their machine, logging out immediately after.
 
 **No partner available?** Enter your own IP as the exception in the condition — you will see the data unmasked since your IP matches. Then swap the condition to a different IP and re-test: the masking will fire. That gives you both the positive and the negative test on your own.
 

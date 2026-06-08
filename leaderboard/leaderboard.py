@@ -304,9 +304,9 @@ LEVEL_STYLE = """
 # ---------------------------------------------------------------------------
 _L2_PEERS_WIDGET = """
 <div style="margin-top:2.5em;padding:1.5em;background:#0d1a0d;border:1px solid #2ecc71;border-radius:8px">
-  <h3 style="color:#2ecc71;margin-top:0">&#x1F91D; Find Your Lab Partner</h3>
-  <p style="color:#ccc">For the test you need a colleague on the <strong>same SAP server</strong>
-  but with a <strong>different SAP client</strong>. Enter your SAP username to see who is on your server:</p>
+  <h3 style="color:#2ecc71;margin-top:0">&#x1F91D; Find Your VPN IP &amp; Lab Partner</h3>
+  <p style="color:#ccc">Enter your SAP username to see your <strong>own VPN IP</strong> and everyone else on your server.
+  Note your IP for Step 4, and pick a colleague with a <strong>different IP</strong> as your lab partner for Step 6:</p>
   <p style="color:#aaa;font-size:0.9em">&#x1F4CB; <strong>How the demo works:</strong>
   Tell your partner your <strong>client number</strong> — they log into SAP on your client from their machine
   (or you can share your credentials and use their machine, logging out immediately after).
