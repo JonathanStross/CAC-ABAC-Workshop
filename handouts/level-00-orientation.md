@@ -173,7 +173,7 @@ You've already seen the answer. Log out of SAP and read everything on the login 
 | WireGuard — "Unable to start tunnel" | Disconnect any other active VPN first, then activate the workshop tunnel |
 | Ping to `10.8.0.1` times out | Wait 30–60 seconds and retry — the first handshake can be slow |
 | SAP GUI — "Cannot connect to server" | Confirm WireGuard shows **Active**; verify application server `10.8.0.1` and instance `00` |
-| SAP — "Name or password is incorrect" | Passwords are case-sensitive. Check Caps Lock. Username must be uppercase (e.g. `AMUELLER`) |
+| SAP — "Name or password is incorrect" | Passwords are case-sensitive. Check Caps Lock. |
 | SAP — "User is locked" | Raise your hand — your instructor will unlock the account |
 | Lost credentials or `.conf` file | Ask your instructor — credentials cannot be retrieved after registration and must be reset manually |
 | macOS blocks WireGuard VPN permission | **System Settings → Privacy & Security → VPN** → allow WireGuard |
