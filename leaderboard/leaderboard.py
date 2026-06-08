@@ -721,124 +721,143 @@ LEADERBOARD_TEMPLATE = """
 <html>
 <head>
   <meta charset="utf-8">
-  <title>DAC: Practitioner Level — Leaderboard</title>
+  <title>Pathlock Academy</title>
   """ + STYLE + """
+  <style>
+    .hero{background:linear-gradient(135deg,#0d0d1f 0%,#14142a 60%,#1a0a1a 100%);border-bottom:1px solid #1e1e35;padding:52px 40px 44px;text-align:center}
+    .hero h1{font-size:2.1em;font-weight:800;color:#fff;margin:0 0 10px;letter-spacing:-.02em}
+    .hero h1 span{color:#c8102e}
+    .hero p{color:#999;font-size:1em;max-width:540px;margin:0 auto 24px;line-height:1.7}
+    .hero .cta-note{display:inline-block;background:#1a1a2e;border:1px solid #2a2a45;border-radius:8px;padding:10px 22px;color:#aaa;font-size:0.85em;line-height:1.6}
+    .hero .cta-note a{color:#c8102e;text-decoration:none;font-weight:600}
+    .hero .cta-note a:hover{color:#e83050}
+    .catalog{max-width:960px;margin:0 auto;padding:40px 24px 20px}
+    .catalog-section{margin-bottom:36px}
+    .catalog-section h2{font-size:0.75em;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;border-bottom:1px solid #1a1a2e;padding-bottom:10px;margin-bottom:14px}
+    .catalog-section h2 span{color:#888;font-weight:400;margin-left:8px;text-transform:none;font-size:1.15em;letter-spacing:0}
+    .course-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+    .course-card{background:#13131f;border:1px solid #1a1a2e;border-radius:10px;padding:16px 16px 12px;position:relative;transition:border-color .2s,background .2s}
+    a.course-card{text-decoration:none;display:block;cursor:pointer}
+    a.course-card:hover{border-color:#c8102e;background:#180810}
+    .course-card.locked{opacity:.32;cursor:default}
+    .course-card .ct{font-size:0.68em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#444;margin-bottom:5px}
+    a.course-card .ct{color:#c8102e}
+    .course-card .cn{font-size:0.92em;font-weight:600;color:#999;margin-bottom:3px}
+    a.course-card .cn{color:#fff}
+    .course-card .cs{font-size:0.76em;color:#444;line-height:1.5}
+    a.course-card .cs{color:#999}
+    .cbadge{position:absolute;top:10px;right:10px;font-size:0.65em;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.05em}
+    .blive{background:#c8102e;color:#fff}
+    .bsoon{background:#1a1a2e;color:#444}
+    .lb-section{max-width:960px;margin:0 auto;padding:0 24px 60px;border-top:1px solid #1a1a2e}
+    .lb-section h2{font-size:0.75em;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;padding:28px 0 16px;margin:0;border-bottom:1px solid #1a1a2e;margin-bottom:16px}
+    .lb-section h2 span{color:#c8102e;font-size:1.15em}
+  </style>
 </head>
 <body>
   """ + _topbar("/") + """
-  <div class="page-header">
-    <h1>Meridian AG — Audit Remediation</h1>
-    <p>DAC: Practitioner Level &nbsp;·&nbsp; Pathlock Live Workshop</p>
-  </div>
-  <div class="container">
 
-    <div style="background:#1a1a2e;border-radius:8px;padding:24px 28px;margin-bottom:28px;border-left:4px solid #c8102e">
-      <h2 style="margin:0 0 10px;color:#fff;font-size:1.2em">👋 Welcome to DAC: Practitioner Level</h2>
-      <p style="margin:0 0 14px;color:#ccc;line-height:1.6">
-        You are part of the <strong style="color:#fff">Meridian AG audit remediation team</strong>.
-        The DPA has issued a formal warning — critical access control findings must be closed before end of day.
-        Work through the levels, find the completion codes inside SAP or Pathlock, and submit them here to earn points.
-      </p>
-      <div style="background:#12120f;border:1px solid #f39c12;border-radius:6px;padding:12px 18px;margin-bottom:14px;font-size:0.9em;color:#f0c040;line-height:1.7">
-        🎓 <strong>Complete all 9 levels (L0–L8) to qualify for the Pathlock DAC: Practitioner Certificate.</strong><br>
-        <span style="color:#aaa">Next step after today: <em>DAC: Professional Level</em> — advanced policy architecture, multi-system rollout, and compliance automation.</span>
-      </div>
-      <div style="background:#0f0f1a;border-radius:6px;padding:16px 20px;font-size:0.9em;color:#ccc;line-height:2">
-        <strong style="color:#fff">How to get started:</strong><br>
-        <span style="color:#2ecc71">①</span> &nbsp;Make sure you have the following installed on your <strong style="color:#fff">laptop</strong>:<br>
-        <div style="margin-left:28px;margin-top:4px;margin-bottom:4px;line-height:1.8">
-          &bull; &nbsp;<a href="https://www.wireguard.com/install/" target="_blank" style="color:#2ecc71">WireGuard</a> &nbsp;<span style="color:#aaa;font-size:0.9em">— VPN client (phone only if tethering)</span><br>
-          &bull; &nbsp;<a href="https://support.sap.com/en/product/connectors/sapgui.html" target="_blank" style="color:#2ecc71">SAP GUI</a> &nbsp;<span style="color:#aaa;font-size:0.9em">— to work in SAP transactions</span><br>
-          &bull; &nbsp;<strong style="color:#fff">Google Chrome</strong> or <strong style="color:#fff">Microsoft Edge</strong> &nbsp;<span style="color:#aaa;font-size:0.9em">— recommended for SAP Fiori / UI5 (best compatibility; Firefox also works)</span>
+  <div class="hero">
+    <h1>Welcome to <span>Pathlock</span> Academy</h1>
+    <p>Hands-on, certification-level training for the Pathlock security and compliance platform. Work through real SAP scenarios, earn points, and qualify for official certificates.</p>
+    <div class="cta-note">
+      Don't have access yet? &nbsp;<a href="mailto:academy@pathlock.com">Contact Pathlock</a> to enrol in a course or request a private workshop for your team.
+    </div>
+  </div>
+
+  <div class="catalog">
+
+    <div class="catalog-section">
+      <h2>DAC <span>Dynamic Access Control</span></h2>
+      <div class="course-row">
+        <a class="course-card" href="/register">
+          <span class="cbadge blive">Live now</span>
+          <div class="ct">DAC</div>
+          <div class="cn">Practitioner</div>
+          <div class="cs">Masking · TCode blocking · Audit feed · Export control · Fiori/OData</div>
+        </a>
+        <div class="course-card locked">
+          <span class="cbadge bsoon">Coming soon</span>
+          <div class="ct">DAC</div>
+          <div class="cn">Professional</div>
+          <div class="cs">Policy architecture · Multi-system rollout · Compliance automation</div>
         </div>
-        <span style="color:#2ecc71">②</span> &nbsp;Go to <a href="/register" style="color:#2ecc71">Register</a> — enter the <strong style="color:#fff">access code your instructor announced</strong>, fill in your details and choose a SAP username<br>
-        <span style="color:#2ecc71">③</span> &nbsp;Download your personal <strong style="color:#fff">WireGuard VPN config</strong> from the registration confirmation page and import it into the WireGuard app<br>
-        <span style="color:#2ecc71">④</span> &nbsp;Connect to the VPN, open SAP GUI or Fiori, and work through the levels — starting with <strong style="color:#fff">Level 0</strong><br>
-        <span style="color:#2ecc71">⑤</span> &nbsp;Found a completion code? Submit it at <a href="/submit" style="color:#2ecc71">Submit Code</a> to claim your points and climb the leaderboard<br>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #2a2a3e;color:#aaa;font-size:0.9em">
-          📖 &nbsp;<a href="/levels/0" style="color:#2ecc71;font-weight:bold">Click here to start with Level 0 →</a><br>
-          Your instructor will also provide the SAP system address, client number, and any additional guidance.
+        <div class="course-card locked">
+          <span class="cbadge bsoon">Coming soon</span>
+          <div class="ct">DAC</div>
+          <div class="cn">Master</div>
+          <div class="cs">Enterprise ABAC design · GRC integration · Framework certification</div>
         </div>
       </div>
     </div>
 
+    <div class="catalog-section">
+      <h2>TDnR <span>Threat Detection &amp; Response</span></h2>
+      <div class="course-row">
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TDnR</div><div class="cn">Practitioner</div><div class="cs">Threat patterns · Alert configuration · Incident triage</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TDnR</div><div class="cn">Professional</div><div class="cs">Detection rules · SIEM integration · Response playbooks</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TDnR</div><div class="cn">Master</div><div class="cs">Advanced threat hunting · SOC enablement</div></div>
+      </div>
+    </div>
+
+    <div class="catalog-section">
+      <h2>Other Tracks</h2>
+      <div class="course-row">
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Code Security</div><div class="cn">Practitioner</div><div class="cs">ABAP scanning · Vulnerability patterns</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Vulnerability Management</div><div class="cn">Practitioner</div><div class="cs">Patch analysis · Risk prioritisation</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Transport Control</div><div class="cn">Practitioner</div><div class="cs">Change gate policies · Transport risk scoring</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Application Profiler</div><div class="cn">Practitioner</div><div class="cs">Usage analytics · Licence optimisation</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Health Monitoring</div><div class="cn">Practitioner</div><div class="cs">System health · Alerting · SLA dashboards</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="lb-section">
+    <h2>DAC: Practitioner — <span>Live Leaderboard</span></h2>
     <div id="lb-container">
       {% if rows %}
       <table id="lb-table">
-        <tr>
-          <th>#</th><th>Participant</th><th>SAP User</th><th>Score</th><th>Levels</th><th>Last Activity</th>
-        </tr>
+        <tr><th>#</th><th>Participant</th><th>SAP User</th><th>Score</th><th>Levels</th><th>Last Activity</th></tr>
         {% for r in rows %}
         <tr class="rank-{{ loop.index if loop.index <= 3 else '' }}">
-          <td>
-            {% if loop.index == 1 %}🥇
-            {% elif loop.index == 2 %}🥈
-            {% elif loop.index == 3 %}🥉
-            {% else %}{{ loop.index }}{% endif %}
-          </td>
+          <td>{% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}</td>
           <td><strong>{{ r.name }}</strong></td>
           <td style="color:#aaa;font-size:0.85em">{{ r.sap_username }}</td>
           <td><strong>{{ r.total }} pts</strong></td>
           <td>{{ r.levels_done }} / {{ total_levels }}</td>
-          <td style="color:#666; font-size:0.85em">{{ r.last_submission or 'Just registered' }}</td>
+          <td style="color:#666;font-size:0.85em">{{ r.last_submission or 'Just registered' }}</td>
         </tr>
         {% endfor %}
       </table>
       {% else %}
-      <p id="lb-empty" style="text-align:center; color:#666; padding: 40px">No participants yet — be the first to register!</p>
+      <p style="text-align:center;color:#555;padding:40px">No participants yet — be the first to register!</p>
       {% endif %}
     </div>
-
     <p class="refresh-note">Live &mdash; updated <span id="last-updated">just now</span></p>
   </div>
 
   <script>
     const TOTAL_LEVELS = {{ total_levels }};
     const MEDALS = ['🥇','🥈','🥉'];
-
-    function esc(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    function renderTable(rows) {
-      const container = document.getElementById('lb-container');
-      if (!rows || rows.length === 0) {
-        container.innerHTML = '<p style="text-align:center;color:#666;padding:40px">No participants yet — be the first to register!</p>';
-        return;
-      }
-      let html = '<table id="lb-table"><tr><th>#</th><th>Participant</th><th>SAP User</th><th>Score</th><th>Levels</th><th>Last Activity</th></tr>';
-      rows.forEach((r, i) => {
-        const rank = i + 1;
-        const rankClass = rank <= 3 ? 'rank-' + rank : '';
-        const medal = rank <= 3 ? MEDALS[i] : rank;
-        html += '<tr class="' + rankClass + '">'
-          + '<td>' + medal + '</td>'
-          + '<td><strong>' + esc(r.name) + '</strong></td>'
-          + '<td style="color:#aaa;font-size:0.85em">' + esc(r.sap_username) + '</td>'
-          + '<td><strong>' + r.total + ' pts</strong></td>'
-          + '<td>' + r.levels_done + ' / ' + TOTAL_LEVELS + '</td>'
-          + '<td style="color:#666;font-size:0.85em">' + esc(r.last_submission || 'Just registered') + '</td>'
-          + '</tr>';
+    function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function renderTable(rows){
+      const c=document.getElementById('lb-container'); if(!c) return;
+      if(!rows||rows.length===0){c.innerHTML='<p style="text-align:center;color:#555;padding:40px">No participants yet.</p>';return;}
+      let h='<table id="lb-table"><tr><th>#</th><th>Participant</th><th>SAP User</th><th>Score</th><th>Levels</th><th>Last Activity</th></tr>';
+      rows.forEach((r,i)=>{
+        const rank=i+1,rc=rank<=3?'rank-'+rank:'',medal=rank<=3?MEDALS[i]:rank;
+        h+='<tr class="'+rc+'"><td>'+medal+'</td><td><strong>'+esc(r.name)+'</strong></td>'
+          +'<td style="color:#aaa;font-size:0.85em">'+esc(r.sap_username)+'</td>'
+          +'<td><strong>'+r.total+' pts</strong></td>'
+          +'<td>'+r.levels_done+' / '+TOTAL_LEVELS+'</td>'
+          +'<td style="color:#666;font-size:0.85em">'+esc(r.last_submission||'Just registered')+'</td></tr>';
       });
-      html += '</table>';
-      container.innerHTML = html;
+      c.innerHTML=h+'</table>';
     }
-
-    function updateTimestamp() {
-      const el = document.getElementById('last-updated');
-      if (el) el.textContent = new Date().toLocaleTimeString();
-    }
-
-    function poll() {
-      fetch('/api/leaderboard')
-        .then(function(r) { return r.ok ? r.json() : null; })
-        .then(function(data) {
-          if (data) { renderTable(data.rows); updateTimestamp(); }
-        })
-        .catch(function() {});
-    }
-
-    setInterval(poll, 10000);
+    function updateTimestamp(){const e=document.getElementById('last-updated');if(e)e.textContent=new Date().toLocaleTimeString();}
+    function poll(){fetch('/api/leaderboard').then(r=>r.ok?r.json():null).then(d=>{if(d){renderTable(d.rows);updateTimestamp();}}).catch(()=>{});}
+    setInterval(poll,10000);
   </script>
 </body>
 </html>
