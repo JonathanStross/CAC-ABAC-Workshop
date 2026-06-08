@@ -193,14 +193,13 @@ DATA.S_EMAIL
 
 ## Step 7 — Test: Verify the Masking Works
 
-Pathlock DAC policies are evaluated when a session starts — **you must log out and back in** for your new policy to take effect.
+Pathlock DAC policies take effect immediately — in most cases you will see the masking without logging out. If the result is not yet visible, a logout and re-login will force the session to pick up the new policy.
 
 | # | Action | Expected result |
 |---|---|---|
-| 1 | **Log out** of SAP (System → Log Off) | SAP login screen |
-| 2 | **Log back in** with your username and password | SAP menu |
-| 3 | Run `SE16` → table `SCUSTOM` → **Execute (F8)** | The `EMAIL` column now shows `***` for every passenger row ✅ |
-| 4 | Ask a colleague sitting next to you to open `SE16` → `SCUSTOM` | Their `EMAIL` column still shows real addresses — your policy only affects your own session ✅ |
+| 1 | Run `SE16` → table `SCUSTOM` → **Execute (F8)** | The `EMAIL` column now shows `***` for every passenger row ✅ |
+| 2 | If emails are still visible — **log out** (System → Log Off) and **log back in**, then repeat step 1 | Masking now active ✅ |
+| 3 | Ask a colleague sitting next to you to open `SE16` → `SCUSTOM` | Their `EMAIL` column still shows real addresses — your policy only affects your own session ✅ |
 
 > **Still seeing real emails after re-login?**  
 > → Check Step 5: the `USER.ID` value must be your exact SAP username, uppercase, no spaces.  
