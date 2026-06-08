@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| 🎯 **Goal** | Create a masking policy that fires based on **network location** — same user, same role, different result |
+| 🎯 **Goal** | Create a masking policy that fires based on **network location** — mask the passenger street address for all sessions not originating from your IP |
 | ⏱ **Time** | 15–20 minutes |
 | 🏆 **Points** | 100 |
 | 💡 **Difficulty** | 🟡 Hints |
@@ -19,10 +19,9 @@ The DPA audit finding #2 reads:
 
 > *"The masking policy created for finding #1 is scoped to a specific user identity. It provides no protection when a different user accesses the same data, nor does it enforce any network-location requirement. An attacker with any valid SAP account can access full passenger PII from any network endpoint."*
 
-In Level 2 you created a policy with condition `USER.ID EQ <your username>`.
-That approach is brittle: one policy per user, no network enforcement.
+In Level 2 you created a policy that masks the `EMAIL` field for your own user. That approach is brittle: one policy per user, no network enforcement, and it only covers one field.
 
-**The goal of this level:** create a policy that protects data based on **where** the connection comes from — not just who — using the `USER.NETWORK` attribute.
+**The goal of this level:** extend protection to the passenger `STREET` address field using **where** the connection comes from as the condition — not who the user is.
 
 ---
 
@@ -75,8 +74,8 @@ Create a new masking policy — name it with your username to avoid collisions.
 | 2 | Double-click **Policy Administration Point** | List of all policies |
 | 3 | Click **Change Mode** (pencil icon) | Edit mode |
 | 4 | Click the **Create** button (📄 blank page icon at the top of the policy list) | Blank policy form |
-| 5 | **Policy Name**: `MASK_NET_<YOURUSERNAME>` — e.g. `MASK_NET_AMUELLER` | Field fills in |
-| 6 | **Description**: `Block EMAIL access from untrusted network endpoints` | Field fills in |
+| 5 | **Policy Name**: `MASK_STREET_<YOURUSERNAME>` — e.g. `MASK_STREET_AMUELLER` | Field fills in |
+| 6 | **Description**: `Mask passenger street address based on network location` | Field fills in |
 | 7 | Leave **Process Area** and **Application Area** empty | — |
 | 8 | Set the **Logging** dropdown to **`Do not log`** | Dropdown updates |
 | 9 | *(Optional)* Add a note in the **Long Text** field | — |
@@ -91,7 +90,7 @@ Now add a rule condition: mask EMAIL for anyone whose VPN IP is **not** yours.
 | # | Action | What you see |
 |---|---|---|
 | 1 | In the left tree, double-click **Policy Administration Point → Rules** | Selection dialog for Rule ID |
-| 2 | Select your policy `MASK_NET_<YOURUSERNAME>` and confirm | Rules list for your policy |
+| 2 | Select your policy `MASK_STREET_<YOURUSERNAME>` and confirm | Rules list for your policy |
 | 3 | Check whether edit mode is already active — look for the toolbar buttons: **Check entries** (scale icon), **Append Row** (blank page icon), **+** and **−**. If not, click **Change Mode** (pencil icon). | Edit mode active |
 | 4 | Click the **Append Row** button (📄 blank page icon) to create a new condition | A blank condition row appears |
 | 5 | In the **Condition ID** field: type `1` directly, or press **F4** and select `1` | Condition ID set to `1` |
@@ -103,8 +102,8 @@ Now add a rule condition: mask EMAIL for anyone whose VPN IP is **not** yours.
 | 11 | Select the condition row and click **Details** (above the list) — confirm it reads: | |
 
 ```
-Policy: MASK_NET_<YOURUSERNAME>
-Policy Name: Block EMAIL access from untrusted network endpoints
+Policy: MASK_STREET_<YOURUSERNAME>
+Policy Name: Mask passenger street address based on network location
 
 *******************************************************************
 
@@ -119,14 +118,16 @@ IF USER.NETWORK NOT EQ <YOUR VPN IP>
 
 ## Step 5 — Add the Data Action
 
-Link the policy to the data it should mask: `SCUSTOM.EMAIL` via `DATA.S_EMAIL`.
+Link the policy to the data it should mask: `SCUSTOM.STREET` via `DATA.S_STREET`.
+
+> 💡 Your Level 2 `EMAIL` masking remains active — this policy adds a second layer of protection on a different field. No conflict, no changes needed to your Level 2 policy.
 
 | # | Action | What you see |
 |---|---|---|
 | 1 | In the left tree, double-click **Policy Administration Point → Actions** | Actions list for your policy |
-| 2 | Click **Change Mode** → **New** | Blank action row |
+| 2 | Click **Change Mode** → **Insert Row** (📄 blank page icon) | Blank action row |
 | 3 | **Action Type**: `Masking` | |
-| 4 | **Data Attribute**: `DATA.S_EMAIL` | |
+| 4 | **Data Attribute**: `DATA.S_STREET` | |
 | 5 | **Masking Pattern**: `***` (or choose a pattern from the dropdown) | |
 | 6 | Save | Policy is now active |
 
@@ -134,20 +135,16 @@ Link the policy to the data it should mask: `SCUSTOM.EMAIL` via `DATA.S_EMAIL`.
 
 ## Step 6 — Test It
 
-> ⚠️ **Disable your Level 2 masking first.** Your `MASK_EMAIL_<YOURUSERNAME>` policy from Level 2 is still active and will interfere with this test — both you and your partner would see masked data, making it impossible to see the difference.
->
-> Go to **`/N/APPSDM/ABAC`** → Functional Configuration → Policy Enforcement Point → **Data Masking**, enter Change Mode, and **uncheck the Active checkbox** on your `MASK_EMAIL_<YOURUSERNAME>` row. Save. Your Level 3 policy stays active.
-
 Use the **Find Your Lab Partner** widget at the bottom of this page to see who is on your server. Pick any colleague and share your **client number** with them. They log into SAP on your client from their machine — or you can share your credentials and use their machine, logging out immediately after.
 
-**No partner available?** Enter your own IP as the exception in the condition — you will see the data unmasked since your IP matches. Then swap the condition to a different IP and re-test: you will now see the masking fire. That gives you both the positive and the negative test on your own.
+**No partner available?** Enter your own IP as the exception in the condition — you will see the data unmasked since your IP matches. Then swap the condition to a different IP and re-test: the masking will fire. That gives you both the positive and the negative test on your own.
 
 ### Test A — Your own session (should be VISIBLE)
 
 | # | Action | Expected result |
 |---|---|---|
 | 1 | Run **`SE16`** → table `SCUSTOM` → **Execute (F8)** | Full table loads |
-| 2 | Look at the `EMAIL` column | **Full email addresses visible** ✅ |
+| 2 | Look at the `STREET` column | **Full street addresses visible** ✅ |
 
 Your VPN IP matches the exception you configured — the policy does not fire for you.
 
@@ -159,7 +156,7 @@ Your partner logs into SAP on **your client number** using their own machine:
 |---|---|---|
 | 1 | Partner logs into SAP with their own credentials on **your client** | Normal login |
 | 2 | Partner runs **`SE16`** → table `SCUSTOM` → **Execute (F8)** | Full table loads |
-| 3 | Partner looks at the `EMAIL` column | **`***` — masked** ✅ |
+| 3 | Partner looks at the `STREET` column | **`***` — masked** ✅ |
 
 Their VPN IP is different from yours → the condition `USER.NETWORK NOT EQ <your IP>` evaluates to TRUE → masking fires.
 
@@ -174,7 +171,7 @@ Their VPN IP is different from yours → the condition `USER.NETWORK NOT EQ <you
 | What changes in SAP were needed? | **None** — no role change, no authorisation object |
 | What changes in Pathlock were needed? | One policy, one condition, one action |
 | Does this scale to 2,000 users? | Yes — change the condition to `USER.NETWORK NOT IN 10.8.0.0/24` and it covers the entire VPN subnet |
-| How does this compare to L1? | L1 = user-identity scope. L2 = network-location scope. Both are ABAC conditions — stack them together for defence in depth |
+| How does this compare to L2? | L2 = user-identity scope on EMAIL. L3 = network-location scope on STREET. Stack both policies and you have defence in depth: identity + location, two different fields |
 
 ---
 
