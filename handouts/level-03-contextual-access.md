@@ -50,17 +50,7 @@ Your VPN IP is in the credentials you received at registration. You can also fin
 
 ---
 
-## Step 2 — Find Your Lab Partner
-
-**👉 Use the "Find Your Lab Partner" widget at the bottom of this page.**
-
-Enter your SAP username. The widget shows all participants assigned to the **same SAP server** as you, along with their VPN IPs. Pick any colleague with a **different IP** — that is your lab partner for Step 6.
-
-Go introduce yourself — you will need them in a few minutes.
-
----
-
-## Step 3 — Explore the `USER.NETWORK` Attribute
+## Step 2 — Explore the `USER.NETWORK` Attribute
 
 A **User Attribute** in Pathlock DAC defines a piece of context about the user at runtime. The `USER.NETWORK` attribute has been pre-created in the system — it resolves to the client's source IP address at the moment the SAP session starts.
 
@@ -79,7 +69,7 @@ A **User Attribute** in Pathlock DAC defines a piece of context about the user a
 
 ---
 
-## Step 4 — Create a Network-Based Masking Policy
+## Step 3 — Create a Network-Based Masking Policy
 
 Create a new masking policy — name it with your username to avoid collisions.
 
@@ -95,7 +85,7 @@ Create a new masking policy — name it with your username to avoid collisions.
 
 ---
 
-## Step 5 — Add the Network Condition
+## Step 4 — Add the Network Condition
 
 Now add a rule condition: mask EMAIL for anyone whose VPN IP is **not** yours.
 
@@ -113,7 +103,7 @@ Now add a rule condition: mask EMAIL for anyone whose VPN IP is **not** yours.
 
 ---
 
-## Step 6 — Add the Data Action
+## Step 5 — Add the Data Action
 
 Link the policy to the data it should mask: `SCUSTOM.EMAIL` via `DATA.S_EMAIL`.
 
@@ -128,7 +118,7 @@ Link the policy to the data it should mask: `SCUSTOM.EMAIL` via `DATA.S_EMAIL`.
 
 ---
 
-## Step 7 — Test It
+## Step 6 — Test It
 
 ### Test A — Your own session (should be VISIBLE)
 
