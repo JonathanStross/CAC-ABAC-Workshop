@@ -120,28 +120,30 @@ Link the policy to the data it should mask: `SCUSTOM.EMAIL` via `DATA.S_EMAIL`.
 
 ## Step 6 — Test It
 
+Use the **Find Your Lab Partner** widget at the bottom of this page to see who is on your server. Pick any colleague, share your **client number** with them, and ask them to log into SAP using your client from their machine.
+
 ### Test A — Your own session (should be VISIBLE)
 
 | # | Action | Expected result |
 |---|---|---|
-| 1 | In SAP, run **`SE16`** → table `SCUSTOM` → **Execute (F8)** | Full table loads |
+| 1 | Run **`SE16`** → table `SCUSTOM` → **Execute (F8)** | Full table loads |
 | 2 | Look at the `EMAIL` column | **Full email addresses visible** ✅ |
 
-Your IP matches the exception — the policy does not fire for you.
+Your VPN IP matches the exception you configured — the policy does not fire for you.
 
 ### Test B — Your lab partner's session (should be MASKED)
 
-> 📢 **Ask your lab partner** (the person you identified in Step 2) to do the following on *their* machine:
+Your partner logs into SAP on **your client number** using their own machine:
 
 | # | Action | Expected result |
 |---|---|---|
-| 1 | Open SAP GUI → log in with **their own** SAP username and password | Normal login |
-| 2 | Run **`SE16`** → table `SCUSTOM` → **Execute (F8)** | Full table loads |
-| 3 | Look at the `EMAIL` column | **`***` — masked** ✅ |
+| 1 | Partner logs into SAP with their own credentials on **your client** | Normal login |
+| 2 | Partner runs **`SE16`** → table `SCUSTOM` → **Execute (F8)** | Full table loads |
+| 3 | Partner looks at the `EMAIL` column | **`***` — masked** ✅ |
 
-Their VPN IP is different from yours → the condition `USER.NETWORK NOT EQ 10.8.0.X` evaluates to TRUE → masking fires.
+Their VPN IP is different from yours → the condition `USER.NETWORK NOT EQ <your IP>` evaluates to TRUE → masking fires.
 
-**This is contextual ABAC.** Same table. Same role. Different VPN IP. Different result. Zero SAP changes.
+**This is contextual ABAC.** Same server. Same client. Same table. Same role. Different VPN IP. Different result. Zero SAP changes.
 
 ---
 
