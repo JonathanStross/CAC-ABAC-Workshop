@@ -313,8 +313,8 @@ _L2_PEERS_WIDGET = """
   They navigate to <code>SE16 &rarr; SCUSTOM</code> — their VPN IP differs from yours,
   so the network condition fires and they see masked data. You open the same table from your own session and see it unmasked.
   Same server, same client, same table, same role &mdash; different result.<br><br>
-  <strong>No partner available?</strong> Enter your own IP as the exception, then validate from your own session &mdash;
-  you will see the data unmasked since your IP matches the condition.</p>
+  <strong>No partner available?</strong> Enter your own IP as the exception &mdash; you will see the data unmasked since your IP matches.
+  Then swap the condition to a different IP and re-test: the masking will fire. That gives you both the positive and the negative test on your own.</p>
   <div style="display:flex;gap:0.5em;margin-bottom:1em">
     <input id="peers-input" type="text" placeholder="Your SAP username &#x2014; e.g. JSMITH"
            style="flex:1;padding:0.65em 0.8em;background:#0a0a1a;color:#fff;border:1px solid #444;
