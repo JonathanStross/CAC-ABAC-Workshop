@@ -740,16 +740,16 @@ HOME_TEMPLATE = """
     .course-card{background:#13131f;border:1px solid #1a1a2e;border-radius:10px;padding:16px 16px 12px;position:relative;transition:border-color .2s,background .2s}
     a.course-card{text-decoration:none;display:block;cursor:pointer}
     a.course-card:hover{border-color:#c8102e;background:#180810}
-    .course-card.locked{opacity:.32;cursor:default}
-    .course-card .ct{font-size:0.68em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#444;margin-bottom:5px}
+    .course-card.locked{opacity:.62;cursor:default;filter:saturate(0)}
+    .course-card .ct{font-size:0.68em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#555;margin-bottom:5px}
     a.course-card .ct{color:#c8102e}
-    .course-card .cn{font-size:0.92em;font-weight:600;color:#999;margin-bottom:3px}
+    .course-card .cn{font-size:0.92em;font-weight:600;color:#bbb;margin-bottom:3px}
     a.course-card .cn{color:#fff}
-    .course-card .cs{font-size:0.76em;color:#444;line-height:1.5}
+    .course-card .cs{font-size:0.76em;color:#666;line-height:1.5}
     a.course-card .cs{color:#999}
     .cbadge{position:absolute;top:10px;right:10px;font-size:0.65em;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.05em}
     .blive{background:#c8102e;color:#fff}
-    .bsoon{background:#1a1a2e;color:#444}
+    .bsoon{background:#252538;color:#888}
     .lb-section{max-width:960px;margin:0 auto;padding:0 24px 60px;border-top:1px solid #1a1a2e}
     .lb-section h2{font-size:0.75em;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;padding:28px 0 16px;margin:0;border-bottom:1px solid #1a1a2e;margin-bottom:16px}
     .lb-section h2 span{color:#c8102e;font-size:1.15em}
