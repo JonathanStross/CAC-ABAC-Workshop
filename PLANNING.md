@@ -390,39 +390,7 @@ ISO 27001 A.8.12 — data leakage prevention | GDPR Art. 32 | PCI DSS v4.0 Req. 
 
 ---
 
-### Level 6 — F-06: Cross-Airline Data Leakage (Multi-Entity ABAC)
-**Points:** 175 | **Guidance:** Independent | **Time:** 25 min
-
-#### Audit finding
-> *"Meridian AG operates as a holding for multiple airline brands. Staff from carrier LH can view booking and revenue data for carrier AA and vice versa. No entity isolation exists at the data layer. GDPR Art. 5(1)(c) — purpose limitation."*
-
-#### What participants do
-Design and implement an ABAC policy that enforces **entity isolation** using a dynamic attribute match:
-- User attribute: `USER.EMPLOYER_CARRID` (the carrier the logged-in user works for)
-- Data attribute: `DATA.CARRID` (the carrier field on `SFLIGHT` and `SBOOK`)
-- Policy condition: `USER.EMPLOYER_CARRID EQ DATA.CARRID`
-
-Verify: LH staff sees only LH rows. AA staff sees only AA rows.
-
-#### Why this level exists
-Introduces **data attribute vs user attribute matching** — the most powerful ABAC pattern. Instead of hardcoding values (`CARRID = LH`), the policy uses a *dynamic comparison* between a user property and a data property. This scales to any number of carriers without changing the policy.
-
-This pattern directly addresses the multi-entity / group holding use case common in enterprise SAP installations.
-
-#### What needs to be pre-configured
-- `USER.EMPLOYER_CARRID` User Attribute created in DAC — resolved from SAP user master data
-- `DATA.CARRID` Data Attribute created in DAC — maps to `CARRID` field on `SFLIGHT`, `SBOOK`
-- Test users assigned different `EMPLOYER_CARRID` values
-
-#### Completion code
-Policy condition string as configured and saved in Pathlock — instructor records before session.
-
-#### Framework
-GDPR Art. 5(1)(c) — purpose limitation | ISO 27001 A.5.15 — access control
-
----
-
-### Level 8 — F-08: Fiori / OData — CSS Mask Is Not a Data Control
+### Level 7 — F-07: Fiori / OData — CSS Mask Is Not a Data Control
 **Points:** 175 | **Guidance:** Independent | **Time:** 25 min
 
 #### Audit finding
