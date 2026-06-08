@@ -85,9 +85,7 @@ Open a terminal or command prompt and run:
 ping 10.8.0.1
 ```
 
-You should see replies within 1–2 seconds. If you do — the VPN is up. 🎉
-
-> **Note:** The first handshake can take up to 60 seconds. Wait a moment before moving on if ping does not respond immediately.
+WireGuard typically establishes the tunnel within **5–15 seconds** of activating. Once connected, ping replies come back in 1–2 ms. If there is no reply yet, wait up to 30 seconds — the first handshake can take a moment depending on your network. If it still does not respond after 30 seconds, toggle the tunnel off and on once.
 
 ---
 
