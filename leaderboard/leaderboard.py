@@ -1191,6 +1191,8 @@ def index():
 
 @app.route("/leaderboard")
 def leaderboard_page():
+    if not _has_access_cookie():
+        return redirect("/register")
     rows = get_leaderboard()
     codes = load_codes()
     return render_template_string(LEADERBOARD_TEMPLATE,
