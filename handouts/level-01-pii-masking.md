@@ -26,6 +26,55 @@ All configuration is done inside SAP via transaction **`/N/APPSDM/ABAC`**
 
 ---
 
+## Concept: RBAC vs. ABAC — Why We Need a New Model
+
+Traditional SAP security is built on **Role-Based Access Control (RBAC)**. A user is assigned a role. That role either grants access to a transaction or data object — or it doesn't. It's binary and static.
+
+```
+RBAC:  User → Role → Access?  YES / NO
+```
+
+That model works for basic access control. But it breaks down the moment you need to answer questions like:
+
+- *"This user should only see this data when connecting from the corporate network"*
+- *"This transaction should only be accessible during business hours"*
+- *"This field should only be visible to users in the Finance department"*
+- *"This record should only be readable if the user's location matches the data's region"*
+
+RBAC has no answer to any of these. You would need to create a separate role for every combination — and roles can't evaluate real-time context like IP address, time, or geolocation at all.
+
+**Attribute-Based Access Control (ABAC)** solves this by evaluating a **policy** at the moment of access — dynamically, every time.
+
+```
+ABAC:  User + Context + Data  →  Policy evaluated  →  Allow / Mask / Block
+```
+
+Instead of asking *"what role does this user have?"* it asks:
+*"Given who this user is, where they are connecting from, what time it is, and what data they are requesting — what should happen?"*
+
+Any security-relevant property can become an **attribute**:
+
+| Attribute type | Examples | Used in this workshop |
+|---|---|---|
+| **Identity** | Username, role, department | L1, L4 |
+| **Network** | IP address, subnet, geolocation | L2 |
+| **Temporal** | Time of day, day of week | L3 |
+| **Data** | Table, field, classification label | L1–L6 |
+
+A **policy** combines one or more attribute conditions with an **enforcement action**:
+
+| Enforcement type | What it does | Used in |
+|---|---|---|
+| **Masking** | Replaces a field value with `***` or a pattern | L1, L2, L4 |
+| **TCode Block** | Prevents a SAP transaction from opening | L3, L4 |
+| **Download Block** | Prevents data export to file | L6 |
+
+**Pathlock DAC (Data Access Control)** implements ABAC at the **data element level** — meaning it operates on individual SAP fields, not just transactions or roles. The same user can open `SE16`, see `SCUSTOM`, but have specific columns replaced or hidden — all based on policy, all without touching SAP authorisation objects.
+
+> **The key message:** DAC does not replace SAP roles. It sits on top of them and adds a dynamic, context-aware enforcement layer. Role cleanup still matters — but you don't have to wait for it.
+
+---
+
 ## Step 1 — Verify the Problem & Identify the Data Element
 
 First, confirm the issue is real — and find the technical identifier for the email field.
