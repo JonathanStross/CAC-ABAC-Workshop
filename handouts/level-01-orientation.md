@@ -21,7 +21,7 @@ Make sure you have the following **installed** before you begin:
 |---|---|---|
 | 💻 | A laptop (Windows, macOS, or Linux) | — |
 | 📦 | **WireGuard** installed and running | [wireguard.com/install](https://www.wireguard.com/install/) |
-| 🖥️ | **SAP GUI** installed | [SAP GUI for Java — tools.hana.ondemand.com](https://tools.hana.ondemand.com/#cloud) (free, no SAP account needed) — or ask your instructor for the Windows installer |
+| 🖥️ | **SAP GUI** installed | Ask your instructor or your IT team |
 | 🌐 | **Google Chrome** or **Microsoft Edge** | [chrome](https://www.google.com/chrome/) / [edge](https://www.microsoft.com/edge) — needed for L8 Fiori |
 | 📄 | Your **WireGuard `.conf` file** | Downloaded from your registration confirmation page |
 | 🔑 | Your **SAP credentials** | From your registration confirmation page (username + temporary password + client number) |
