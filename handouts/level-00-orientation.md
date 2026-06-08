@@ -32,8 +32,10 @@ Make sure you have the following before you begin:
 | Application Server | `10.8.0.1` |
 | Instance Number | `00` |
 | System ID (SID) | `A4H` |
-| Client | `001` |
+| Client | **see your registration confirmation page** |
 | Language | `EN` |
+
+> ⚠️ Your SAP **client number** is personal — it was assigned to you when you registered and is shown on your registration confirmation page. It is **not** the same for everyone.
 
 ---
 
@@ -101,7 +103,7 @@ You should see replies within 1–2 seconds. If you do — the VPN is up. 🎉
 | Application Server | `10.8.0.1` |
 | Instance Number | `00` |
 | System ID (SID) | `A4H` |
-| Client | `001` |
+| Client | **see your registration confirmation page** |
 
 ---
 
@@ -118,7 +120,7 @@ You should see replies within 1–2 seconds. If you do — the VPN is up. 🎉
 
 | Field | Value |
 |---|---|
-| Client | `001` |
+| Client | **your assigned client** — from your registration page |
 | User | Your SAP username (e.g. `AMUELLER`) — from your registration page |
 | Password | Your temporary password — from your registration page |
 | Language | `EN` |

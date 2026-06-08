@@ -22,7 +22,7 @@ Your task: work through each finding and implement a mitigation. No code changes
 |---|---|
 | VPN Config | Provided by instructor |
 | SAP GUI | `10.8.0.1:3200` |
-| SAP Client | `001` |
+| SAP Client | **assigned at registration** — see your confirmation page |
 | Demo User A | `DEMO_USER_A` / see 1Password share |
 | Demo User B (HR Manager) | `DEMO_USER_B` / see 1Password share |
 | Finance Controller | `MSCHMIDT` / see 1Password share |
