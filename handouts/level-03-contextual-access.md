@@ -120,7 +120,9 @@ Link the policy to the data it should mask: `SCUSTOM.EMAIL` via `DATA.S_EMAIL`.
 
 ## Step 6 — Test It
 
-Use the **Find Your Lab Partner** widget at the bottom of this page to see who is on your server. Pick any colleague, share your **client number** with them, and ask them to log into SAP using your client from their machine.
+Use the **Find Your Lab Partner** widget at the bottom of this page to see who is on your server. Pick any colleague and share your **client number** with them. They log into SAP on your client from their machine — or you can share your credentials and use their machine, logging out immediately after.
+
+**No partner available?** Enter your own IP as the exception in the condition — you can then validate from your own session, since your IP matches and the masking will not fire for you.
 
 ### Test A — Your own session (should be VISIBLE)
 

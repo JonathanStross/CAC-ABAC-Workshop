@@ -308,10 +308,13 @@ _L2_PEERS_WIDGET = """
   <p style="color:#ccc">For the test you need a colleague on the <strong>same SAP server</strong>
   but with a <strong>different SAP client</strong>. Enter your SAP username to see who is on your server:</p>
   <p style="color:#aaa;font-size:0.9em">&#x1F4CB; <strong>How the demo works:</strong>
-  Tell your partner your <strong>client number</strong> and have them log into SAP using your client.
-  They navigate to <code>SE16 &rarr; SCUSTOM</code> from <em>their</em> machine — their VPN IP differs from yours,
-  so the network condition fires and they see masked data. You open the same table from your session and see it unmasked.
-  Same server, same table, same role — different result.</p>
+  Tell your partner your <strong>client number</strong> — they log into SAP on your client from their machine
+  (or you can share your credentials and use their machine, logging out immediately after).
+  They navigate to <code>SE16 &rarr; SCUSTOM</code> — their VPN IP differs from yours,
+  so the network condition fires and they see masked data. You open the same table from your own session and see it unmasked.
+  Same server, same client, same table, same role &mdash; different result.<br><br>
+  <strong>No partner available?</strong> Enter your own IP as the exception, then validate from your own session &mdash;
+  you will see the data unmasked since your IP matches the condition.</p>
   <div style="display:flex;gap:0.5em;margin-bottom:1em">
     <input id="peers-input" type="text" placeholder="Your SAP username &#x2014; e.g. JSMITH"
            style="flex:1;padding:0.65em 0.8em;background:#0a0a1a;color:#fff;border:1px solid #444;
