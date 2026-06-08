@@ -27,8 +27,7 @@ Make sure you have the following **installed** before you begin:
 | 🔑 | Your **SAP credentials** | From your registration confirmation page (username + temporary password + client number) |
 
 > ⚠️ **If you have not installed WireGuard or SAP GUI yet — do it now before continuing.**
-> Both require a standard installation on your laptop. No admin rights are needed on macOS;
-> on Windows you may need to click "Allow" on a UAC prompt.
+> If you run into installation issues, ask your instructor or your IT team.
 
 > 💡 **SAP GUI version:** Any version from SAP GUI 7.60 onwards works. If your company already has SAP GUI installed, use that.
 
