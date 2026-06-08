@@ -162,7 +162,7 @@ Their VPN IP is different from yours → the condition `USER.NETWORK NOT EQ <you
 
 ## 🏆 Submit Your Code
 
-Enter the completion code you found in Step 3 at **`https://pathlock.academy/submit`**
+Enter the completion code you found in **Step 2** (the description of `USER.NETWORK`) at **`https://pathlock.academy/submit`**
 
 > **Compliance note:** GDPR Art. 32 — technical security measures | NIS2 Art. 21 — access control | ISO 27001 A.8.11 — data masking
 
