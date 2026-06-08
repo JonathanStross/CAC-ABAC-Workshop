@@ -165,21 +165,22 @@ The **Policy Enforcement Point** (PEP) is where you activate the masking action 
 | 8 | In the **Policy** field, select or type `MASK_EMAIL_<YOURUSERNAME>` | Your policy linked |
 | 9 | In the **Attribute** field, select or type `DATA.S_EMAIL` | Data attribute linked |
 | 10 | Click **Save** | New enforcement point row saved ✅ |
-| 11 | Click **Details** on your row | Full policy summary is displayed |
+| 11 | Click the **selection box** at the very start of your row to highlight the entire line, then click **Details** (above the list) | Full policy summary is displayed |
 
 **Your Details screen should show:**
 
 ```
-Policy:                   MASK_EMAIL_<YOURUSERNAME>
-Description:              Mask passenger email for my user
-Policy Status:            Active
-Policy Enforcement Type:  Data Masking
+Policy: MASK_EMAIL_<YOURUSERNAME>
+Description: Mask passenger email for my user
+Policy Status: Active
+Policy Enforcement Type: Data Masking
 
 *******************************************************************
 
 Rule:
 
 IF USER.ID EQ <YOURUSERNAME>
+
 
 THEN DENY ACCESS TO ATTRIBUTES:
 
