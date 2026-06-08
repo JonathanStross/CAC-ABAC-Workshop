@@ -134,6 +134,10 @@ Link the policy to the data it should mask: `SCUSTOM.EMAIL` via `DATA.S_EMAIL`.
 
 ## Step 6 — Test It
 
+> ⚠️ **Disable your Level 2 masking first.** Your `MASK_EMAIL_<YOURUSERNAME>` policy from Level 2 is still active and will interfere with this test — both you and your partner would see masked data, making it impossible to see the difference.
+>
+> Go to **`/N/APPSDM/ABAC`** → Functional Configuration → Policy Enforcement Point → **Data Masking**, enter Change Mode, and **uncheck the Active checkbox** on your `MASK_EMAIL_<YOURUSERNAME>` row. Save. Your Level 3 policy stays active.
+
 Use the **Find Your Lab Partner** widget at the bottom of this page to see who is on your server. Pick any colleague and share your **client number** with them. They log into SAP on your client from their machine — or you can share your credentials and use their machine, logging out immediately after.
 
 **No partner available?** Enter your own IP as the exception in the condition — you will see the data unmasked since your IP matches. Then swap the condition to a different IP and re-test: you will now see the masking fire. That gives you both the positive and the negative test on your own.
