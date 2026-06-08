@@ -131,7 +131,18 @@ A **Rule Condition** tells the policy *when* it should fire. Without one, the po
 | | **Option B — Ranges:** click **Define Ranges**, then in the **Single Values** section enter your username in the **`BNAME`** field (must be **uppercase**), click **Accept** | Value filled |
 | 9 | Click the **Check entries** button (⚖️ scale icon) to validate — no errors should appear | Validation passed |
 | 10 | Click **Save** | Condition row saved |
-| 11 | To review what you built: select the condition row and click **Details** (above the list) | DAC describes the condition in plain language — confirm it reads: *"User ID equals `<YOURUSERNAME>`"* |
+| 11 | To review what you built: select the condition row and click **Details** (above the list) | DAC shows the policy rule in plain text — it should read exactly: |
+
+```
+Policy: MASK_EMAIL_<YOURUSERNAME>
+Policy Name: Mask passenger email for my user
+
+*******************************************************************
+
+Rule:
+
+IF USER.ID EQ <YOURUSERNAME>
+```
 
 > This condition reads: *"Only apply this policy when the currently logged-in user ID equals AMUELLER."*  
 > Your colleagues' sessions will not be affected at all.
