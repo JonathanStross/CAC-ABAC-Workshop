@@ -244,17 +244,31 @@ LEVEL_FILES = {
 
 LEVEL_STYLE = """
 <style>
-  body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#e0e0e0;margin:0;padding:0}
-  .header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:20px 40px;border-bottom:2px solid #c8102e;display:flex;align-items:center;gap:24px}
-  .header img{height:38px}
-  .header-text h1{margin:0;color:#fff;font-size:1.3em}
-  .header-text p{margin:2px 0 0;color:#aaa;font-size:0.85em}
+  *,*::before,*::after{box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f1a;color:#e0e0e0;margin:0;padding:0}
+  /* topbar */
+  .topbar{position:sticky;top:0;z-index:100;background:#12121f;border-bottom:1px solid #1e1e35;
+    display:flex;align-items:center;padding:0 32px;height:58px;gap:24px;
+    box-shadow:0 2px 12px rgba(0,0,0,.45)}
+  .topbar .brand{display:flex;align-items:center;gap:14px;text-decoration:none;flex-shrink:0}
+  .topbar .brand img{height:30px;width:auto}
+  .topbar .brand-divider{width:1px;height:22px;background:#2a2a45;margin:0 2px}
+  .topbar .brand-label{font-size:0.82em;font-weight:600;color:#aaa;letter-spacing:.04em;white-space:nowrap}
+  .topbar nav{display:flex;align-items:center;gap:4px;margin-left:auto}
+  .topbar nav a{color:#bbb;text-decoration:none;padding:6px 14px;border-radius:5px;
+    font-size:0.88em;font-weight:500;transition:background .15s,color .15s;white-space:nowrap}
+  .topbar nav a:hover{background:#1e1e35;color:#fff}
+  .topbar nav a.active{background:#c8102e;color:#fff}
+  /* page header */
+  .page-header{background:linear-gradient(135deg,#16162a 0%,#1a1a35 100%);
+    border-bottom:2px solid #c8102e;padding:28px 40px}
+  .page-header h1{margin:0 0 4px;color:#fff;font-size:1.5em;font-weight:700}
+  .page-header p{margin:0;color:#888;font-size:0.88em}
+  /* content */
   .container{max-width:820px;margin:30px auto;padding:0 24px 60px}
-  .nav{margin-bottom:24px;font-size:0.9em}
-  .nav a{color:#aaa;text-decoration:none;margin-right:16px}
-  .nav a:hover{color:#fff}
-  .level-badge{display:inline-block;background:#c8102e;color:#fff;border-radius:4px;padding:3px 10px;font-size:0.8em;font-weight:bold;margin-right:8px;vertical-align:middle}
-  h1{color:#fff;border-bottom:1px solid #2a2a3e;padding-bottom:10px}
+  .level-badge{display:inline-block;background:#c8102e;color:#fff;border-radius:4px;
+    padding:3px 10px;font-size:0.8em;font-weight:bold;margin-right:8px;vertical-align:middle}
+  h1{color:#fff;border-bottom:1px solid #2a2a3e;padding-bottom:10px;margin-top:28px}
   h2{color:#e0e0e0;margin-top:36px}
   h3{color:#ccc}
   p{line-height:1.7;color:#ccc}
@@ -267,14 +281,19 @@ LEVEL_STYLE = """
   th{background:#c8102e;color:#fff;padding:8px 12px;text-align:left;font-size:0.85em}
   td{padding:8px 12px;border-bottom:1px solid #2a2a3e;color:#ccc}
   tr:hover td{background:#1a1a2e}
-  blockquote{border-left:3px solid #c8102e;margin:16px 0;padding:10px 16px;background:#1a1a2e;color:#aaa;border-radius:0 6px 6px 0}
+  blockquote{border-left:3px solid #c8102e;margin:16px 0;padding:10px 16px;
+    background:#1a1a2e;color:#aaa;border-radius:0 6px 6px 0}
   blockquote p{margin:0;color:#ccc}
   hr{border:none;border-top:1px solid #2a2a3e;margin:28px 0}
   .hint-box{background:#1a2a1a;border:1px solid #2ecc71;border-radius:6px;padding:14px 18px;margin:16px 0}
   .warn-box{background:#2a1a0a;border:1px solid #f39c12;border-radius:6px;padding:14px 18px;margin:16px 0}
-  .level-nav{display:flex;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid #2a2a3e}
-  .level-nav a{background:#1a1a2e;border:1px solid #3a3a5e;padding:10px 18px;border-radius:6px;color:#aaa;text-decoration:none;font-size:0.9em}
+  .level-nav{display:flex;justify-content:space-between;margin-top:40px;
+    padding-top:20px;border-top:1px solid #2a2a3e}
+  .level-nav a{background:#1a1a2e;border:1px solid #3a3a5e;padding:10px 18px;
+    border-radius:6px;color:#aaa;text-decoration:none;font-size:0.9em}
   .level-nav a:hover{background:#2a2a3e;color:#fff}
+  details summary{cursor:pointer;color:#2ecc71;font-weight:600;padding:6px 0}
+  details[open] summary{color:#27ae60}
 </style>
 """
 
@@ -376,14 +395,12 @@ def levels_index():
         else:
             link = f"<span style='color:#555'>{key} — {title} <em style='font-size:0.8em'>(coming soon)</em></span>"
         rows += f"<tr><td>{link}</td><td style='color:#aaa'>{pts} pts</td></tr>"
-    return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level Guides</title>{LEVEL_STYLE}</head>
+    return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level Guides — DAC: Practitioner Level</title>{LEVEL_STYLE}</head>
 <body>
-  <div class='header'><img src='/logo' alt='Pathlock'>
-    <div class='header-text'><h1>Meridian AG — Level Guides</h1><p>DAC: Practitioner Level</p></div>
-  </div>
+  {_topbar('/levels')}
+  <div class='page-header'><h1>Level Guides</h1><p>Meridian AG Audit Remediation &nbsp;·&nbsp; DAC: Practitioner Level</p></div>
   <div class='container'>
-    <div class='nav'><a href='/'>← Leaderboard</a><a href='/submit'>Submit Code</a></div>
-    <h1>Workshop Levels</h1>
+    <h2 style='color:#fff;margin-top:24px'>All Levels</h2>
     <table><tr><th>Level</th><th>Points</th></tr>{rows}</table>
   </div>
 </body></html>"""
@@ -398,11 +415,9 @@ def level_guide(level_num):
     if not os.path.exists(md_path):
         return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level {level_num}</title>{LEVEL_STYLE}</head>
 <body>
-  <div class='header'><img src='/logo' alt='Pathlock'>
-    <div class='header-text'><h1>Level {level_num}</h1><p>Guide coming soon</p></div>
-  </div>
+  {_topbar('/levels')}
+  <div class='page-header'><h1>Level {level_num}</h1><p>Guide coming soon</p></div>
   <div class='container'>
-    <div class='nav'><a href='/levels'>← All Levels</a><a href='/'>Leaderboard</a></div>
     <p style='color:#666;padding:40px 0;text-align:center'>This level guide hasn't been published yet. Check back soon.</p>
   </div>
 </body></html>""", 404
@@ -412,25 +427,21 @@ def level_guide(level_num):
         body_html = _markdown_lib.markdown(
             md_text, extensions=["tables", "fenced_code", "toc"])
     else:
-        # Fallback: wrap in <pre> if markdown lib not installed
         body_html = f"<pre style='white-space:pre-wrap'>{md_text}</pre>"
-    # Prev / next navigation
     prev_link = f"<a href='/levels/{level_num-1}'>← Level {level_num-1}</a>" if level_num > 0 else "<span></span>"
     next_link = f"<a href='/levels/{level_num+1}'>Level {level_num+1} →</a>" if (level_num+1) in LEVEL_FILES else "<span></span>"
     codes = load_codes()
     key = f"L{level_num}"
     title = codes.get(key, {}).get("title", f"Level {level_num}")
     extra_widget = _L2_PEERS_WIDGET if level_num == 2 else ""
-    return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level {level_num} — {title}</title>{LEVEL_STYLE}</head>
+    return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>L{level_num} — {title}</title>{LEVEL_STYLE}</head>
 <body>
-  <div class='header'><img src='/logo' alt='Pathlock'>
-    <div class='header-text'>
-      <h1><span class='level-badge'>L{level_num}</span>{title}</h1>
-      <p>Meridian AG Audit Remediation &nbsp;|&nbsp; DAC: Practitioner Level</p>
-    </div>
+  {_topbar('/levels')}
+  <div class='page-header'>
+    <h1><span class='level-badge'>L{level_num}</span> {title}</h1>
+    <p>Meridian AG Audit Remediation &nbsp;·&nbsp; DAC: Practitioner Level</p>
   </div>
   <div class='container'>
-    <div class='nav'><a href='/levels'>← All Levels</a><a href='/'>Leaderboard</a><a href='/submit'>Submit Code</a></div>
     {body_html}
     {extra_widget}
     <div class='level-nav'>{prev_link}{next_link}</div>
@@ -604,14 +615,60 @@ def get_level_completions():
 # ---------------------------------------------------------------------------
 STYLE = """
 <style>
-  body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #e0e0e0; margin: 0; padding: 0; }
-  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 24px 40px; border-bottom: 2px solid #c8102e; display: flex; align-items: center; gap: 28px; }
-  .header img.logo { height: 44px; width: auto; flex-shrink: 0; }
-  .header-text h1 { margin: 0; color: #fff; font-size: 1.6em; }
-  .header-text p { margin: 4px 0 0; color: #aaa; font-size: 0.9em; }
-  .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f1a; color: #e0e0e0; margin: 0; padding: 0; }
+
+  /* ── Top bar ─────────────────────────────────────────────────── */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #12121f;
+    border-bottom: 1px solid #1e1e35;
+    display: flex; align-items: center;
+    padding: 0 32px; height: 58px; gap: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.45);
+  }
+  .topbar .brand {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; flex-shrink: 0;
+  }
+  .topbar .brand img { height: 30px; width: auto; }
+  .topbar .brand-divider {
+    width: 1px; height: 22px; background: #2a2a45; margin: 0 2px;
+  }
+  .topbar .brand-label {
+    font-size: 0.82em; font-weight: 600; color: #aaa;
+    letter-spacing: .04em; white-space: nowrap;
+  }
+  .topbar nav {
+    display: flex; align-items: center; gap: 4px;
+    margin-left: auto;
+  }
+  .topbar nav a {
+    color: #bbb; text-decoration: none;
+    padding: 6px 14px; border-radius: 5px;
+    font-size: 0.88em; font-weight: 500;
+    transition: background .15s, color .15s;
+    white-space: nowrap;
+  }
+  .topbar nav a:hover { background: #1e1e35; color: #fff; }
+  .topbar nav a.active { background: #c8102e; color: #fff; }
+  .topbar nav .nav-sep {
+    width: 1px; height: 18px; background: #2a2a45; margin: 0 4px;
+  }
+
+  /* ── Page header (title block below topbar) ──────────────────── */
+  .page-header {
+    background: linear-gradient(135deg, #16162a 0%, #1a1a35 100%);
+    border-bottom: 2px solid #c8102e;
+    padding: 28px 40px;
+  }
+  .page-header h1 { margin: 0 0 4px; color: #fff; font-size: 1.5em; font-weight: 700; }
+  .page-header p  { margin: 0; color: #888; font-size: 0.88em; }
+
+  /* ── Content ─────────────────────────────────────────────────── */
+  .container { max-width: 920px; margin: 30px auto; padding: 0 24px 60px; }
   table { width: 100%; border-collapse: collapse; background: #1a1a2e; border-radius: 8px; overflow: hidden; }
-  th { background: #c8102e; color: white; padding: 12px 16px; text-align: left; font-size: 0.85em; text-transform: uppercase; }
+  th { background: #c8102e; color: white; padding: 12px 16px; text-align: left; font-size: 0.82em; text-transform: uppercase; letter-spacing: .05em; }
   td { padding: 12px 16px; border-bottom: 1px solid #2a2a3e; }
   tr:hover td { background: #1f1f35; }
   .rank-1 td { color: #ffd700; font-weight: bold; }
@@ -624,19 +681,40 @@ STYLE = """
   .btn.secondary { background: #2a2a3e; }
   .btn.secondary:hover { background: #3a3a5e; }
   form { background: #1a1a2e; padding: 30px; border-radius: 8px; max-width: 500px; margin: 0 auto; }
-  input, select { width: 100%; padding: 10px; margin: 8px 0 16px; background: #0f0f1a; border: 1px solid #3a3a5e; color: #e0e0e0; border-radius: 4px; font-size: 1em; box-sizing: border-box; }
+  input, select { width: 100%; padding: 10px; margin: 8px 0 16px; background: #0f0f1a; border: 1px solid #3a3a5e; color: #e0e0e0; border-radius: 4px; font-size: 1em; }
   .msg { padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; }
   .msg.ok { background: #1a3a1a; border: 1px solid #2ecc71; color: #2ecc71; }
   .msg.err { background: #3a1a1a; border: 1px solid #c8102e; color: #ff6b6b; }
-  .nav { margin-bottom: 20px; }
-  .nav a { color: #aaa; text-decoration: none; margin-right: 20px; }
-  .nav a:hover { color: #fff; }
   .refresh-note { color: #666; font-size: 0.8em; text-align: right; margin-top: 10px; }
   .level-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin: 20px 0; }
   .level-cell { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 6px; padding: 10px; text-align: center; font-size: 0.85em; }
   .level-cell.done { border-color: #2ecc71; color: #2ecc71; }
 </style>
 """
+
+# ---------------------------------------------------------------------------
+# Shared topbar snippet — injected into every main page
+# ---------------------------------------------------------------------------
+def _topbar(active: str = "") -> str:
+    links = [
+        ("/",        "🏆",  "Leaderboard"),
+        ("/levels",  "📖",  "Levels"),
+        ("/register","📝",  "Register"),
+        ("/submit",  "🔑",  "Submit"),
+    ]
+    items = ""
+    for href, icon, label in links:
+        cls = ' class="active"' if active == href else ""
+        items += f'<a href="{href}"{cls}>{icon}&nbsp; {label}</a>'
+    return f"""
+<div class="topbar">
+  <a class="brand" href="/">
+    <img src="/logo" alt="Pathlock">
+    <span class="brand-divider"></span>
+    <span class="brand-label">DAC: Practitioner Level</span>
+  </a>
+  <nav>{items}</nav>
+</div>"""
 
 LEADERBOARD_TEMPLATE = """
 <!DOCTYPE html>
@@ -647,20 +725,12 @@ LEADERBOARD_TEMPLATE = """
   """ + STYLE + """
 </head>
 <body>
-  <div class="header">
-    <img src="/logo" class="logo" alt="Pathlock">
-    <div class="header-text">
-      <h1>Meridian AG — Audit Remediation</h1>
-      <p>DAC: Practitioner Level &nbsp;|&nbsp; Pathlock Live Workshop</p>
-    </div>
+  """ + _topbar("/") + """
+  <div class="page-header">
+    <h1>Meridian AG — Audit Remediation</h1>
+    <p>DAC: Practitioner Level &nbsp;·&nbsp; Pathlock Live Workshop</p>
   </div>
   <div class="container">
-    <div class="nav">
-      <a href="/">🏆 Leaderboard</a>
-      <a href="/levels">📖 Levels</a>
-      <a href="/register">📝 Register</a>
-      <a href="/submit">🔑 Submit Code</a>
-    </div>
 
     <div style="background:#1a1a2e;border-radius:8px;padding:24px 28px;margin-bottom:28px;border-left:4px solid #c8102e">
       <h2 style="margin:0 0 10px;color:#fff;font-size:1.2em">👋 Welcome to DAC: Practitioner Level</h2>
@@ -848,15 +918,12 @@ REGISTER_TEMPLATE = """
 <html>
 <head><meta charset="utf-8"><title>Register — DAC: Practitioner Level</title>""" + STYLE + """</head>
 <body>
-  <div class="header">
-    <img src="/logo" class="logo" alt="Pathlock">
-    <div class="header-text">
-      <h1>Meridian AG — Join the Team</h1>
-      <p>Register to get your personal SAP login and join the leaderboard</p>
-    </div>
+  """ + _topbar("/register") + """
+  <div class="page-header">
+    <h1>Meridian AG — Join the Team</h1>
+    <p>Register to get your personal SAP login and join the leaderboard</p>
   </div>
   <div class="container">
-    <div class="nav"><a href="/">🏆 Leaderboard</a><a href="/levels">📖 Levels</a><a href="/submit">🔑 Submit Code</a></div>
     {% if success %}
       <div class="msg ok" style="font-size:1.1em">
         <strong>✅ You're registered!</strong><br><br>
@@ -1007,17 +1074,14 @@ REGISTER_TEMPLATE = """
 SUBMIT_TEMPLATE = """
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Submit Code</title>""" + STYLE + """</head>
+<head><meta charset="utf-8"><title>Submit Code — DAC: Practitioner Level</title>""" + STYLE + """</head>
 <body>
-  <div class="header">
-    <img src="/logo" class="logo" alt="Pathlock">
-    <div class="header-text">
-      <h1>Submit Completion Code</h1>
-      <p>Enter the code you found in SAP / Pathlock to claim your points</p>
-    </div>
+  """ + _topbar("/submit") + """
+  <div class="page-header">
+    <h1>Submit Completion Code</h1>
+    <p>Enter the code you found in SAP / Pathlock to claim your points</p>
   </div>
   <div class="container">
-    <div class="nav"><a href="/">🏆 Leaderboard</a><a href="/levels">📖 Levels</a><a href="/register">📝 Register</a></div>
     {% if msg %}<div class="msg {{ msg_type }}">{{ msg }}</div>{% endif %}
     <form method="POST">
       <h2 style="margin-top:0">Level Completion</h2>
@@ -1043,15 +1107,12 @@ ACCESS_CODE_TEMPLATE = """
 <html>
 <head><meta charset="utf-8"><title>Register — DAC: Practitioner Level</title>""" + STYLE + """</head>
 <body>
-  <div class="header">
-    <img src="/logo" class="logo" alt="Pathlock">
-    <div class="header-text">
-      <h1>Meridian AG — Join the Team</h1>
-      <p>Workshop participant registration</p>
-    </div>
+  """ + _topbar("/register") + """
+  <div class="page-header">
+    <h1>Meridian AG — Join the Team</h1>
+    <p>Enter your access code to register</p>
   </div>
   <div class="container">
-    <div class="nav"><a href="/">🏆 Leaderboard</a><a href="/register">📝 Register</a></div>
     {% if error %}<div class="msg err">{{ error }}</div>{% endif %}
     <form method="POST">
       <h2 style="margin-top:0">🔐 Enter access code</h2>
