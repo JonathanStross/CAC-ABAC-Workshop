@@ -244,39 +244,44 @@ GDPR Art. 32 — technical security measures | NIS2 Art. 21 — access control |
 
 ---
 
-### Level 3 — F-03: Developers Have Real Passenger Data
+### Level 3 — F-03: After-Hours Access to Sensitive Transactions
 **Points:** 100 | **Guidance:** Hints only | **Time:** 15 min
 
 #### Audit finding
-> *"Developer accounts have read access to production passenger data in SCUSTOM including real names, addresses and credit card references. Test scenarios are run against live PII. GDPR Art. 25 — privacy by design and by default."*
+> *"Booking agents and analysts can run sensitive transactions including SE16, FB01 and payment-related reports at any hour of the day — including nights, weekends and public holidays. No time-of-day control exists. SOX and PCI-DSS require that access to financial data is restricted to authorised business hours."*
 
 #### What participants do
-1. Understand why masking is the wrong solution: developers need realistic-format data (correct length, valid structure) to test with — `***` breaks test code
-2. Find the **scrambling** option in Pathlock DAC — a different enforcement type from Data Masking
-3. Configure a scrambling policy for `SCUSTOM` name/address fields scoped to the `DEVELOPER` role
-4. Verify: the same table now shows realistic but fictitious values — `MÜLLER, HANS` → `FISCHER, KARL`
-5. Explain to the room: why is scrambling better than masking for dev environments?
+1. Explore the pre-created `USER.TIME` User Attribute — confirm it resolves to the current server time (HH:MM) at the moment the policy is evaluated
+2. Create a **TCode Block** policy with condition: `USER.TIME NOT IN 08:00-18:00`
+   - Action type: **Block TCode** (not Masking — a new action type)
+   - TCode to block: `SE16` (they've been using it all workshop — dramatic effect)
+3. Immediately test: run `SE16` — it is now blocked outside business hours (note: the workshop runs outside 08:00–18:00 UTC, so the block fires immediately)
+4. **Find the completion code** — it is visible in the **blocked screen message** that Pathlock displays when the TCode is blocked
+5. Remove or deactivate the policy so they can continue using `SE16` for later levels
 
 #### Why this level exists
-Teaches the distinction between **masking** (hide the value) and **scrambling** (replace with realistic fake). Masked data is useless for testing; real PII in dev is a GDPR violation. Scrambling solves both.
+Introduces a completely different enforcement type — **TCode blocking** — distinct from field masking (L1/L2). Also introduces the `USER.TIME` temporal attribute, a third category of contextual ABAC (after identity-based L1 and network-based L2).
 
-Also introduces **role-based** policy conditions (`USER.ROLE EQ DEVELOPER`) as contrast to L1's user-specific and L2's network-based conditions. By level 3, participants have seen three distinct ABAC condition types.
+The drama is built in: the block fires immediately during the workshop since it runs outside 08:00–18:00. Participants block themselves and see the real Pathlock block screen.
+
+**Key customer message:** *"You don't need SAP authorisation changes. Pathlock wraps around the transaction and enforces business hours independently of the role."*
 
 #### What needs to be pre-configured
-- `USER.ROLE` User Attribute created in DAC — resolves to the SAP role of the logged-in user
-- `DEVELOPER` role assigned to the demo user (or a dedicated test user)
-- Scrambling configuration available and licensed on this DAC instance (verify before session)
+- `USER.TIME` User Attribute created in DAC — resolves to current time HH:MM at policy evaluation
+- **Completion code** pre-typed into the **block message text** of the TCode Block action (the text shown when access is denied)
+- No role changes needed — any standard workshop participant user triggers this
 
 #### ABAC concepts introduced
-- Scrambling / pseudonymisation (vs masking)
-- Role-based user attribute (`USER.ROLE`)
-- Privacy by design (GDPR Art. 25)
+- Temporal / time-based contextual attributes (`USER.TIME`)
+- TCode blocking (vs field masking)
+- Time-window conditions (`NOT IN 08:00-18:00`)
+- Three ABAC condition types now seen: identity (L1), network (L2), time (L3)
 
 #### Completion code
-TBD — suggested: the first scrambled customer name in `SCUSTOM` row 1 after the policy activates. Instructor sets after confirming scrambling output on this instance.
+Pre-entered in the **block message** of the TCode Block action. Participants see it on screen the moment `SE16` is blocked.
 
 #### Framework
-GDPR Art. 25 — privacy by design | GDPR Art. 5(1)(e) — storage limitation
+SOX Section 404 — access control | PCI-DSS Req. 7 — restrict access by business need | ISO 27001 A.9.4
 
 ---
 

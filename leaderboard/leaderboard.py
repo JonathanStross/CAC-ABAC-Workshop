@@ -234,7 +234,7 @@ LEVEL_FILES = {
     0:  "level-00-orientation.md",
     1:  "level-01-pii-masking.md",
     2:  "level-02-contextual-access.md",
-    3:  "level-03-scrambling.md",
+    3:  "level-03-tcode-block.md",
     4:  "level-04-overprivileged-role.md",
     5:  "level-05-classification.md",
     6:  "level-06-export-block.md",
