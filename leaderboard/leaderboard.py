@@ -434,7 +434,7 @@ def level_guide(level_num):
     codes = load_codes()
     key = f"L{level_num}"
     title = codes.get(key, {}).get("title", f"Level {level_num}")
-    extra_widget = _L2_PEERS_WIDGET if level_num == 2 else ""
+    extra_widget = ""  # _L2_PEERS_WIDGET disabled — L2 is individual work
     return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>L{level_num} — {title}</title>{LEVEL_STYLE}</head>
 <body>
   {_topbar('/levels')}
