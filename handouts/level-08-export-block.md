@@ -34,9 +34,9 @@ SAP GUI export actions use ok-codes:
 
 Pathlock intercepts these **before** the file is written — checks `DATA.CLASS_LABEL` — and blocks if the label is `Restricted-PII` or `Internal-Financial`.
 
-> **Data Blocking ≠ Masking.**
+> **Data Restriction ≠ Masking.**
 > Masking hides a value but lets the action proceed.
-> Blocking **prevents the action entirely** — no data leaves the system.
+> Restriction **prevents the action entirely** — no data leaves the system.
 
 ---
 
@@ -118,7 +118,7 @@ Enter it on the leaderboard exactly as shown, uppercase, underscores included.
 
 | Concept | Meaning |
 |---|---|
-| **Data Blocking** | Prevents the action — no data leaves (vs masking which hides values) |
+| **Data Restriction** | Prevents the action — no data leaves (vs masking which hides values) |
 | **Classification-driven policy** | One policy covers all classified tables — no table names hardcoded |
 | **`DATA.BUTTON_OK_CODE`** | Detects which export action the user triggered |
 | **`DATA.CLASS_LABEL`** | Reads the classification of the active table at runtime |

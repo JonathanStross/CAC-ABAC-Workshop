@@ -156,7 +156,7 @@ The **Policy Enforcement Point** (PEP) is where you activate the masking action 
 | # | Action | What you see |
 |---|---|---|
 | 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(second tab)** | Left tree updates |
-| 2 | **Double-click** on **Policy Enforcement Point** in the left tree | Sub-items appear: **Data Masking** and **Data Blocking** |
+| 2 | **Double-click** on **Policy Enforcement Point** in the left tree | Sub-items appear: **Data Masking** and **Data Restriction** |
 | 3 | **Double-click** on **Data Masking** | List of all active masking enforcement points |
 | 4 | Click the **Change Mode** button in the top toolbar (pencil icon) | Screen switches to edit mode |
 | 5 | Click **Append New** | A blank row appears at the bottom |
