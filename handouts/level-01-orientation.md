@@ -1,4 +1,4 @@
-# Level 0 — Orientation: Connect & Log In
+# Level 1 — Orientation: Connect & Log In
 
 **Meridian AG Audit Remediation — DAC: Practitioner Level**
 
@@ -155,7 +155,7 @@ This is exactly what the external auditors flagged — and it is why you are her
 
 You have connected to the VPN, logged into SAP, and seen the unprotected data first-hand.
 
-**Claim your Level 0 points:**
+**Claim your Level 1 points:**
 Go to the **[leaderboard](http://152.53.187.143:9000)** → **Submit Code** → select **L0 — Orientation** → enter the code.
 
 <details>
@@ -180,4 +180,4 @@ You've already seen the answer. Log out of SAP and read everything on the login 
 
 ---
 
-*Next: [Level 1 — Passenger PII Visible to All Staff →](/levels/1)*
+*Next: [Level 2 — Passenger PII Visible to All Staff →](/levels/2)*

@@ -1,4 +1,4 @@
-# Level 2 — Contextual Access: Same User, Different Rules
+# Level 3 — Contextual Access: Same User, Different Rules
 
 **Meridian AG Audit Remediation — Pathlock DAC/ABAC Workshop**
 
@@ -19,7 +19,7 @@ The DPA audit finding #2 reads:
 
 > *"The masking policy created for finding #1 is scoped to a specific user identity. It provides no protection when a different user accesses the same data, nor does it enforce any network-location requirement. An attacker with any valid SAP account can access full passenger PII from any network endpoint."*
 
-In Level 1 you created a policy with condition `USER.ID EQ <your username>`.
+In Level 2 you created a policy with condition `USER.ID EQ <your username>`.
 That approach is brittle: one policy per user, no network enforcement.
 
 **The goal of this level:** create a policy that protects data based on **where** the connection comes from — not just who — using the `USER.NETWORK` attribute.
@@ -172,4 +172,4 @@ Enter the completion code you found in Step 3 at **`https://pathlock.academy/sub
 
 > **Compliance note:** GDPR Art. 32 — technical security measures | NIS2 Art. 21 — access control | ISO 27001 A.8.11 — data masking
 
-*Next: [Level 3 — After-Hours TCode Block →](/levels/3)*
+*Next: [Level 4 — After-Hours TCode Block →](/levels/4)*

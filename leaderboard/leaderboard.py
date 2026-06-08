@@ -231,15 +231,16 @@ def logo():
 # Level guide renderer — markdown files from the handouts/ directory
 # ---------------------------------------------------------------------------
 LEVEL_FILES = {
-    0:  "level-00-orientation.md",
-    1:  "level-01-pii-masking.md",
-    2:  "level-02-contextual-access.md",
-    3:  "level-03-tcode-block.md",
-    4:  "level-04-audit-feed.md",
-    5:  "level-05-overprivileged-role.md",
-    6:  "level-06-classification.md",
-    7:  "level-07-export-block.md",
-    8:  "level-08-fiori-masking.md",
+    0:  "level-00-briefing.md",
+    1:  "level-01-orientation.md",
+    2:  "level-02-pii-masking.md",
+    3:  "level-03-contextual-access.md",
+    4:  "level-04-tcode-block.md",
+    5:  "level-05-audit-feed.md",
+    6:  "level-06-overprivileged-role.md",
+    7:  "level-07-classification.md",
+    8:  "level-08-export-block.md",
+    9:  "level-09-fiori-masking.md",
 }
 
 LEVEL_STYLE = """

@@ -1,4 +1,4 @@
-# Level 6 — Data Classification: Your Role Is Your Clearance
+# Level 7 — Data Classification: Your Role Is Your Clearance
 
 **Meridian AG Audit Remediation — DAC: Practitioner Level**
 
@@ -171,7 +171,7 @@ Enter it on the leaderboard exactly as it appears — capital letters, hyphen in
 
 ---
 
-> **Level 7 builds directly on this:** you will use `DATA.CLASS_LABEL` to block
+> **Level 8 builds directly on this:** you will use `DATA.CLASS_LABEL` to block
 > data exports for `Restricted-PII` and `Internal-Financial` tables
 > while allowing `Public` data through freely.
 
@@ -254,7 +254,7 @@ Enter it on the leaderboard exactly as it appears — capital letters, hyphen in
 | **`DATA.CLASS_LABEL`** | Runtime attribute that makes the classification label available to any DAC policy |
 | **Tag once, control everywhere** | Classify a table once — all downstream policies apply automatically |
 
-> **Level 7 builds directly on this:** you'll use `DATA.CLASS_LABEL` to block exports of
+> **Level 8 builds directly on this:** you'll use `DATA.CLASS_LABEL` to block exports of
 > `Restricted-PII` and `Internal-Financial` data while allowing `Public` data through.
 
-*Next: [Level 7 — Export Block →](/levels/7)*
+*Next: [Level 8 — Export Block →](/levels/8)*

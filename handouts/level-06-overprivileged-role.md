@@ -1,4 +1,4 @@
-# Level 4 — Overprivileged Role: One Policy, Two Controls
+# Level 6 — Overprivileged Role: One Policy, Two Controls
 
 **Meridian AG Audit Remediation — Pathlock DAC/ABAC Workshop**
 
@@ -123,4 +123,4 @@ Enter the completion code you found in the `USER.ROLE` attribute description at 
 
 > **Compliance note:** SOX Section 404 — SoD compensating controls | PCI-DSS Req. 3 — protect stored cardholder data | GDPR Art. 5(1)(c) — data minimisation
 
-*Next: [Level 6 — Data Classification →](/levels/6)*
+*Next: [Level 7 — Data Classification →](/levels/7)*

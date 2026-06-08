@@ -1,4 +1,4 @@
-# Level 6 — Block the Data Export
+# Level 8 — Block the Data Export
 
 **Meridian AG Audit Remediation — Pathlock DAC/ABAC Workshop**
 
@@ -15,7 +15,7 @@
 
 ## Background
 
-You've tagged the data in Level 5. Now put it to work.
+You've tagged the data in Level 7. Now put it to work.
 
 > *"Users can export SCUSTOM and SBOOK data to local Excel files via SE16 — no restriction exists."*
 
@@ -125,4 +125,4 @@ Enter it on the leaderboard exactly as shown, uppercase, underscores included.
 
 > *"The data leaving the building is the breach. We stopped it at the door."*
 
-*Next: [Level 8 — Fiori / OData Masking →](/levels/8)*
+*Next: [Level 9 — Fiori / OData Masking →](/levels/9)*
