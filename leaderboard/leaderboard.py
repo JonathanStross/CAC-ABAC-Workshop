@@ -712,7 +712,7 @@ def _topbar(active: str = "") -> str:
   <a class="brand" href="/">
     <img src="/logo" alt="Pathlock">
     <span class="brand-divider"></span>
-    <span class="brand-label">Pathlock Academy</span>
+    <span class="brand-label">Academy</span>
   </a>
   <nav>{items}</nav>
 </div>"""
