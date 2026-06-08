@@ -77,7 +77,10 @@ Create a new masking policy — name it with your username to avoid collisions.
 | 4 | Click the **Create** button (📄 blank page icon at the top of the policy list) | Blank policy form |
 | 5 | **Policy Name**: `MASK_NET_<YOURUSERNAME>` — e.g. `MASK_NET_AMUELLER` | Field fills in |
 | 6 | **Description**: `Block EMAIL access from untrusted network endpoints` | Field fills in |
-| 7 | Click **Save** (💾 or Ctrl+S) | Policy saved |
+| 7 | Leave **Process Area** and **Application Area** empty | — |
+| 8 | Set the **Logging** dropdown to **`Do not log`** | Dropdown updates |
+| 9 | *(Optional)* Add a note in the **Long Text** field | — |
+| 10 | Click **Save** (💾 or Ctrl+S), then navigate back to the **Policy Administration Point** overview | Your policy appears in the list |
 
 ---
 
