@@ -41,9 +41,13 @@ USER.NETWORK NOT EQ <your_VPN_IP>
 
 ## Step 1 — Find Your VPN IP and Your Lab Partner
 
-Use the widget below. Enter your SAP username — it shows your own VPN IP and lists everyone on your server.
+Use the widget below. Enter your SAP username — it shows your own VPN IP and lists everyone on the same SAP server. Your lab partner is anyone on that list: they use a different WireGuard config so they have a different VPN IP.
 
-> ⚠️ Write down your `10.8.0.X` address — you will need it in Step 5. Also note a colleague with a different IP — that is your lab partner for Step 7.
+> ⚠️ Write down your `10.8.0.X` address — you will need it in Step 5.
+
+**How the demo works:** Walk over to your partner's laptop. From *their* machine — which carries their VPN IP — log into SAP with **your own credentials** (your username, your password, your client number). Navigate to `SE16 → SCUSTOM` and look at the `STREET` column: the masking fires because the source IP is your partner's, not yours. Same user, same role, same data — different machine, different result. **Log out immediately after.**
+
+**No partner available?** Enter your own IP as the exception — you will see the data unmasked since your IP matches. Then swap the condition to a different IP and re-test: the masking will fire. That gives you both the positive and the negative test on your own.
 
 <!-- PEERS_WIDGET -->
 
@@ -171,30 +175,33 @@ Link the policy to the data it should mask: `SCUSTOM.STREET` via `DATA.S_STREET`
 
 ## Step 7 — Test It
 
-You already have everything you need from Step 1 — your VPN IP is in the condition and your lab partner is identified. Share your **client number** with them and ask them to log into SAP on your client from their machine — or share your credentials and use their machine, logging out immediately after.
+Walk over to your lab partner's laptop (identified in Step 1). From their machine, log into SAP with **your own credentials** — your username, your password, your client number.
 
 **No partner available?** Enter your own IP as the exception in the condition — you will see the data unmasked since your IP matches. Then swap the condition to a different IP and re-test: the masking will fire. That gives you both the positive and the negative test on your own.
 
-### Test A — Your own session (should be VISIBLE)
+### Test A — On your own laptop (should be VISIBLE)
+
+Stay on your own machine. Your VPN IP is the one you entered as the exception value.
 
 | # | Action | Expected result |
 |---|---|---|
 | 1 | Run **`SE16`** → table `SCUSTOM` → **Execute (F8)** | Full table loads |
 | 2 | Look at the `STREET` column | **Full street addresses visible** ✅ |
 
-Your VPN IP matches the exception you configured — the policy does not fire for you.
+Your VPN IP matches the exception you configured — the condition `USER.NETWORK NOT EQ <your IP>` evaluates to FALSE → policy does not fire.
 
-### Test B — Your lab partner's session (should be MASKED)
+### Test B — On your partner's laptop (should be MASKED)
 
-Your partner logs into SAP on **your client number** using their own machine:
+Walk to your partner's laptop. Log into SAP with **your own credentials** — your username, your password, your client number. You are the same user, but the source IP is now your partner's VPN IP, which does not match your exception.
 
 | # | Action | Expected result |
 |---|---|---|
-| 1 | Partner logs into SAP with their own credentials on **your client** | Normal login |
-| 2 | Partner runs **`SE16`** → table `SCUSTOM` → **Execute (F8)** | Full table loads |
-| 3 | Partner looks at the `STREET` column | **`***` — masked** ✅ |
+| 1 | On partner's laptop: log in with **your own** username + password + client | Normal login |
+| 2 | Run **`SE16`** → table `SCUSTOM` → **Execute (F8)** | Full table loads |
+| 3 | Look at the `STREET` column | **`***` — masked** ✅ |
+| 4 | Log out | Leave the machine clean for your partner |
 
-Their VPN IP is different from yours → the condition `USER.NETWORK NOT EQ <your IP>` evaluates to TRUE → masking fires.
+Source IP = partner's VPN IP ≠ your exception → `USER.NETWORK NOT EQ <your IP>` evaluates to TRUE → masking fires.
 
 **This is contextual ABAC.** Same server. Same client. Same table. Same role. Different VPN IP. Different result. Zero SAP changes.
 
