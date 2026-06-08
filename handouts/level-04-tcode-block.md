@@ -56,7 +56,7 @@ The policy fires immediately — the workshop runs outside 08:00–18:00, so the
 | 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab | Left tree updates |
 | 2 | Double-click **Policy Administration Point** | List of all policies |
 | 3 | Click **Change Mode** (pencil icon) | Edit mode |
-| 4 | Click **New Entry** | Blank policy form |
+| 4 | Click the **Create** button (📄 blank page icon at the top of the policy list) | Blank policy form |
 | 5 | **Policy Name**: `BLOCK_SE16_HOURS_<YOURUSERNAME>` | Field fills in |
 | 6 | **Description**: `Block SE16 outside business hours` | Field fills in |
 | 7 | Click **Save** (💾 or Ctrl+S) | Policy saved |
