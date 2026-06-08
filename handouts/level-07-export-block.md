@@ -124,3 +124,5 @@ Enter it on the leaderboard exactly as shown, uppercase, underscores included.
 | **`DATA.CLASS_LABEL`** | Reads the classification of the active table at runtime |
 
 > *"The data leaving the building is the breach. We stopped it at the door."*
+
+*Next: [Level 8 — Fiori / OData Masking →](/levels/8)*

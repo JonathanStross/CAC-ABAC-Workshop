@@ -254,5 +254,7 @@ Enter it on the leaderboard exactly as it appears — capital letters, hyphen in
 | **`DATA.CLASS_LABEL`** | Runtime attribute that makes the classification label available to any DAC policy |
 | **Tag once, control everywhere** | Classify a table once — all downstream policies apply automatically |
 
-> **Level 6 builds directly on this:** you'll use `DATA.CLASS_LABEL` to block exports of
+> **Level 7 builds directly on this:** you'll use `DATA.CLASS_LABEL` to block exports of
 > `Restricted-PII` and `Internal-Financial` data while allowing `Public` data through.
+
+*Next: [Level 7 — Export Block →](/levels/7)*

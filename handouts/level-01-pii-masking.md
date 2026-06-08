@@ -271,4 +271,4 @@ Ask yourself: *which field do we mask?*
 
 ---
 
-*Next: [Level 2 — Contextual Access →](level-02-contextual-access.md)*
+*Next: [Level 2 — Contextual Access →](/levels/2)*

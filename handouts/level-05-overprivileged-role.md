@@ -122,3 +122,5 @@ Both controlled by one condition. The analyst's role triggered both enforcements
 Enter the completion code you found in the `USER.ROLE` attribute description at **`https://pathlock.academy/submit`**
 
 > **Compliance note:** SOX Section 404 — SoD compensating controls | PCI-DSS Req. 3 — protect stored cardholder data | GDPR Art. 5(1)(c) — data minimisation
+
+*Next: [Level 6 — Data Classification →](/levels/6)*

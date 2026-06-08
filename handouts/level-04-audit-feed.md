@@ -119,3 +119,5 @@ This is a real GDPR Art. 30 access record. You just produced it in under 2 minut
 Enter the completion code you found in the DAC Feed at **`https://pathlock.academy/submit`**
 
 > **Compliance note:** GDPR Art. 30 — records of processing activities | GDPR Art. 32 — evidence of technical measures | SOX Section 404 — ITGC audit evidence | ISO 27001 A.8.15 — logging and monitoring
+
+*Next: [Level 5 — Overprivileged Role →](/levels/5)*
