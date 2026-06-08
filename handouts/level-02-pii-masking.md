@@ -107,7 +107,7 @@ A **Policy** is the container that holds the masking rules and links them to the
 | 7 | Leave **Process Area** and **Application Area** empty | — |
 | 8 | Set the **Logging** dropdown to **`Do not log`** | Dropdown updates |
 | 9 | *(Optional)* In the **Long Text** field, write something about the workshop — feedback is always welcome 😄 | — |
-| 10 | Click **Save** (💾 or Ctrl+S) | Policy appears in the list |
+| 10 | Click **Save** (💾 or Ctrl+S), then navigate back to the **Policy Administration Point** overview | Your policy appears in the list |
 
 > ⚠️ If you get a "duplicate name" error, someone already used that name — double-check your username is in the policy name.
 
