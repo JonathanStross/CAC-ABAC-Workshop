@@ -54,8 +54,6 @@ Your VPN IP is in the credentials you received at registration. You can also fin
 
 A **User Attribute** in Pathlock DAC defines a piece of context about the user at runtime. The `USER.NETWORK` attribute has been pre-created in the system — it resolves to the client's source IP address at the moment the SAP session starts.
 
-> **The completion code for this level is hidden inside the description of `USER.NETWORK`. You will find it in this step.**
-
 | # | Action | What you see |
 |---|---|---|
 | 1 | In SAP, run **`/N/APPSDM/ABAC`** | Pathlock ABAC main screen |
@@ -63,9 +61,7 @@ A **User Attribute** in Pathlock DAC defines a piece of context about the user a
 | 3 | Expand **Policy Information Point** in the left tree | Sub-items appear |
 | 4 | Double-click **User Attribute Master** | List of all user attributes |
 | 5 | Find and open **`USER.NETWORK`** | Attribute detail screen opens |
-| 6 | Read the **Description** field carefully | The completion code is here 🏆 |
-
-> ⚠️ Note down the completion code now — submit it to the leaderboard at the end of this level.
+| 6 | Read the **Description** and **Technical Name** fields | Note them down — you will need the Attribute ID at the end |
 
 ---
 
@@ -162,7 +158,17 @@ Their VPN IP is different from yours → the condition `USER.NETWORK NOT EQ <you
 
 ## 🏆 Submit Your Code
 
-Enter the completion code you found in **Step 2** (the description of `USER.NETWORK`) at **`https://pathlock.academy/submit`**
+Go to **`https://pathlock.academy/submit`** → select **L3 — Contextual Access** → enter the code.
+
+> 💭 *What was the Attribute ID of the user attribute that carries the client's IP address?*
+
+<details>
+<summary>💬 <strong>Hint</strong> — click to reveal</summary>
+<br>
+
+Think about the attribute you explored in Step 2. What was its technical name?
+
+</details>
 
 > **Compliance note:** GDPR Art. 32 — technical security measures | NIS2 Art. 21 — access control | ISO 27001 A.8.11 — data masking
 
