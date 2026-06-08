@@ -697,8 +697,8 @@ STYLE = """
 # ---------------------------------------------------------------------------
 def _topbar(active: str = "") -> str:
     links = [
-        ("/",            "�",  "Academy"),
-        ("/leaderboard", "�🏆",  "Leaderboard"),
+        ("/",            "&#127968;",  "Academy"),      # 🏠
+        ("/leaderboard", "&#127942;",  "Leaderboard"),  # 🏆
         ("/levels",      "📖",  "Levels"),
         ("/register",    "📝",  "Register"),
         ("/submit",      "🔑",  "Submit"),
