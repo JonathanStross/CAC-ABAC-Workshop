@@ -3,7 +3,7 @@
   "L1":  { "code": "DATA.S_EMAIL", "points": 100, "title": "PII Masking" },
   "L2":  { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Contextual Access" },
   "L3":  { "code": "SET_BEFORE_SESSION", "points": 100, "title": "Time-Based TCode Block" },
-  "L4":  { "code": "SET_BEFORE_SESSION", "points": 150, "title": "Overprivileged Role" },
+  "L4":  { "code": "SET_BEFORE_SESSION", "points": 150, "title": "Overprivileged Role (SoD + PCI)" },
   "L5":  { "code": "Restricted-PII", "points": 100, "title": "Data Classification" },
   "L6":  { "code": "BLOCK_DOWNLOAD_BY_CLASSIFICATION", "points": 100, "title": "Export Block" },
   "L7":  { "code": "SET_BEFORE_SESSION", "points": 175, "title": "Multi-Entity ABAC" },

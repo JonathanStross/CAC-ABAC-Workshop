@@ -289,33 +289,43 @@ SOX Section 404 — access control | PCI-DSS Req. 7 — restrict access by busin
 **Points:** 150 | **Guidance:** Independent | **Time:** 15 min
 
 #### Audit finding
-> *"User RANALYST holds a role granting read access to flight revenue data, booking records and passenger details across ALL airline codes — including carriers outside Meridian AG's own portfolio. Role cleanup is 9 months away. No compensating control exists. SOX Section 404 deficiency."*
+> *"The RANALYST role was cloned from an Accounts Receivable Clerk template 18 months ago and never cleaned up. It carries two privileges the role has no business justification for: read access to `SBOOK.LOCCURAM` (credit card reference — PCI-DSS violation) and access to TCode `FB01` (Post Financial Document — SOX Segregation of Duties violation). An analyst should only READ revenue data, never view payment instruments or post journal entries. Role remediation is 9 months away."*
 
 #### What participants do
-No instructions given. They must independently:
-1. Identify the right attribute to scope by: `SFLIGHT.CARRID` / `SBOOK.CARRID` — Meridian AG operates `LH` and `AA` only
-2. Create a policy that restricts `RANALYST`'s view of `SFLIGHT` and `SBOOK` to only rows where `CARRID IN {LH, AA}`
-3. Verify: row count of `SFLIGHT` visible to `RANALYST` drops after the policy is applied
-4. Submit the post-restriction row count as the completion code
+First fully independent level — minimal guidance. They must:
+1. Confirm the problem: open `SBOOK` via `SE16` → see `LOCCURAM` (credit card reference) fully visible
+2. Try running `FB01` — it opens (it shouldn't for an analyst)
+3. Find the `USER.ROLE` User Attribute in DAC — read its description to get the completion code
+4. Create a single policy with condition: `USER.ROLE EQ RANALYST`
+5. Add two actions under the same condition:
+   - Action 1: **Mask** `DATA.LOCCURAM` on `SBOOK` → credit card reference hidden
+   - Action 2: **Block TCode** `FB01` → posting transaction blocked
+6. Test both: `SBOOK.LOCCURAM` is now masked; `FB01` shows a block screen
+7. Reflect: one policy, one condition, two enforcement types, zero SAP role changes
 
 #### Why this level exists
-First fully independent level. Tests whether participants can apply the ABAC pattern without scaffolding. The "role cleanup is 9 months away" framing is a real-world scenario — **ABAC as a compensating control** resonates strongly with customers mid-way through a GRC programme who can't wait for role engineering.
+First independent level. Teaches that **one ABAC condition can drive multiple enforcement actions simultaneously** — masking + TCode blocking together. Also introduces the `USER.ROLE` attribute.
+
+The SoD framing (`FB01` = post financial documents) is immediately recognisable to any SAP audience. The PCI-DSS framing (`LOCCURAM` = credit card reference) adds a compliance dimension. Together they show ABAC as a **compensating control for role remediation backlogs** — a universal pain point.
 
 #### What needs to be pre-configured
-- `RANALYST` user created in SAP with overprivileged role
-- `SFLIGHT` and `SBOOK` loaded with data for multiple carriers including non-Meridian ones
-- `DATA.CARRID` Data Attribute created in DAC — maps to `CARRID` field on `SFLIGHT`, `SBOOK`
+- `ZRANALYST` custom role created in SAP (`SU01`/`PFCG`) with access to `FB01`, `SE16`, `SBOOK`
+- Role assigned to all workshop participant users (or a dedicated shared `RANALYST` user per server)
+- `DATA.LOCCURAM` Data Attribute created in DAC — maps to `LOCCURAM` on `SBOOK`
+- `USER.ROLE` User Attribute created in DAC — resolves to the participant's SAP role at login
+- **Completion code** pre-entered in the description of `USER.ROLE` attribute
 
 #### ABAC concepts introduced
-- Resource/data attributes (not just user attributes)
-- Row-level filtering (not just field masking)
-- ABAC as a compensating control for role issues
+- Role-based user attribute (`USER.ROLE`)
+- Multiple actions from a single condition (masking + TCode block combined)
+- ABAC as SoD compensating control
+- PCI-DSS field-level control + SOX TCode-level control in one policy
 
 #### Completion code
-Row count of `SFLIGHT` visible to `RANALYST` after the scoping policy is applied. Instructor records this number after pre-config.
+Pre-entered in the **description field** of the `USER.ROLE` User Attribute in DAC. Consistent mechanic with L1/L2/L3.
 
 #### Framework
-SOX Section 404 — ITGC compensating controls | GDPR Art. 5(1)(c)
+SOX Section 404 — SoD compensating controls | PCI-DSS Req. 3 — protect stored cardholder data | GDPR Art. 5(1)(c) — data minimisation
 
 ---
 
