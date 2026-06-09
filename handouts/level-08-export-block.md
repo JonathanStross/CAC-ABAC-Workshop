@@ -15,7 +15,7 @@
 
 ## Background
 
-You've tagged the data in Level 7. Now put it to work.
+You've seen row-level filtering in Level 7. Now enforce a different control on the same data: block the export entirely based on classification labels the instructor has pre-configured.
 
 > *"Users can export SCUSTOM and SBOOK data to local Excel files via SE16 — no restriction exists."*
 

@@ -1,4 +1,4 @@
-# Level 7 — Data Classification: Your Role Is Your Clearance
+# Level 7 — Regional Access: Your Business Unit Shapes Your View
 
 **Meridian AG Audit Remediation — DAC: Practitioner Level**
 
@@ -6,8 +6,8 @@
 
 | | |
 |---|---|
-| 🎯 **Goal** | Discover how data classification + ABAC role conditions create a clearance-tier access model — without changing a single SAP authorization object |
-| ⏱ **Time** | 15–20 minutes |
+| 🎯 **Goal** | Discover how a single SAP role controls which **rows** of data you see — without any ABAP change, table split, or authorization object |
+| ⏱ **Time** | 15 minutes |
 | 🏆 **Points** | 100 |
 | 💡 **Difficulty** | 🟡 Hints |
 
@@ -17,145 +17,124 @@
 
 The DPA audit finding #6 reads:
 
-> *"No data classification exists — Pathlock cannot distinguish between SCARR (public reference data) and SCUSTOM (PII). There is no mechanism to enforce data-sensitivity-aware access. Data leaves the system without restriction or audit trail."*
-> — *ISO 27001 A.8.3, ISO 27001 A.8.12, GDPR Art. 32*
+> *"All booking agents, regardless of business unit, can browse the full SCUSTOM passenger table — including records belonging to regional subsidiaries they have no business need to access. No regional data separation exists. GDPR Art. 5(1)(b) — purpose limitation violation."*
 
-You have already built policies that target specific users, networks, times, and roles. All of those conditions answer the question: **"who is accessing?"**
+Meridian AG operates across multiple European markets. German-market passenger records are managed by the **German business unit** — other analysts have no legitimate reason to view them.
 
-This level introduces a second axis: **"how sensitive is the data being accessed?"**
-
-The answer comes from **Data Classification** — a labelling system that tags every SAP table with a sensitivity tier. Once labelled, the label becomes an ABAC attribute (`DATA.CLASS_LABEL`) that any policy can reference. You classify a table once. Every control that uses `DATA.CLASS_LABEL` applies automatically, forever — no table names hardcoded anywhere.
+The solution is **row-level access control**: users without the `Z_GERMAN` business unit role see a filtered result set. German passenger entries simply do not appear. Same table. Same transaction. Same SAP role. Fewer rows.
 
 ---
 
-## The Clearance Model
+## Step 1 — Establish a Baseline
 
-Your SAP user has been assigned a **clearance role**. It contains zero authorization objects — it exists purely as a name that DAC can match:
+First, run `SE16` on `SCUSTOM` and note what you see.
 
-| Role | Clearance tier | What you can see |
+| # | Action | What you see |
 |---|---|---|
-| `Z_CLEARANCE_PUBLIC` | Public | Only `Public` data — reference tables like SCARR |
-| `Z_CLEARANCE_INTERNAL` | Internal | `Internal-Financial` + `Public` — financial records + reference |
-| `Z_CLEARANCE_TOPSECRET` | Top Secret | Everything — `Restricted-PII` + `Internal-Financial` + `Public` |
+| 1 | Run `SE16` in SAP → table `SCUSTOM` → **Execute (F8)** | Full passenger list |
+| 2 | Note the **total row count** (bottom status bar) | e.g. `135 entries` |
+| 3 | Look for entries where **`COUNTRY`** = `DE` | German passenger records |
 
-> The roles are empty shells in SAP. Your SAP authorization profile is unchanged.
-> The enforcement — what you see vs. what gets masked — is entirely driven by DAC policy
-> matching `USER.ROLE` against `DATA.CLASS_LABEL`.
-
-This is how real-world data classification schemes work under ISO 27001 A.8.3 and NATO-style clearance models: the label on the data meets the clearance on the user — access is granted or denied at that intersection.
+> ⚠️ Write down the **total row count** and how many German entries (`COUNTRY = DE`) you can see. You will compare this after the policy is applied.
 
 ---
 
-## Step 1 — Find Your Clearance Role
+## Step 2 — Check Your Business Unit Role
 
 | # | Action | What you see |
 |---|---|---|
 | 1 | Run `SU01` in SAP | User maintenance |
-| 2 | Enter your SAP username → Execute (F8) | Your user master |
+| 2 | Enter your SAP username → **Execute (F8)** | Your user master record |
 | 3 | Click the **Roles** tab | List of assigned roles |
-| 4 | Find the role beginning with `Z_CLEARANCE_` | Your clearance tier |
+| 4 | Look for a role named **`Z_GERMAN`** | Present or absent |
 
-> ⚠️ Write down your clearance role — you will need it in Step 3.
+> Note whether `Z_GERMAN` is assigned to your user — this determines what you will see after the policy is active.
 
 ---
 
-## Step 2 — Explore the Classification Table
+## Step 3 — Find the Row-Level Policy
+
+The instructor has pre-configured a Data Restriction policy that enforces the business unit separation. Locate it and read its logic.
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | Run transaction **`/APPSDM/DC`** | Data Classification main screen |
-| 2 | Browse all classification entries | Tables mapped to sensitivity labels |
+| 1 | Run **`/N/APPSDM/ABAC`** → **Functional Configuration** tab | Left tree updates |
+| 2 | Double-click **Policy Administration Point** | All policies |
+| 3 | Find and open **`RESTRICT_GERMAN_BU`** | Policy detail screen |
+| 4 | Read the **Condition** | `USER.ROLE NOT EQ Z_GERMAN` |
+| 5 | Read the **Action** | Data Restriction on `DATA.S_COUNTRY` — value `DE` |
 
-**Confirm these three entries:**
+**What this means:**
 
-| Table | Classification | What it contains |
-|---|---|---|
-| `SCUSTOM` | `Restricted-PII` | Passenger names, addresses, phone, email, payment ref |
-| `SBOOK` | `Internal-Financial` | Booking records, prices, payment amounts |
-| `SCARR` | `Public` | Partner carrier names — public reference data |
+| If... | Then... |
+|---|---|
+| `USER.ROLE NOT EQ Z_GERMAN` evaluates to **TRUE** (you don't have the role) | All rows where `COUNTRY = DE` are removed from the SE16 result set |
+| `USER.ROLE NOT EQ Z_GERMAN` evaluates to **FALSE** (you have the role) | No restriction — full result set returned |
 
-> ⚠️ If any entry is missing or wrong — tell your instructor before continuing.
-
----
-
-## Step 3 — Find the `DATA.CLASS_LABEL` Attribute
-
-Classification labels need a bridge into the DAC policy engine.
-
-| # | Action | What you see |
-|---|---|---|
-| 1 | Run **`/N/APPSDM/ABAC`** → **Functional Configuration** tab | Left tree |
-| 2 | Expand **Policy Information Point** → **Data Attribute Master** | Attribute list |
-| 3 | Find and open **`DATA.CLASS_LABEL`** | Attribute detail |
-| 4 | Read the description carefully | Runtime: resolves to the label of the current table |
-
-> At runtime, when a user opens `SCUSTOM` in SE16, `DATA.CLASS_LABEL` = `Restricted-PII`.
-> When they open `SCARR`, it = `Public`. The policy engine sees this value live, every call.
+> This is **row-level access control** — not masking. The rows are absent, not starred out.
+> A user without `Z_GERMAN` cannot even tell how many German records exist.
 
 ---
 
-## Step 4 — Find the Pre-Built Clearance Policies
+## Step 4 — Test: Run SE16 Again
 
-The instructor has pre-configured two masking policies that enforce the clearance model. Locate them and understand their structure.
-
-| # | Action | What you see |
+| # | Action | Expected result |
 |---|---|---|
-| 1 | In **`/N/APPSDM/ABAC`** → **Functional Configuration** | Left tree |
-| 2 | Open **Policy Administration Point** | All policies |
-| 3 | Find **`MASK_CLASSIFICATION_PUBLIC`** and open it | Policy detail |
-| 4 | Read the **Condition** and **Action** | — |
-| 5 | Find **`MASK_CLASSIFICATION_INTERNAL`** and open it | Policy detail |
-| 6 | Read the **Condition** and **Action** | — |
+| 1 | Run `SE16` → table `SCUSTOM` → **Execute (F8)** | Result set loads |
+| 2 | Check the **total row count** | Compare with your Step 1 baseline |
+| 3 | Filter for `COUNTRY = DE` | Result depends on your role (see below) |
 
-**You should see:**
+| Your role | What you see |
+|---|---|
+| **Has `Z_GERMAN`** | Same count as Step 1 — German rows visible ✅ |
+| **No `Z_GERMAN`** | Lower count — German rows silently absent 🚫 |
 
-| Policy | Condition | Action |
-|---|---|---|
-| `MASK_CLASSIFICATION_PUBLIC` | `USER.ROLE EQ Z_CLEARANCE_PUBLIC` AND `DATA.CLASS_LABEL NEQ Public` | Mask all fields |
-| `MASK_CLASSIFICATION_INTERNAL` | `USER.ROLE EQ Z_CLEARANCE_INTERNAL` AND `DATA.CLASS_LABEL EQ Restricted-PII` | Mask all fields |
-
-> No policy targets `Z_CLEARANCE_TOPSECRET` — absence of a matching condition means no
-> enforcement. Top Secret users see everything unmasked by design.
+> If you don't have `Z_GERMAN`: the row count in Step 4 will be lower than Step 1.
+> The difference = the number of German passenger records you are no longer permitted to see.
 
 ---
 
-## Step 5 — Test Your Clearance
+## Step 5 — The Partner Comparison
 
-Run SE16 against all three tables and observe what your clearance tier permits:
+Compare results with a colleague who has the opposite role assignment.
 
-| Table | Classification | Public sees | Internal sees | Top Secret sees |
-|---|---|---|---|---|
-| `SCARR` | `Public` | ✅ full data | ✅ full data | ✅ full data |
-| `SBOOK` | `Internal-Financial` | `***` masked | ✅ full data | ✅ full data |
-| `SCUSTOM` | `Restricted-PII` | `***` masked | `***` masked | ✅ full data |
+| | Without `Z_GERMAN` | With `Z_GERMAN` |
+|---|---|---|
+| SCUSTOM row count | Lower | Full |
+| `COUNTRY = DE` filter result | 0 entries | German records visible |
+| Any error or warning shown? | ❌ None | ✅ Full view |
 
-> Run: `SE16` → table name → Execute (F8) → observe the result.
-> Do all three tables. Confirm your tier behaves as the table above predicts.
+> This is the key implication: a user without the role doesn't see an error or a masked value —
+> they simply see a shorter list. They have no way to know what they are missing.
+> This is the strongest form of data segregation.
 
 ---
 
-## Step 6 — The Insight: One Classification, Infinite Policies
+## Step 6 — The Insight: Role as a Data Gate
 
-> **`DATA.CLASS_LABEL`** is the key insight of this level.
+Every previous level used `USER.ROLE` as a **condition** to decide *how* data is presented (masked or blocked). This level uses it to decide *whether* data is returned at all.
 
-Imagine Meridian AG adds a new table tomorrow — `SPASSPORT` — containing passport numbers. The DBA classifies it as `Restricted-PII` in `/APPSDM/DC`.
+| Level | Attribute | Effect |
+|---|---|---|
+| L2 | `USER.ID` | Field masked for specific user |
+| L3 | `USER.NETWORK` | Field masked based on source IP |
+| L4 | `USER.TIME` | TCode blocked outside hours |
+| L6 | `USER.ROLE` | TCode blocked for non-privileged roles |
+| **L7** | **`USER.ROLE`** | **Rows removed — data never returned** |
 
-**What changes in the DAC policies?** Nothing. Zero.
-
-`MASK_CLASSIFICATION_PUBLIC` already blocks `DATA.CLASS_LABEL NEQ Public`.
-`SPASSPORT` = `Restricted-PII` → not equal to `Public` → masked automatically.
-
-This is the difference between **policy-based** and **rule-based** access control:
-- Rule-based: add a new table → add a new rule → risk of forgetting.
-- Policy-based: add a new table → classify it → all existing policies apply instantly.
+**What changed in SAP?**
+- No authorization object added or removed
+- No table partitioned or split
+- No ABAP developed
+- One DAC policy, one role, one country code — full regional data separation
 
 ---
 
 ## 🏆 Completion Code
 
-**The completion code is the classification label assigned to `SCUSTOM` in `/APPSDM/DC`.**
+**The completion code is the name of the SAP role that grants access to German entries.**
 
-Enter it on the leaderboard exactly as it appears — capital letters, hyphen included.
+Enter it exactly as it appears in the policy condition — uppercase, underscore included.
 
 ---
 
@@ -163,98 +142,15 @@ Enter it on the leaderboard exactly as it appears — capital letters, hyphen in
 
 | Concept | Meaning |
 |---|---|
-| **Data Classification** | Sensitivity labels on SAP tables — `Restricted-PII`, `Internal-Financial`, `Public` |
-| **`DATA.CLASS_LABEL`** | Runtime attribute that carries the label into the policy engine |
-| **Clearance role** | An empty SAP role used purely as a `USER.ROLE` value — no auth objects needed |
-| **Clearance intersection** | Policy fires when the user's clearance tier meets the data's sensitivity label |
-| **Tag once, control everywhere** | Classify a table once — all downstream policies apply automatically |
+| **Row-level access control** | Rows are filtered out of the result set entirely — not masked |
+| **`USER.ROLE` as a data gate** | A role controls not just what you can do, but what data you can see |
+| **Silent exclusion** | Users without the role see a shorter list with no indication that records are missing |
+| **No SAP changes** | Zero authorization objects, zero ABAP — pure DAC policy |
+| **Regional data separation** | Business unit boundaries enforced at the data layer, not the application layer |
 
 ---
 
-> **Level 8 builds directly on this:** you will use `DATA.CLASS_LABEL` to block
-> data exports for `Restricted-PII` and `Internal-Financial` tables
-> while allowing `Public` data through freely.
-
-
----
-
-## Background
-
-The DPA audit finding #5 reads:
-
-> *"No data classification exists — Pathlock cannot distinguish between SCARR (public reference data) and SCUSTOM (PII). Data leaves the system without restriction or audit trail."*
-> — *ISO 27001 A.8.3, ISO 27001 A.8.12, GDPR Art. 32*
-
-Before any download block or export control can work, Pathlock needs to know **what kind of data each table contains**. That's what Data Classification does.
-
-Classification is a label system:
-
-| Label | Meaning |
-|---|---|
-| `Restricted-PII` | Personal data — names, addresses, payment info |
-| `Internal-Financial` | Business-sensitive financial records |
-| `Public` | Reference data — safe to export freely |
-
-**Once tables are tagged, every policy that references `DATA.CLASS_LABEL` automatically applies to the right data — no table names hardcoded anywhere.**
-
----
-
-## Step 1 — Open the Classification Configuration
-
-| # | Action | What you see |
-|---|---|---|
-| 1 | Run transaction **`/APPSDM/DC`** | Data Classification main screen |
-| 2 | Browse the classification entries | Table names mapped to labels |
-
-**Confirm these three entries exist:**
-
-| Table | Classification | What it contains |
-|---|---|---|
-| `SCUSTOM` | `Restricted-PII` | Passenger names, addresses, phone, email, payment ref |
-| `SBOOK` | `Internal-Financial` | Booking records, prices, payment amounts |
-| `SCARR` | `Public` | Partner carrier names — public reference data |
-
-> ⚠️ If any of these are missing or wrong — tell your instructor before continuing.
-
----
-
-## Step 2 — Find the Runtime Attribute
-
-Classification labels don't automatically reach Pathlock policies — a **Data Attribute** bridges them.
-
-| # | Action | What you see |
-|---|---|---|
-| 1 | Run **`/N/APPSDM/ABAC`** → **Functional Configuration** tab | Left tree |
-| 2 | Expand **Policy Information Point** → **Data Attribute Master** | Attribute list |
-| 3 | Find and open **`DATA.CLASS_LABEL`** | Attribute detail screen |
-| 4 | Read the description — note what this attribute captures at runtime | — |
-
-> **`DATA.CLASS_LABEL`** reads the classification label of the table currently open in SE16.
-> At runtime, when a user is in `SCUSTOM`, its value is `Restricted-PII`.
-> When they're in `SCARR`, its value is `Public`.
-
-> **This is the key insight:** any policy that references `DATA.CLASS_LABEL` works for
-> *all* classified tables — past, present and future. You classify once, the controls follow.
-
----
-
-## 🏆 Completion Code
-
-**The completion code is the classification label assigned to `SCUSTOM` in `/APPSDM/DC`.**
-
-Enter it on the leaderboard exactly as it appears — capital letters, hyphen included.
-
----
-
-## What you learned
-
-| Concept | Meaning |
-|---|---|
-| **Data Classification** | Labels that describe data sensitivity — `Restricted-PII`, `Internal-Financial`, `Public` |
-| **`DATA.CLASS_LABEL`** | Runtime attribute that makes the classification label available to any DAC policy |
-| **Tag once, control everywhere** | Classify a table once — all downstream policies apply automatically |
-
-> **Level 8 builds directly on this:** you'll use `DATA.CLASS_LABEL` to block exports of
-> `Restricted-PII` and `Internal-Financial` data while allowing `Public` data through.
+> **Level 8** uses data classification labels (pre-configured by the instructor) to block
+> data exports — `Restricted-PII` and `Internal-Financial` tables stay in SAP, `Public` data flows freely.
 
 *Next: [Level 8 — Export Block →](/levels/8)*

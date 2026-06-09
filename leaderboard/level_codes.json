@@ -6,7 +6,7 @@
   "L4":  { "code": "SET_BEFORE_SESSION",                "points": 100, "title": "Time-Based TCode Block" },
   "L5":  { "code": "SET_BEFORE_SESSION",                "points": 150, "title": "Audit Feed" },
   "L6":  { "code": "SET_BEFORE_SESSION",                "points": 150, "title": "Overprivileged Role (SoD + PCI)" },
-  "L7":  { "code": "Restricted-PII",                   "points": 100, "title": "Data Classification" },
+  "L7":  { "code": "Z_GERMAN",                          "points": 100, "title": "Regional Access Control" },
   "L8":  { "code": "BLOCK_DOWNLOAD_BY_CLASSIFICATION",  "points": 100, "title": "Export Block" },
   "L9":  { "code": "SET_BEFORE_SESSION",                "points": 175, "title": "Fiori/UI5 Masking" }
 }
