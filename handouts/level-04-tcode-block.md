@@ -73,10 +73,19 @@ The policy fires whenever the current time falls **outside** your configured win
 | 3 | Click **Change Mode** → **New** | Blank condition row |
 | 4 | **Attribute**: `USER.TIME` | |
 | 5 | **Operator**: `NOT IN` | |
-| 6 | **Value**: `08:00-18:00` | Time range in 24h format |
+| 6 | **Value**: a 5-minute window starting now — check **System → Status** for the server time, then enter e.g. `14:23-14:28` | Time range in 24h format |
 | 7 | Save | Condition saved |
 
-> **What this means:** the policy fires whenever the current time is **outside** 08:00–18:00. If the workshop runs during that window, the block won't fire — swap the range to something that excludes your current time (e.g. `10:00-11:00` if it's 14:00, so you are already outside it).
+> **What this means:** the policy fires whenever the current time is **outside** the range you set. The trick is to make the range expire in exactly 5 minutes — so the block fires while you're watching.
+>
+> **☕ Coffee-break demo — recommended approach:**
+>
+> 1. Check the exact server time: in SAP GUI go to **System menu → Status** — note the **System Time** field (24h format, server clock).
+> 2. Set the **Value** to a 5-minute window starting now — e.g. if System Time shows `14:23`, enter `14:23-14:28`.
+> 3. Save, then go get a coffee.
+> 4. Come back after the window closes — `SE16` is now blocked. Same user, same role, no SAP changes. Just time.
+>
+> *The policy condition `USER.TIME NOT IN 14:23-14:28` evaluates to FALSE while you're inside the window (SE16 works), and flips to TRUE the moment the clock passes 14:28 (SE16 blocked).*
 
 ---
 
