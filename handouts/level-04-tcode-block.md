@@ -21,7 +21,7 @@ The DPA audit finding #3 reads:
 
 In L1 and L2 you masked **fields**. This level introduces a completely different enforcement type: **blocking a TCode entirely** based on the time of day.
 
-The policy fires immediately — the workshop runs outside 08:00–18:00, so the moment you activate it you will be locked out of `SE16`. That is the point.
+The policy fires whenever the current time falls **outside** your configured window. Depending on when the workshop runs, you may need to adjust the time range so the block fires during your session — see the hint in Step 3.
 
 > ⚠️ Remember to **deactivate the policy** at the end of this level so you can continue using `SE16` in later levels.
 
@@ -76,7 +76,7 @@ The policy fires immediately — the workshop runs outside 08:00–18:00, so the
 | 6 | **Value**: `08:00-18:00` | Time range in 24h format |
 | 7 | Save | Condition saved |
 
-> **What this means:** the policy fires whenever the current time is **outside** 08:00–18:00. Since the workshop runs in the evening, this fires immediately.
+> **What this means:** the policy fires whenever the current time is **outside** 08:00–18:00. If the workshop runs during that window, the block won't fire — swap the range to something that excludes your current time (e.g. `10:00-11:00` if it's 14:00, so you are already outside it).
 
 ---
 
