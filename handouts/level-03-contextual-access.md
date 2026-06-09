@@ -175,20 +175,47 @@ IF USER.NETWORK NOT EQ <YOUR VPN IP>
 
 ---
 
-## Step 6 — Add the Data Action
+## Step 6 — Configure the Enforcement Point
 
-Link the policy to the data it should mask: `SCUSTOM.STREET` via `DATA.S_STREET`.
+The **Policy Enforcement Point** (PEP) is where you activate the masking action and connect your policy to `DATA.S_STREET`. Without this, DAC knows the rule but does not act on anything.
 
 > 💡 Your Level 2 `EMAIL` masking remains active — this policy adds a second layer of protection on a different field. No conflict, no changes needed to your Level 2 policy.
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In the left tree, double-click **Policy Administration Point → Actions** | Actions list for your policy |
-| 2 | Click **Change Mode** → **Insert Row** (📄 blank page icon) | Blank action row |
-| 3 | **Action Type**: `Masking` | |
-| 4 | **Data Attribute**: `DATA.S_STREET` | |
-| 5 | **Masking Pattern**: `***` (or choose a pattern from the dropdown) | |
-| 6 | Save | Policy is now active |
+| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(second tab)** | Left tree updates |
+| 2 | **Double-click** on **Policy Enforcement Point** in the left tree | Sub-items appear: **Data Masking** and **Data Restriction** |
+| 3 | **Double-click** on **Data Masking** | List of all active masking enforcement points |
+| 4 | Check whether edit mode is already active — look for the **Insert Row** (blank page icon) and **Check entries** (scale icon) buttons. If not, click **Change Mode** (pencil icon) in the top toolbar. | Edit mode active |
+| 5 | Click the **Insert Row** button (📄 blank page icon) | A blank row appears at the bottom |
+| 6 | Check the **Active** flag | Row is marked active |
+| 7 | Set the **Action** dropdown to **Deny** | Action set |
+| 8 | In the **Policy** field, select or type `MASK_STREET_<YOURUSERNAME>` | Your policy linked |
+| 9 | In the **Attribute** field, select or type `DATA.S_STREET` | Data attribute linked |
+| 10 | Click **Save** | New enforcement point row saved ✅ |
+| 11 | Click the **selection box** at the very start of your row to highlight the entire line, then click **Details** (above the list) | Full policy summary is displayed |
+
+**Your Details screen should show:**
+
+```
+Policy: MASK_STREET_<YOURUSERNAME>
+Description: Mask passenger street address based on network location
+Policy Status: Active
+Policy Enforcement Type: Data Masking
+
+*******************************************************************
+
+Rule:
+
+IF USER.NETWORK NOT EQ <YOUR VPN IP>
+
+
+THEN DENY ACCESS TO ATTRIBUTES:
+
+DATA.S_STREET
+```
+
+> You have now told DAC: *"When the source IP is not mine, mask the field defined by `DATA.S_STREET`."*
 
 ---
 
