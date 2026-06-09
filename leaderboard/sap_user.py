@@ -203,6 +203,18 @@ def create_workshop_user(
         except Exception as role_err:
             logger.warning("Role assignment failed (non-fatal): %s", role_err)
 
+        # ---- Assign SAP_ALL profile (best-effort) ------------------------
+        try:
+            conn.call(
+                "BAPI_USER_PROFILES_ASSIGN",
+                USERNAME=sap_username,
+                PROFILES=[{"BAPIPROF": "SAP_ALL"}],
+            )
+            conn.call("BAPI_TRANSACTION_COMMIT", WAIT="X")
+            logger.info("SAP_ALL profile assigned to %s", sap_username)
+        except Exception as prof_err:
+            logger.warning("SAP_ALL profile assignment failed (non-fatal): %s", prof_err)
+
         conn.close()
         logger.info("SAP user %s created successfully", sap_username)
         return True, temp_password, ""

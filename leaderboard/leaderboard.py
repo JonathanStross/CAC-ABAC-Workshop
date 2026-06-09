@@ -527,12 +527,13 @@ def init_db():
     # Migrate older DBs — add any missing columns
     existing = {row[1] for row in db.execute("PRAGMA table_info(participants)")}
     for col, typedef in [
-        ("wg_ip",      "TEXT"),
-        ("wg_conf",    "TEXT"),
-        ("locked",     "INTEGER DEFAULT 0"),
-        ("kicked_at",  "TEXT"),
-        ("server",     "TEXT"),
-        ("sap_client", "TEXT"),
+        ("wg_ip",           "TEXT"),
+        ("wg_conf",         "TEXT"),
+        ("locked",          "INTEGER DEFAULT 0"),
+        ("kicked_at",       "TEXT"),
+        ("server",          "TEXT"),
+        ("sap_client",      "TEXT"),
+        ("waiver_accepted", "INTEGER DEFAULT 0"),
     ]:
         if col not in existing:
             db.execute(f"ALTER TABLE participants ADD COLUMN {col} {typedef}")
@@ -1124,6 +1125,37 @@ REGISTER_TEMPLATE = """
                required value="{{ form_sap or '' }}" style="text-transform:uppercase;letter-spacing:1px">
         <label>Company <span style="color:#aaa;font-size:0.85em">(optional)</span></label>
         <input type="text" name="company" placeholder="e.g. Contoso AG" value="{{ form_company or '' }}">
+
+        <div style="background:#1a1a2e;border:1px solid #c0392b;border-radius:8px;padding:20px;margin:20px 0">
+          <h3 style="color:#e74c3c;margin-top:0;margin-bottom:6px">⚠️ Participant Agreement</h3>
+          <p style="color:#aaa;font-size:0.85em;margin-top:0;margin-bottom:16px">Read and accept all five terms before registering.</p>
+
+          <label style="display:flex;gap:10px;margin-bottom:14px;cursor:pointer;align-items:flex-start">
+            <input type="checkbox" name="w_screenshots" required style="margin-top:3px;flex-shrink:0">
+            <span><strong>No screenshots or recordings.</strong> Photography, screen recording, and sharing of any system contents outside this session is strictly prohibited.</span>
+          </label>
+
+          <label style="display:flex;gap:10px;margin-bottom:14px;cursor:pointer;align-items:flex-start">
+            <input type="checkbox" name="w_privileges" required style="margin-top:3px;flex-shrink:0">
+            <span><strong>Responsible use of elevated privileges.</strong> You will receive broad SAP access (SAP_ALL). Any misuse, data exfiltration, or access beyond the scope of this workshop will result in <strong>immediate disqualification</strong> and may lead to <strong>legal action</strong>.</span>
+          </label>
+
+          <label style="display:flex;gap:10px;margin-bottom:14px;cursor:pointer;align-items:flex-start">
+            <input type="checkbox" name="w_shared" required style="margin-top:3px;flex-shrink:0">
+            <span><strong>Shared system etiquette.</strong> The SAP environment is shared with other participants. Do not modify others' configurations, users, or data. Be mindful and respectful at all times.</span>
+          </label>
+
+          <label style="display:flex;gap:10px;margin-bottom:14px;cursor:pointer;align-items:flex-start">
+            <input type="checkbox" name="w_leaderboard" required style="margin-top:3px;flex-shrink:0">
+            <span><strong>Leaderboard visibility.</strong> Your display name will be shown publicly on the leaderboard. If you do not wish to share personally identifiable information, use a fictive name in the field above.</span>
+          </label>
+
+          <label style="display:flex;gap:10px;margin-bottom:0;cursor:pointer;align-items:flex-start">
+            <input type="checkbox" name="w_retention" required style="margin-top:3px;flex-shrink:0">
+            <span><strong>Data retention.</strong> Your SAP account and registration data will be deleted at the end of the course. To retain access for an extended training period, opt in by <strong>Friday</strong>. If you do not opt in, all data is deleted without further notice.</span>
+          </label>
+        </div>
+
         <button type="submit" class="btn">Register & create SAP user →</button>
         {% if not sap_available %}
         <p style="color:#f39c12;margin-top:16px;font-size:0.85em">
@@ -1356,6 +1388,11 @@ def register():
     if not re.match(r'^[A-Z0-9_]+$', sap_username):
         return err("SAP username may only contain letters, digits and underscore.")
 
+    # ---- Waiver check ------------------------------------------------------
+    waiver_fields = ["w_screenshots", "w_privileges", "w_shared", "w_leaderboard", "w_retention"]
+    if not all(request.form.get(f) for f in waiver_fields):
+        return err("You must accept all terms in the Participant Agreement to register.")
+
     # ---- Check duplicates --------------------------------------------------
     db = get_db()
     if db.execute("SELECT 1 FROM participants WHERE email=?", (email,)).fetchone():
@@ -1415,8 +1452,8 @@ def register():
     try:
         db.execute(
             "INSERT INTO participants "
-            "(name, email, sap_username, company, sap_created, wg_ip, wg_conf, server, sap_client) "
-            "VALUES (?,?,?,?,?,?,?,?,?)",
+            "(name, email, sap_username, company, sap_created, wg_ip, wg_conf, server, sap_client, waiver_accepted) "
+            "VALUES (?,?,?,?,?,?,?,?,?,1)",
             (name, email, sap_username, company, 1 if sap_ok else 0,
              wg_ip, wg_conf, server_alias, slot_client))
         db.commit()
@@ -1600,7 +1637,103 @@ def admin():
     for lvl, info in codes.items():
         out += f"{lvl}: {info['code']} ({info['points']} pts)\n"
     out += "</pre><br><form method='POST' action='/admin/reset' onsubmit=\"return confirm('Reset ALL data? This also removes all WireGuard peers and frees all slots.');\" ><button style='background:#c0392b;color:#fff;border:none;padding:8px 20px;border-radius:4px;cursor:pointer;font-size:1em'>Reset Everything</button></form>"
+    out += "<br><a href='/admin/create' style='display:inline-block;margin-top:10px;background:#2980b9;color:#fff;padding:8px 20px;border-radius:4px;text-decoration:none;font-size:1em'>➕ Manually create participant</a>"
     return f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>{out}</body></html>"
+
+@app.route("/admin/create", methods=["GET", "POST"])
+def admin_create_user():
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+
+    msg = ""
+    result_block = ""
+
+    if request.method == "POST":
+        name         = _sanitize_text(request.form.get("name", ""), 80)
+        email        = _sanitize_text(request.form.get("email", "").lower(), 120)
+        sap_username = _sanitize_text(request.form.get("sap_username", "").upper(), 12)
+        company      = _sanitize_text(request.form.get("company", ""), 80)
+
+        if not name or not email or not sap_username:
+            msg = "Name, email and SAP username are required."
+        elif not re.match(r'^[A-Z0-9_]+$', sap_username):
+            msg = "SAP username may only contain letters, digits and underscore."
+        else:
+            db = get_db()
+            dup_email = db.execute("SELECT 1 FROM participants WHERE email=?", (email,)).fetchone()
+            dup_sap   = db.execute("SELECT 1 FROM participants WHERE sap_username=?", (sap_username,)).fetchone()
+            if dup_email:
+                msg = f"Email {email} already registered."
+            elif dup_sap:
+                msg = f"SAP username {sap_username} already taken."
+            else:
+                server_alias, slot_client = _assign_slot(sap_username)
+                if server_alias is None:
+                    msg = "No slots remaining."
+                else:
+                    srv_info = SAP_SERVERS.get(server_alias, {})
+                    slot_conn_params = {
+                        "host":   srv_info.get("host",  SAP_HOST),
+                        "sysnr":  srv_info.get("sysnr", SAP_SYSNR),
+                        "client": slot_client,
+                    }
+                    sap_ok, temp_password, sap_error = create_workshop_user(
+                        sap_username=sap_username,
+                        first_name=name.split()[0] if name.split() else name,
+                        last_name=" ".join(name.split()[1:]) if len(name.split()) > 1 else "",
+                        email=email,
+                        conn_params=slot_conn_params,
+                    )
+                    wg_ok, wg_ip, wg_conf, wg_error = create_customer_peer(
+                        display_name=name, server_alias=server_alias)
+                    try:
+                        db.execute(
+                            "INSERT INTO participants "
+                            "(name, email, sap_username, company, sap_created, wg_ip, wg_conf, server, sap_client, waiver_accepted) "
+                            "VALUES (?,?,?,?,?,?,?,?,?,1)",
+                            (name, email, sap_username, company, 1 if sap_ok else 0,
+                             wg_ip, wg_conf, server_alias, slot_client))
+                        db.commit()
+                    except sqlite3.IntegrityError as exc:
+                        db.close()
+                        msg = f"DB error: {exc}"
+                        sap_ok = False
+                    if sap_ok or not msg:
+                        result_block = (
+                            f"<div style='background:#0f1f0f;border:1px solid #2ecc71;padding:16px;border-radius:8px;margin-top:16px'>"
+                            f"<strong style='color:#2ecc71'>✅ Created: {sap_username}</strong><br><br>"
+                            f"Server: {server_alias} &nbsp;|&nbsp; Client: {slot_client} &nbsp;|&nbsp; VPN IP: {wg_ip or 'n/a'}<br>"
+                            f"SAP Password: <strong style='color:#ffd700'>{temp_password or '(see SAP)'}</strong><br>"
+                            f"{'⚠️ SAP error: ' + sap_error if not sap_ok else ''}"
+                            f"{'<br>⚠️ WG error: ' + wg_error if not wg_ok else ''}"
+                            f"</div>"
+                        )
+            db.close()
+
+    form = f"""
+    <html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>
+    <h2>➕ Manually Create Participant</h2>
+    <p style='color:#aaa'>Use this as a failsafe when a participant cannot self-register.<br>
+    Waiver is recorded as accepted by the instructor on behalf of the participant.</p>
+    {"<p style='color:#e74c3c'>" + msg + "</p>" if msg else ""}
+    {result_block}
+    <form method='POST' style='max-width:480px;margin-top:16px'>
+      <label style='display:block;margin-bottom:4px;color:#aaa'>Full name</label>
+      <input name='name' required style='width:100%;padding:8px;background:#222;color:#fff;border:1px solid #444;border-radius:4px;margin-bottom:12px'>
+      <label style='display:block;margin-bottom:4px;color:#aaa'>Email</label>
+      <input name='email' type='email' required style='width:100%;padding:8px;background:#222;color:#fff;border:1px solid #444;border-radius:4px;margin-bottom:12px'>
+      <label style='display:block;margin-bottom:4px;color:#aaa'>SAP username (max 12 chars)</label>
+      <input name='sap_username' required maxlength='12' style='width:100%;padding:8px;background:#222;color:#fff;border:1px solid #444;border-radius:4px;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px'>
+      <label style='display:block;margin-bottom:4px;color:#aaa'>Company (optional)</label>
+      <input name='company' style='width:100%;padding:8px;background:#222;color:#fff;border:1px solid #444;border-radius:4px;margin-bottom:16px'>
+      <button type='submit' style='background:#2980b9;color:#fff;border:none;padding:10px 24px;border-radius:4px;cursor:pointer;font-size:1em'>Create participant →</button>
+    </form>
+    <br><a href='/admin' style='color:#aaa'>← Back to admin</a>
+    </body></html>
+    """
+    return form
+
 
 @app.route("/admin/delete/<sap_username>", methods=["POST"])
 def admin_delete_user(sap_username):
