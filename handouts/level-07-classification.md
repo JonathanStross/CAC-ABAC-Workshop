@@ -150,7 +150,7 @@ Enter it exactly as it appears in the policy condition — uppercase, underscore
 
 ---
 
-> **Level 8** uses data classification labels (pre-configured by the instructor) to block
-> data exports — `Restricted-PII` and `Internal-Financial` tables stay in SAP, `Public` data flows freely.
+> **Level 8** — you will classify the SAP tables yourself (`/APPSDM/DC`), then use those labels
+> to block data exports — `Restricted-PII` and `Internal-Financial` tables stay in SAP, `Public` data flows freely.
 
 *Next: [Level 8 — Export Block →](/levels/8)*

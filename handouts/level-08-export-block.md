@@ -15,12 +15,11 @@
 
 ## Background
 
-You've seen row-level filtering in Level 7. Now enforce a different control on the same data: block the export entirely based on classification labels the instructor has pre-configured.
+You've seen row-level filtering in Level 7. Now take it further: classify the data, then use that classification to block exports entirely.
 
 > *"Users can export SCUSTOM and SBOOK data to local Excel files via SE16 — no restriction exists."*
 
-**Your task:** Activate the policy `BLOCK_DOWNLOAD_BY_CLASSIFICATION` and verify it blocks
-`Restricted-PII` and `Internal-Financial` tables while allowing `Public` ones.
+**Your task:** Tag the SAP tables with sensitivity labels, then activate the policy `BLOCK_DOWNLOAD_BY_CLASSIFICATION` and verify it blocks `Restricted-PII` and `Internal-Financial` tables while allowing `Public` ones.
 
 **How the block works:**
 
@@ -40,7 +39,33 @@ Pathlock intercepts these **before** the file is written — checks `DATA.CLASS_
 
 ---
 
-## Step 1 — Confirm the Problem First
+## Step 1 — Classify the Tables
+
+Before the download block policy can work, each table needs a sensitivity label. You create these in the Pathlock Data Classification transaction.
+
+| # | Action | What you see |
+|---|---|---|
+| 1 | Run transaction **`/APPSDM/DC`** in SAP | Data Classification main screen |
+| 2 | Enter Change Mode (pencil icon) | Edit mode |
+| 3 | Click **Insert Row** (📄 blank page icon) | Blank row |
+| 4 | **Table**: `SCUSTOM` — **Label**: `Restricted-PII` | Row filled in |
+| 5 | Insert another row: **Table**: `SBOOK` — **Label**: `Internal-Financial` | Row filled in |
+| 6 | Insert another row: **Table**: `SCARR` — **Label**: `Public` | Row filled in |
+| 7 | **Save** | Three classification entries saved |
+
+**Your classification table should now read:**
+
+| Table | Classification | What it contains |
+|---|---|---|
+| `SCUSTOM` | `Restricted-PII` | Passenger names, addresses, phone, email, payment ref |
+| `SBOOK` | `Internal-Financial` | Booking records, prices, payment amounts |
+| `SCARR` | `Public` | Partner carrier names — public reference data |
+
+> ⚠️ The label values must be **exact** — `Restricted-PII`, `Internal-Financial`, `Public` — the policy condition matches these strings case-sensitively. If an entry already exists, do not create a duplicate.
+
+---
+
+## Step 2 — Confirm the Problem First
 
 | # | Action | What you see |
 |---|---|---|
@@ -51,7 +76,7 @@ No block yet. That's the finding. Now fix it.
 
 ---
 
-## Step 2 — Activate the Policy
+## Step 3 — Activate the Policy
 
 | # | Action | What you see |
 |---|---|---|
@@ -75,7 +100,7 @@ No block yet. That's the finding. Now fix it.
 
 ---
 
-## Step 3 — Test All Three Cases
+## Step 4 — Test All Three Cases
 
 | # | Table | Classification | Expected result |
 |---|---|---|---|
