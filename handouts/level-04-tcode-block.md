@@ -54,13 +54,18 @@ The policy fires whenever the current time falls **outside** your configured win
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab | Left tree updates |
-| 2 | Double-click **Policy Administration Point** | List of all policies |
-| 3 | Click **Change Mode** (pencil icon) | Edit mode |
-| 4 | Click the **Create** button (📄 blank page icon at the top of the policy list) | Blank policy form |
-| 5 | **Policy Name**: `BLOCK_SE16_HOURS_<YOURUSERNAME>` | Field fills in |
+| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(second tab)** | Left tree updates |
+| 2 | **Double-click** on **Policy Administration Point** in the left tree | List of all existing policies opens |
+| 3 | Click the **Change Mode** button in the top toolbar (pencil icon) | Screen switches to edit mode |
+| 4 | Click the **Create** button (📄 blank page icon at the top of the policy list) | Blank policy form opens |
+| 5 | **Policy Name**: `BLOCK_SE16_HOURS_<YOURUSERNAME>` — e.g. `BLOCK_SE16_HOURS_AMUELLER` | Field fills in |
 | 6 | **Description**: `Block SE16 outside business hours` | Field fills in |
-| 7 | Click **Save** (💾 or Ctrl+S) | Policy saved |
+| 7 | Leave **Process Area** and **Application Area** empty | — |
+| 8 | Set the **Logging** dropdown to **`Do not log`** | Dropdown updates |
+| 9 | *(Optional)* Add a note in the **Long Text** field | — |
+| 10 | Click **Save** (💾 or Ctrl+S), then navigate back to the **Policy Administration Point** overview | Your policy appears in the list |
+
+> ⚠️ If you get a "duplicate name" error, double-check your username is included in the policy name.
 
 ---
 
