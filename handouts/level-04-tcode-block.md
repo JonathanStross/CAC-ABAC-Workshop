@@ -82,8 +82,9 @@ The policy fires whenever the current time falls **outside** your configured win
 >
 > 1. Check the exact server time: in SAP GUI go to **System menu → Status** — note the **System Time** field (24h format, server clock).
 > 2. Set the **Value** to a 5-minute window starting now — e.g. if System Time shows `14:23`, enter `14:23-14:28`.
-> 3. Save, then go get a coffee.
-> 4. Come back after the window closes — `SE16` is now blocked. Same user, same role, no SAP changes. Just time.
+> 3. Save, then immediately run **`SE16`** → it works. You are inside the window.
+> 4. Go get a coffee. ☕
+> 5. Come back after the window closes and try **`SE16`** again — blocked. Same user, same role, no SAP changes. Just time.
 >
 > *The policy condition `USER.TIME NOT IN 14:23-14:28` evaluates to FALSE while you're inside the window (SE16 works), and flips to TRUE the moment the clock passes 14:28 (SE16 blocked).*
 
