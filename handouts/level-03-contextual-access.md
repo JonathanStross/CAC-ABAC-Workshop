@@ -72,6 +72,25 @@ A **User Attribute** in Pathlock DAC defines a piece of context about the user a
 
 Before you can use `DATA.S_STREET` in a policy, it must exist in the **Data Attribute Master** with a mapping to the physical SAP field.
 
+But first — what **is** the physical field? You need the exact SAP table name and field name before you can enter the mapping. Find it yourself the same way you did in Level 2.
+
+> 🔍 **Your task:** Go to `SE16 → SCUSTOM`, find the street address column, and look up its technical details. Note the **table name** and the **field name** — you will need both in the mapping step below.
+
+<details>
+<summary>💡 Hint — how to find a field's technical name</summary>
+
+1. Run `SE16` → table `SCUSTOM` → **Execute (F8)**
+2. Click on the **`STREET` column header** to select it
+3. Press **F1** — the SAP help popup opens
+4. Click **Technical Info** (button inside the popup)
+5. Note the **Table Name** (`SCUSTOM`) and the **Field Name** (`STREET`)
+
+This is the same technique you used in Level 2 to find `S_EMAIL`. The Data Element name you see (`S_STREET`) also confirms what the Attribute ID prefix should be.
+
+</details>
+
+Once you have those values, create the attribute and wire it up:
+
 | # | Action | What you see |
 |---|---|---|
 | 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab | Left tree updates |
