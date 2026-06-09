@@ -313,6 +313,31 @@ def kick_sap_user(sap_username: str, conn_params: dict | None = None) -> tuple[b
         return False, str(exc)
 
 
+def reset_sap_password(sap_username: str, conn_params: dict | None = None) -> tuple[bool, str, str]:
+    """
+    Reset a SAP user's password to a newly generated one.
+    Uses SUSR_USER_CHANGE_PASSWORD_RFC (works without knowing the old password).
+
+    Returns (success, new_password, error_msg).
+    """
+    if not SAP_AVAILABLE or not (conn_params or {}).get("passwd", SAP_PASSWD):
+        return False, "", "SAP not available"
+    new_password = _generate_password()
+    try:
+        conn = _sap_connection_for(conn_params)
+        conn.call(
+            "SUSR_USER_CHANGE_PASSWORD_RFC",
+            BNAME=sap_username.upper(),
+            PASSWORD=new_password,
+        )
+        conn.close()
+        logger.info("Password reset for SAP user %s", sap_username)
+        return True, new_password, ""
+    except Exception as exc:
+        logger.error("Failed to reset password for SAP user %s: %s", sap_username, exc)
+        return False, "", str(exc)
+
+
 def delete_sap_user(sap_username: str, conn_params: dict | None = None) -> tuple[bool, str]:
     """
     Delete a SAP user via BAPI_USER_DELETE.

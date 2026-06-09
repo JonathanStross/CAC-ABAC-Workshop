@@ -24,7 +24,7 @@ try:
     MARKDOWN_AVAILABLE = True
 except ImportError:
     MARKDOWN_AVAILABLE = False
-from sap_user import create_workshop_user, user_exists, lock_sap_user, unlock_sap_user, kick_sap_user, delete_sap_user, SAP_AVAILABLE
+from sap_user import create_workshop_user, user_exists, lock_sap_user, unlock_sap_user, kick_sap_user, delete_sap_user, reset_sap_password, SAP_AVAILABLE
 from wireguard_peer import create_customer_peer, remove_customer_peer, WG_AVAILABLE
 
 app = Flask(__name__)
@@ -1562,46 +1562,67 @@ def admin():
     slots = db.execute("SELECT * FROM slots ORDER BY id").fetchall()
     db.close()
     codes = load_codes()
-    td = "style='padding:4px 10px'"
-    th = "style='text-align:left;padding:4px 10px;color:#aaa'"
-    out = f"<h2>Participants</h2><table style='border-collapse:collapse;width:100%'><tr><th {th}>Username</th><th {th}>Name</th><th {th}>Email</th><th {th}>SAP</th><th {th}>Server</th><th {th}>Client</th><th {th}>VPN IP</th><th {th}>Registered</th><th></th></tr>"
+    td = "style='padding:4px 10px;vertical-align:middle'"
+    th = "style='text-align:left;padding:4px 10px;color:#aaa;white-space:nowrap'"
+    out = (
+        f"<h2>Participants ({len(parts)})</h2>"
+        f"<table style='border-collapse:collapse;width:100%'>"
+        f"<tr>"
+        f"<th {th}>SAP Username</th>"
+        f"<th {th}>VM</th>"
+        f"<th {th}>Client</th>"
+        f"<th {th}>Display Name</th>"
+        f"<th {th}>Email</th>"
+        f"<th {th}>VPN IP</th>"
+        f"<th {th}>Status</th>"
+        f"<th {th}>Registered</th>"
+        f"<th {th}>Actions</th>"
+        f"</tr>"
+    )
     for p in parts:
-        sap_icon = "&#x2705;" if p["sap_created"] else "manual"
-        wg_icon  = p["wg_ip"] if p["wg_ip"] else "no VPN"
-        uname = p["sap_username"]
+        uname     = p["sap_username"]
         is_locked = p["locked"]
         kicked_at = p["kicked_at"]
+        vm_label  = (p["server"] or "—").upper()   # SAP2, SAP3 …
+        client    = p["sap_client"] or "—"
+        wg_ip     = p["wg_ip"] or "—"
+
         row_style = "border-top:1px solid #333;background:#2a0a0a" if is_locked else "border-top:1px solid #333"
+
         if kicked_at:
-            status_badge = f"<span style='color:#f39c12;font-weight:bold'>&#x26A1; KICKED</span> <span style='color:#888;font-size:0.8em'>({kicked_at[:16]})</span>"
+            status_badge = f"<span style='color:#f39c12;font-weight:bold'>⚡ KICKED</span>"
         elif is_locked:
-            status_badge = "<span style='color:#e74c3c;font-weight:bold'>&#x1F512; LOCKED</span>"
+            status_badge = "<span style='color:#e74c3c;font-weight:bold'>🔒 LOCKED</span>"
         else:
             status_badge = "<span style='color:#2ecc71'>active</span>"
+
         lock_btn = (
             f"<form method='POST' action='/admin/unlock/{uname}' style='display:inline'>"
-            f"<button style='background:#27ae60;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;margin-right:3px'>Unlock</button></form>"
+            f"<button style='background:#27ae60;color:#fff;border:none;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:0.8em;margin-right:2px'>Unlock</button></form>"
         ) if is_locked else (
             f"<form method='POST' action='/admin/lock/{uname}' style='display:inline'>"
-            f"<button style='background:#e67e22;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;margin-right:3px'>Lock</button></form>"
+            f"<button style='background:#e67e22;color:#fff;border:none;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:0.8em;margin-right:2px'>Lock</button></form>"
         )
+
         out += (
             f"<tr style='{row_style}'>"
-            f"<td {td}><strong>{uname}</strong></td>"
+            f"<td {td}><strong style='color:#ffd700;letter-spacing:1px'>{uname}</strong></td>"
+            f"<td {td}><strong>{vm_label}</strong></td>"
+            f"<td {td}>{client}</td>"
             f"<td {td}>{p['name']}</td>"
-            f"<td {td} style='color:#aaa'>{p['email']}</td>"
-            f"<td {td}>{sap_icon} {status_badge}</td>"
-            f"<td {td} style='color:#aaa'>{p['server'] or '—'}</td>"
-            f"<td {td} style='color:#aaa'>{p['sap_client'] or '—'}</td>"
-            f"<td {td}>{wg_icon}</td>"
-            f"<td {td} style='color:#aaa'>{p['registered_at']}</td>"
+            f"<td {td} style='color:#aaa;font-size:0.85em'>{p['email']}</td>"
+            f"<td {td} style='color:#2ecc71;font-size:0.85em'>{wg_ip}</td>"
+            f"<td {td}>{status_badge}</td>"
+            f"<td {td} style='color:#aaa;font-size:0.8em;white-space:nowrap'>{(p['registered_at'] or '')[:16]}</td>"
             f"<td {td} style='white-space:nowrap'>"
             f"{lock_btn}"
             f"<form method='POST' action='/admin/kick/{uname}' style='display:inline'>"
-            f"<button style='background:#8e44ad;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;margin-right:3px' title='Expire their session cookie — forces re-auth'>Kick</button></form>"
+            f"<button style='background:#8e44ad;color:#fff;border:none;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:0.8em;margin-right:2px' title='Kill active sessions'>Kick</button></form>"
+            f"<form method='POST' action='/admin/reset-pwd/{uname}' style='display:inline'>"
+            f"<button style='background:#2980b9;color:#fff;border:none;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:0.8em;margin-right:2px' title='Generate new SAP password'>Reset Pwd</button></form>"
             f"<form method='POST' action='/admin/delete/{uname}' style='display:inline'>"
-            f"<button onclick=\"return confirm('Delete {uname} and remove WireGuard peer? This cannot be undone.');\" "
-            f"style='background:#c0392b;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer'>Delete</button>"
+            f"<button onclick=\"return confirm('Delete {uname}? Cannot be undone.');\" "
+            f"style='background:#c0392b;color:#fff;border:none;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:0.8em'>Delete</button>"
             f"</form></td></tr>"
         )
     out += "</table>"
@@ -1733,6 +1754,44 @@ def admin_create_user():
     </body></html>
     """
     return form
+
+
+@app.route("/admin/reset-pwd/<sap_username>", methods=["POST"])
+def admin_reset_password(sap_username):
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    uname = sap_username.upper()
+    db = get_db()
+    row = db.execute("SELECT name, server, sap_client FROM participants WHERE sap_username=?", (uname,)).fetchone()
+    db.close()
+    if not row:
+        return f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'><p style='color:#e74c3c'>User {uname} not found.</p><a href='/admin' style='color:#aaa'>← Back</a></body></html>"
+
+    conn_params = None
+    if row["server"] and row["sap_client"] and row["server"] in SAP_SERVERS:
+        conn_params = {
+            "host":   SAP_SERVERS[row["server"]]["host"],
+            "sysnr":  SAP_SERVERS[row["server"]]["sysnr"],
+            "client": row["sap_client"],
+        }
+
+    ok, new_pwd, err = reset_sap_password(uname, conn_params=conn_params)
+    vm = (row["server"] or "").upper()
+    client = row["sap_client"] or "—"
+    if ok:
+        body = (
+            f"<div style='background:#0f1f0f;border:1px solid #2ecc71;padding:16px;border-radius:8px;max-width:460px'>"
+            f"<strong style='color:#2ecc71'>✅ Password reset — {uname}</strong><br><br>"
+            f"VM: <strong>{vm}</strong> &nbsp;|&nbsp; Client: <strong>{client}</strong><br><br>"
+            f"New password: <strong style='font-size:1.4em;color:#ffd700;letter-spacing:2px'>{new_pwd}</strong><br><br>"
+            f"<span style='color:#aaa;font-size:0.85em'>The user will be prompted to change it on next login.</span>"
+            f"</div>"
+        )
+    else:
+        body = f"<p style='color:#e74c3c'>❌ Reset failed for {uname}: {err}</p>"
+
+    return f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>{body}<br><br><a href='/admin' style='color:#aaa'>← Back to admin</a></body></html>"
 
 
 @app.route("/admin/delete/<sap_username>", methods=["POST"])
