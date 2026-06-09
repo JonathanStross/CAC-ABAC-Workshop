@@ -19,14 +19,14 @@
 
 Three weeks ago, the German **Data Protection Authority (DPA)** completed a surprise audit. The findings were serious enough to trigger a formal warning — one step below an enforcement notice. Meridian AG has been given **30 days** to implement compensating controls or face regulatory action.
 
-You are part of the emergency remediation team. Today you will work through all nine findings and close each one using Pathlock DAC.
+You are part of the emergency remediation team. Today you will work through all eight findings and close each one using Pathlock DAC.
 
 > The DPA's closing statement read:
 > *"Meridian AG demonstrates a systemic failure of data access governance. Full visibility of passenger PII, payment references and financial data is granted to all authenticated users with no contextual restriction, no audit trail, and no export controls. Immediate remediation is required under GDPR Art. 32, SOX Section 404, and ISO 27001 A.8."*
 
 ---
 
-## The Nine Findings
+## The Eight Findings
 
 | # | Finding | Standard | Fixed in |
 |---|---|---|---|
@@ -38,7 +38,6 @@ You are part of the emergency remediation team. Today you will work through all 
 | **6** | All users see passenger data across all business units — no regional data separation | GDPR Art. 5(1)(b) | L7 |
 | **7** | No data classification — system cannot distinguish PII from public reference data | ISO 27001 A.8.3 | L8 |
 | **8** | Sensitive tables can be exported to local files with no restriction | ISO 27001 A.8.12 | L8 |
-| **9** | Fiori app masks fields visually only — raw values visible in OData response | GDPR Art. 32 | L9 |
 
 Each level today corresponds to one or more findings. You fix it. You find the completion code. You submit it. The leaderboard updates live.
 
@@ -111,7 +110,7 @@ Each completion code you submit is proof that you configured and verified the co
 
 ## 🏆 Completion Code
 
-**The completion code for this level is the name of the access control model that solves all nine findings above.**
+**The completion code for this level is the name of the access control model that solves all eight findings above.**
 
 It is a four-letter acronym. You have already read it on this page.
 
