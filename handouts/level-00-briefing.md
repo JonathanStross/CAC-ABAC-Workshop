@@ -100,14 +100,6 @@ A policy combines conditions with an **enforcement action**:
 
 ---
 
-## What the Certificate Requires
-
-Complete all 10 levels (L0–L9) to qualify for the **Pathlock DAC: Practitioner Certificate**.
-
-Each completion code you submit is proof that you configured and verified the control yourself — not just read about it.
-
----
-
 ## 🏆 Completion Code
 
 **The completion code for this level is the name of the access control model that solves all eight findings above.**
