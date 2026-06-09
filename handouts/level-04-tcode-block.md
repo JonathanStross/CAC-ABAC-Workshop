@@ -41,11 +41,12 @@ The policy fires immediately — the workshop runs outside 08:00–18:00, so the
 | 6 | Read the **Description** and **Format** fields | Format: `HH:MM` — 24-hour server time |
 
 > **Three ABAC condition types so far:**
-> | Level | Attribute | What it captures |
-> |---|---|---|
-> | L1 | `USER.ID` | Who you are |
-> | L2 | `USER.NETWORK` | Where you connect from |
-> | L3 | `USER.TIME` | When you connect |
+
+| Level | Attribute | What it captures |
+|---|---|---|
+| L2 | `USER.ID` | Who you are |
+| L3 | `USER.NETWORK` | Where you connect from |
+| L4 | `USER.TIME` | When you connect |
 
 ---
 
