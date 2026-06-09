@@ -81,30 +81,35 @@ The policy fires whenever the current time falls **outside** your configured win
 | 6 | **Value**: a 5-minute window starting now — check **System → Status** for the server time, then enter e.g. `14:23-14:28` | Time range in 24h format |
 | 7 | Save | Condition saved |
 
-> **☕ Coffee-break demo — recommended approach:**
+> **☕ Good timing — you have ~5 minutes:**
 >
 > 1. Check the exact server time: in SAP GUI go to **System menu → Status** — note the **System Time** field (24h format, server clock).
 > 2. Set the **Value** to a 5-minute window starting now — e.g. if System Time shows `14:23`, enter `14:23-14:28`.
-> 3. Save, then run **`SE16`** → works. Step back out (F3).
-> 4. Go get a coffee. ☕
-> 5. Come back after 5 minutes, run **`SE16`** again — blocked.
->
-> Same user. Same role. No SAP changes. Just time.
+> 3. Save — the window is now counting down.
+> 4. Use the remaining time to complete **Step 4** below (add the Data Restriction action).
+> 5. Once Step 4 is done, run **`SE16`** — it still works (you are inside the window).
+> 6. Step back out (F3), wait for the window to close, then run **`SE16`** again — blocked.
 
 ---
 
 ## Step 4 — Add the TCode Block Action
 
-This is where L3 differs from all previous levels — the action type is **Block**, not Masking.
+The **Policy Enforcement Point** for a TCode block is under **Data Restriction** — the same tree node as in L8. At least one Data Attribute must be linked to the policy, or the enforcement point cannot be saved.
 
 | # | Action | What you see |
 |---|---|---|
-| 1 | In the left tree, double-click **Policy Administration Point → Actions** | Actions list |
-| 2 | Click **Change Mode** → **New** | Blank action row |
-| 3 | **Action Type**: `Block TCode` | Different from Masking |
-| 4 | **TCode**: `SE16` | The table browser |
-| 5 | **Block Message**: read carefully — **the completion code is in this message** 🏆 | |
-| 6 | Save | Action saved — policy is now live |
+| 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(second tab)** | Left tree updates |
+| 2 | **Double-click** on **Policy Enforcement Point** in the left tree | Sub-items appear: **Data Masking** and **Data Restriction** |
+| 3 | **Double-click** on **Data Restriction** | List of all active restriction enforcement points |
+| 4 | Check whether edit mode is already active — look for the **Insert Row** (blank page icon) button. If not, click **Change Mode** (pencil icon) in the top toolbar. | Edit mode active |
+| 5 | Click the **Insert Row** button (📄 blank page icon) | A blank row appears |
+| 6 | Check the **Active** flag | Row is marked active |
+| 7 | In the **Policy** field, select or type `BLOCK_SE16_HOURS_<YOURUSERNAME>` | Your policy linked |
+| 8 | **Action Type**: `Block TCode` | Different from Masking |
+| 9 | **TCode**: `SE16` | The table browser |
+| 10 | **Data Attribute**: `DATA.S_EMAIL` (at least one attribute must be present) | Required by the enforcement point |
+| 11 | **Block Message**: read carefully — **the completion code is in this message** 🏆 | |
+| 12 | Click **Save** | Enforcement point saved — policy is now live |
 
 > ⚠️ The completion code is pre-filled in the Block Message by your instructor. Note it down now — you'll need it to submit to the leaderboard.
 
