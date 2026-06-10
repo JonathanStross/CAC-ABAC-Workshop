@@ -1558,9 +1558,32 @@ def submit():
             "SELECT * FROM submissions WHERE participant=? AND level=? AND correct=1",
             (sap_username, level)).fetchone()
         if already:
-            msg, msg_type = f"You already completed {level}! No double points.", "err"
             db.close()
-            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
+            return render_template_string("""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Nice try</title>""" + STYLE + """
+<style>
+  .caught{display:flex;flex-direction:column;align-items:center;justify-content:center;
+          min-height:80vh;text-align:center;padding:40px}
+  .caught .emoji{font-size:6rem;margin-bottom:24px;animation:shake .4s ease infinite alternate}
+  @keyframes shake{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
+  .caught h1{font-size:2.4rem;color:#c8102e;margin:0 0 16px}
+  .caught p{color:#aaa;font-size:1.1rem;max-width:480px;margin:0 0 32px}
+  .caught .sub{font-size:0.85rem;color:#555;margin-top:8px}
+</style>
+</head>
+<body>
+""" + _topbar("/submit") + """
+  <div class="caught">
+    <div class="emoji">🕵️</div>
+    <h1>The joke's on you.</h1>
+    <p>You already completed <strong>""" + level + """</strong> and collected those points.<br>
+       Stop trying to redeem the code multiple times — the system remembers everything.</p>
+    <a href="/submit" class="btn">← Back to Submit</a>
+    <p class="sub">Each code can only be redeemed once per participant. Nice try though.</p>
+  </div>
+</body>
+</html>""")
 
         # Validate code
         correct_code = codes.get(level, {}).get("code", "").upper()
