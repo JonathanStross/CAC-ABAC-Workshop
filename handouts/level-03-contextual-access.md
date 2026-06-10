@@ -100,12 +100,11 @@ Once you have those values, create the attribute and wire it up:
 | 5 | **Attribute ID**: `DATA.S_STREET` | Field fills in |
 | 6 | **Description**: `Passenger street address` | Field fills in |
 | 7 | Click **Save** and navigate back to the list | Attribute appears in the list |
-| 8 | Open your new `DATA.S_STREET` attribute | Detail screen |
-| 9 | Navigate to the **Technical Mapping** tab | Mapping table (currently empty) |
-| 10 | Enter Change Mode → Insert Row (📄 blank page icon) | Blank mapping row |
-| 11 | **Table**: `SCUSTOM` | |
-| 12 | **Field**: `STREET` | |
-| 13 | **Save** | Mapping saved — `DATA.S_STREET` now resolves to `SCUSTOM.STREET` at runtime |
+| 8 | Navigate to the **Technical Mapping** tab | Mapping table (currently empty) |
+| 9 | Enter Change Mode → Insert Row (📄 blank page icon) | Blank mapping row |
+| 10 | **Table**: `SCUSTOM` | |
+| 11 | **Field**: `STREET` | |
+| 12 | **Save** | Mapping saved — `DATA.S_STREET` now resolves to `SCUSTOM.STREET` at runtime |
 
 > 💡 This is exactly what was pre-configured for `DATA.S_EMAIL` in Level 2 (mapped to `SCUSTOM.EMAIL`). Now you know how it works under the hood.
 
