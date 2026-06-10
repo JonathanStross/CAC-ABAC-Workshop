@@ -120,7 +120,7 @@ Create a new masking policy — name it with your username to avoid collisions.
 |---|---|---|
 | 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab | Left tree updates |
 | 2 | Double-click **Policy Administration Point** | List of all policies |
-| 3 | Click **Change Mode** (pencil icon) | Edit mode |
+| 3 | Enter change mode by clicking **Change** on the **top left-hand side** — if the **Create** button (📄) is already visible, you are already in edit mode | Edit mode active |
 | 4 | Click the **Create** button (📄 blank page icon at the top of the policy list) | Blank policy form |
 | 5 | **Policy Name**: `MASK_STREET_<YOURUSERNAME>` — e.g. `MASK_STREET_AMUELLER` | Field fills in |
 | 6 | **Description**: `Mask passenger street address based on network location` | Field fills in |
