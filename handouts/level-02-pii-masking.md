@@ -234,7 +234,7 @@ Pathlock DAC policies take effect immediately — in most cases you will see the
 > → Log out and back in again after fixing.
 
 > **Policy Enforcement Point not showing Data Masking or Data Restriction?**  
-> The enforcement types need to be activated first. In **`/N/APPSDM/ABAC`** → **Functional Configuration** tab → expand the top node → click **Activate Functionality**. Check the boxes for **Data Masking** and **Data Restriction**, then save. The sub-items will appear under Policy Enforcement Point.
+> The enforcement types need to be activated first. In **`/N/APPSDM/ABAC`** → **Functional Configuration** tab → expand the top node → click **Activate Functionality**. Check the boxes for **Data Masking** and **Data Restriction**, then save. **Then restart the transaction** — exit and re-run **`/N/APPSDM/ABAC`** — the sub-items will now appear under Policy Enforcement Point.
 
 > **Masking not firing even though the policy is configured correctly?**  
 > This can happen after a system restart if the SAP profile parameter `dynp/usr_masking` is not set to `ALL`. This is a system-level setting — **raise your hand and ask your instructor** to check it. You cannot fix this yourself.
@@ -272,7 +272,7 @@ Ask yourself: *which field do we mask?*
 | Colleague's email is also masked | Your Step 5 rule condition is missing or has the wrong username — it should be your username only |
 | Enforcement Point save fails | Check Step 6: Policy field must match your exact policy name, Attribute must be `DATA.S_EMAIL` |
 | Can't find `DATA.S_EMAIL` in the list | Make sure you are in **Data Attribute Master** (Step 2), not User Attribute Master |
-| PEP tree shows no **Data Masking** or **Data Restriction** items | Go to **Functional Configuration** → expand the top node → **Activate Functionality** → check **Data Masking** and **Data Restriction** → Save |
+| PEP tree shows no **Data Masking** or **Data Restriction** items | Go to **Functional Configuration** → expand the top node → **Activate Functionality** → check **Data Masking** and **Data Restriction** → Save, then **exit and re-run `/N/APPSDM/ABAC`** |
 | Masking policy is correct but nothing is masked | Profile parameter `dynp/usr_masking` may not be set to `ALL` after a system restart — raise your hand, instructor must fix this |
 
 ---

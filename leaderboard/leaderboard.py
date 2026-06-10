@@ -474,9 +474,8 @@ def level_guide(level_num):
     def _img_to_video(m):
         src = m.group(1)
         alt = m.group(2)
-        return (f'<video src="{src}" controls '
+        return (f'<video src="{src}" controls controlslist="nodownload" '
                 f'style="max-width:100%;border-radius:6px;margin:12px 0;display:block">'
-                f'<p style="color:#888">{alt} — <a href="{src}">Download video</a></p>'
                 f'</video>')
     body_html = _re.sub(
         r'<img\s+(?:[^>]*?\s)?src="(/videos/[^"]+)"(?:\s+alt="([^"]*)")?[^>]*?>',
