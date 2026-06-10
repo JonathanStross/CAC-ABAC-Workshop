@@ -118,10 +118,9 @@ The **Policy Enforcement Point** for a block action is under **Data Restriction*
 | 6 | Check the **Active** flag | Row is marked active |
 | 7 | Set the **Action** dropdown to **`Deny`** | Action set |
 | 8 | In the **Policy** field, select or type `BLOCK_SE16_HOURS_<YOURUSERNAME>` | Your policy linked |
-| 9 | **Block Message**: read carefully — **the completion code is in this message** 🏆 | |
-| 10 | Click **Save** | Enforcement point saved — policy is now live |
+| 9 | Click **Save** | Enforcement point saved — policy is now live |
 
-> ⚠️ The completion code is pre-filled in the Block Message by your instructor. Note it down now — you'll need it to submit to the leaderboard.
+> ⚠️ The completion code will appear in the **block screen message** when you trigger the block in Step 5. You do not need to note anything down here.
 
 ---
 
@@ -130,11 +129,11 @@ The **Policy Enforcement Point** for a block action is under **Data Restriction*
 | # | Action | What you see |
 |---|---|---|
 | 1 | In SAP, type `/NSE16` in the command field and press Enter | **Access denied — Pathlock block screen** |
-| 2 | Read the block message on screen | The message contains your completion code ✅ |
-| 3 | Note down the code | |
+| 2 | Read the block message on screen — **your completion code is displayed here** 🏆 | Note it down |
+| 3 | Go to **[https://pathlock.academy/submit](https://pathlock.academy/submit)** → select **L4** → enter the code | Points awarded ✅ |
 
 ![Pathlock TCode block screen on SE16](/screenshots/l04-step5-block-screen.png)
-*Pathlock block screen: access to SE16 denied. The completion code is in the message body.*
+*Pathlock block screen: access denied. The completion code is in the message body.*
 
 This is exactly what a Meridian AG booking agent would see if they tried to access passenger data at midnight.
 
