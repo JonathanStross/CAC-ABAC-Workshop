@@ -100,13 +100,15 @@ Once you have those values, create the attribute and wire it up:
 | 5 | **Attribute ID**: `DATA.S_STREET` | Field fills in |
 | 6 | **Description**: `Passenger street address` | Field fills in |
 | 7 | Click **Save** and navigate back to the list | Attribute appears in the list |
-| 8 | Navigate to the **Technical Mapping** tab | Mapping table (currently empty) |
-| 9 | Enter Change Mode → Insert Row (📄 blank page icon) | Blank mapping row |
-| 10 | **Table**: `SCUSTOM` | |
-| 11 | **Field**: `STREET` | |
-| 12 | **Save** | Mapping saved — `DATA.S_STREET` now resolves to `SCUSTOM.STREET` at runtime |
+| 8 | Click the **Technical Configuration** tab **(third tab)** | Left tree updates |
+| 9 | Expand **Data Attribute Config** → click **Technical Mapping** | List of all technical mappings |
+| 10 | Enter Change Mode (pencil icon) | Edit mode |
+| 11 | Click **Insert Row** (📄 blank page icon) | Blank mapping row appears |
+| 12 | **Attribute**: `DATA.S_STREET` | |
+| 13 | **Data Element**: `S_STREET` | |
+| 14 | **Save** | Mapping saved — `DATA.S_STREET` now resolves to SAP Data Element `S_STREET` at runtime |
 
-> 💡 This is exactly what was pre-configured for `DATA.S_EMAIL` in Level 2 (mapped to `SCUSTOM.EMAIL`). Now you know how it works under the hood.
+> 💡 This is exactly what was pre-configured for `DATA.S_EMAIL` in Level 2 (mapped to Data Element `S_EMAIL`). Now you know how it works under the hood.
 
 ---
 
