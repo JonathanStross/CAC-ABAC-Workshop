@@ -29,7 +29,7 @@ The policy fires whenever the current time falls **outside** your configured win
 
 ## Step 1 — Explore the `USER.TIME` Attribute
 
-`USER.TIME` is a pre-created User Attribute in Pathlock DAC. Unlike `USER.ID` (identity) or `USER.NETWORK` (network location), this one resolves to the **current server time** at the moment the policy is evaluated — every single time a transaction is called.
+`USER.TIME` is a pre-created User Attribute in Pathlock DAC. Unlike `USER.ID` (identity) or `USER.IP_ADDRESS` (network location), this one resolves to the **current server time** at the moment the policy is evaluated — every single time a transaction is called.
 
 | # | Action | What you see |
 |---|---|---|
@@ -37,15 +37,14 @@ The policy fires whenever the current time falls **outside** your configured win
 | 2 | Click the **Functional Configuration** tab (second tab) | Left tree updates |
 | 3 | Expand **Policy Information Point** in the left tree | Sub-items appear |
 | 4 | Double-click **User Attribute Master** | List of all user attributes |
-| 5 | Find and open **`USER.TIME`** | Attribute detail screen |
-| 6 | Read the **Description** and **Format** fields | Format: `HH:MM` — 24-hour server time |
+| 5 | Find and open **`USER.TIME`** | Attribute detail screen — the attribute details including format (`HHMMSS` — system time from **System → Status**) are displayed directly |
 
 > **Three ABAC condition types so far:**
 
 | Level | Attribute | What it captures |
 |---|---|---|
 | L2 | `USER.ID` | Who you are |
-| L3 | `USER.NETWORK` | Where you connect from |
+| L3 | `USER.IP_ADDRESS` | Where you connect from |
 | L4 | `USER.TIME` | When you connect |
 
 ---
@@ -78,13 +77,13 @@ The policy fires whenever the current time falls **outside** your configured win
 | 3 | Click **Change Mode** → **New** | Blank condition row |
 | 4 | **Attribute**: `USER.TIME` | |
 | 5 | **Operator**: `NOT IN` | |
-| 6 | **Value**: a 5-minute window starting now — check **System → Status** for the server time, then enter e.g. `14:23-14:28` | Time range in 24h format |
+| 6 | **Value**: a 5-minute window starting now — check **System → Status** for the server time (format `HHMMSS`), then enter e.g. `142300-142800` | Time range in HHMMSS format |
 | 7 | Save | Condition saved |
 
 > **☕ Good timing — you have ~5 minutes:**
 >
-> 1. Check the exact server time: in SAP GUI go to **System menu → Status** — note the **System Time** field (24h format, server clock).
-> 2. Set the **Value** to a 5-minute window starting now — e.g. if System Time shows `14:23`, enter `14:23-14:28`.
+> 1. Check the exact server time: in SAP GUI go to **System menu → Status** — note the **User Time** field (format `HHMMSS`, server clock).
+> 2. Set the **Value** to a 5-minute window starting now — e.g. if User Time shows `142300`, enter `142300-142800`.
 > 3. Save — the window is now counting down.
 > 4. Use the remaining time to complete **Step 4** below (add the Data Restriction action).
 > 5. Once Step 4 is done, run **`SE16`** — it still works (you are inside the window).
@@ -154,7 +153,7 @@ You need `SE16` for the rest of the workshop — deactivate the policy before co
 |---|---|
 | What changed in SAP? | **Nothing** — no authorisation object, no role change |
 | What enforcement type was this? | **TCode Block** — completely different from field masking |
-| Can you combine this with L1/L2? | Yes — stack conditions: `USER.TIME NOT IN 08:00-18:00 AND USER.NETWORK NOT EQ 10.8.0.X` |
+| Can you combine this with L1/L2? | Yes — stack conditions: `USER.TIME NOT IN 080000-180000 AND USER.IP_ADDRESS NOT EQ 10.8.0.X` |
 | What other TCodes could you block? | `FB01`, `F110`, `SE37`, `SM59` — any sensitive transaction |
 | Does this survive a role change? | Yes — the policy is independent of SAP authorisation objects |
 
