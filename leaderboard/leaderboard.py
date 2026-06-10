@@ -315,6 +315,8 @@ LEVEL_STYLE = """
   .level-nav a:hover{background:#2a2a3e;color:#fff}
   details summary{cursor:pointer;color:#2ecc71;font-weight:600;padding:6px 0}
   details[open] summary{color:#27ae60}
+  img{max-width:100%;height:auto;border-radius:6px;margin:12px 0;display:block}
+  img+em{display:block;color:#666;font-size:0.82em;margin-top:-6px;margin-bottom:16px}
 </style>
 """
 
