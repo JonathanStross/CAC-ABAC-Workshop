@@ -100,6 +100,9 @@ A **User Attribute** defines *who* the policy applies to. Again, this has been p
 | 4 | Find and open **`USER.ID`** | Attribute detail screen |
 | 5 | Read its description — this attribute holds the **logged-in user's SAP username** at runtime | — |
 
+![User Attribute Master — USER.ID](/screenshots/l2_user_attribute_master.png)
+*User Attribute Master: `USER.ID` — resolves to the logged-in SAP username at policy evaluation time.*
+
 > **Convention:** All User Attributes start with `USER.`
 
 ---
