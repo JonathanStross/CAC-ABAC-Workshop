@@ -90,6 +90,9 @@ The policy fires whenever the current time falls **outside** your configured win
 > 5. Once Step 4 is done, run **`SE16`** — it still works (you are inside the window).
 > 6. Step back out (F3), wait for the window to close, then run **`SE16`** again — blocked.
 
+> 📸 **[Screenshot — `screenshots/l04-step3-system-status.png`]**  
+> *SAP GUI → System menu → Status: the System Time field (24h clock) participants use to calibrate the 5-minute window.*
+
 ---
 
 ## Step 4 — Add the TCode Block Action
@@ -107,7 +110,7 @@ The **Policy Enforcement Point** for a TCode block is under **Data Restriction**
 | 7 | In the **Policy** field, select or type `BLOCK_SE16_HOURS_<YOURUSERNAME>` | Your policy linked |
 | 8 | **Action Type**: `Block TCode` | Different from Masking |
 | 9 | **TCode**: `SE16` | The table browser |
-| 10 | **Data Attribute**: `DATA.S_EMAIL` (at least one attribute must be present) | Required by the enforcement point |
+| 10 | **Data Attribute**: `DATA.TABLE_NAME` — required as an *exposed attribute* | Every Data Restriction enforcement point needs at least one data attribute assigned, even when the policy condition contains no data attribute. `DATA.TABLE_NAME` is the logical choice here: it identifies the table being browsed in SE16. |
 | 11 | **Block Message**: read carefully — **the completion code is in this message** 🏆 | |
 | 12 | Click **Save** | Enforcement point saved — policy is now live |
 
@@ -122,6 +125,9 @@ The **Policy Enforcement Point** for a TCode block is under **Data Restriction**
 | 1 | In SAP, type `/NSE16` in the command field and press Enter | **Access denied — Pathlock block screen** |
 | 2 | Read the block message on screen | The message contains your completion code ✅ |
 | 3 | Note down the code | |
+
+> 📸 **[Screenshot — `screenshots/l04-step5-block-screen.png`]**  
+> *Pathlock block screen: "Access to transaction SE16 has been denied" with the completion code visible in the message body.*
 
 This is exactly what a Meridian AG booking agent would see if they tried to access passenger data at midnight.
 

@@ -15,9 +15,9 @@
 
 ## Background
 
-The DPA audit finding #4 reads:
+The DPA audit finding #5 reads:
 
-> *"The RANALYST role was cloned from an Accounts Receivable Clerk template 18 months ago and never cleaned up. It carries two privileges with no business justification:*
+> *"The ZRANALYST role was cloned from an Accounts Receivable Clerk template 18 months ago and never cleaned up. It carries two privileges with no business justification:*
 > - *`SBOOK.LOCCURAM` (credit card reference) is fully readable — PCI-DSS violation*
 > - *TCode `FB01` (Post Financial Document) is accessible — SOX Segregation of Duties violation*
 >
@@ -92,12 +92,18 @@ It maps to the `LOCCURAM` field in table `SBOOK` — the local currency credit c
 | 1 | Run `SE16` → table `SBOOK` → Execute (F8) | Booking records load |
 | 2 | Find the `LOCCURAM` column | **`***`** — masked ✅ |
 
+> 📸 **[Screenshot — `screenshots/l06-test1-loccuram-masked.png`]**  
+> *SE16 → SBOOK: LOCCURAM (credit card reference) column showing `***`. Policy triggered by USER.ROLE EQ ZRANALYST.*
+
 ### Test 2 — Financial posting blocked
 
 | # | Action | Expected result |
 |---|---|---|
 | 1 | Type `/NFB01` in the command field → Enter | **Pathlock block screen** ✅ |
 | 2 | Read the block message | Confirms: access denied by policy |
+
+> 📸 **[Screenshot — `screenshots/l06-test2-fb01-blocked.png`]**  
+> *Pathlock block screen on FB01: "Access to transaction FB01 has been denied." Both controls triggered by the same single policy.*
 
 Both controlled by one condition. The analyst's role triggered both enforcements at once.
 

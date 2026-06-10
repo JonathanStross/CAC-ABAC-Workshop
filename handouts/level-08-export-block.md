@@ -53,6 +53,9 @@ Before the download block policy can work, each table needs a sensitivity label.
 | 6 | Insert another row: **Table**: `SCARR` — **Label**: `Public` | Row filled in |
 | 7 | **Save** | Three classification entries saved |
 
+> 📸 **[Screenshot — `screenshots/l08-step1-classification.png`]**  
+> *`/APPSDM/DC` Data Classification screen with three rows saved: SCUSTOM=Restricted-PII, SBOOK=Internal-Financial, SCARR=Public.*
+
 **Your classification table should now read:**
 
 | Table | Classification | What it contains |
@@ -92,6 +95,8 @@ No block yet. That's the finding. Now fix it.
 | `DATA.BUTTON_OK_CODE` | is one of `%EX`, `%PC`, `&XXL` |
 | `DATA.CLASS_LABEL` | is one of `Restricted-PII`, `Internal-Financial` |
 
+> **💡 Exposed Attribute:** `DATA.BUTTON_OK_CODE` is assigned as the data attribute in the Policy Administration Point. Because the policy blocks based on the *action taken* (which export button was pressed) rather than masking a specific field, the engine needs this exposed attribute to know what to intercept. `DATA.BUTTON_OK_CODE` captures the ok-code of every SAP GUI button press — the policy fires when that code matches an export action AND the table classification is sensitive.
+
 > If `DATA.CLASS_LABEL = Public` → neither condition fully matches → **download allowed.**
 > This is why `SCARR` passes through automatically — no exception needed.
 
@@ -116,6 +121,9 @@ No block yet. That's the finding. Now fix it.
 | 2 | **System → List → Save → Local File** |
 | 3 | Blocked tables show: *"Pathlock ABAC: You don't have permission to download this data."* |
 
+> 📸 **[Screenshot — `screenshots/l08-step4-export-blocked.png`]**  
+> *SAP block dialog: "Pathlock ABAC: You don't have permission to download this data." triggered when attempting System → List → Save → Local File on SCUSTOM.*
+
 ---
 
 ## 🏆 Completion Code
@@ -125,7 +133,7 @@ open `BLOCK_DOWNLOAD_BY_CLASSIFICATION`.
 
 **The completion code is the exact name of this policy** — as it appears in the Policy Name field.
 
-Enter it on the leaderboard exactly as shown, uppercase, underscores included.
+Go to **[https://pathlock.academy/submit](https://pathlock.academy/submit)** → select **L8 — Export Block** → enter the code, uppercase, underscores included.
 
 ---
 

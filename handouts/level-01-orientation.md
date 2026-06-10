@@ -78,6 +78,9 @@ sudo cp YourName_customer.conf /etc/wireguard/wg-workshop.conf
 sudo wg-quick up wg-workshop
 ```
 
+> 📸 **[Screenshot — `screenshots/l01-wireguard-active.png`]**  
+> *WireGuard app showing the tunnel in **Active** / green state. Participants use this to confirm the VPN is up before proceeding.*
+
 **Verify the connection**
 
 Open a terminal or command prompt and run:
@@ -110,6 +113,9 @@ WireGuard typically establishes the tunnel within **5–15 seconds** of activati
 | Instance Number | `00` |
 | System ID (SID) | `A4H` |
 | Client | **see your registration confirmation page** |
+
+> 📸 **[Screenshot — `screenshots/l01-saplogon-connection.png`]**  
+> *SAP Logon — "New Custom Application Server" dialog with `10.8.0.1`, instance `00`, SID `A4H` filled in.*
 
 ---
 
@@ -150,6 +156,9 @@ You are now inside Meridian AG's live SAP environment. Take a few minutes to loo
 
 This is exactly what the external auditors flagged — and it is why you are here. Over the following levels, you will fix this.
 
+> 📸 **[Screenshot — `screenshots/l01-scustom-unprotected.png`]**  
+> *SE16 → SCUSTOM result: passenger names, emails, phone numbers, credit card references — all fully visible. This is the "before" state the entire workshop is built around.*
+
 ---
 
 ## 🏁 Completion
@@ -157,7 +166,7 @@ This is exactly what the external auditors flagged — and it is why you are her
 You have connected to the VPN, logged into SAP, and seen the unprotected data first-hand.
 
 **Claim your Level 1 points:**
-Go to the **[leaderboard](http://152.53.187.143:9000)** → **Submit Code** → select **L0 — Orientation** → enter the code.
+Go to **[https://pathlock.academy/submit](https://pathlock.academy/submit)** → select **L1 — Orientation** → enter the code.
 
 <details>
 <summary>💬 <strong>Hint</strong> — click to reveal</summary>

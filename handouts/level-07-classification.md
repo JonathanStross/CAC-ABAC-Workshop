@@ -35,6 +35,9 @@ First, run `SE16` on `SCUSTOM` and note what you see.
 | 2 | Note the **total row count** (bottom status bar) | e.g. `135 entries` |
 | 3 | Look for entries where **`COUNTRY`** = `DE` | German passenger records |
 
+> 📸 **[Screenshot — `screenshots/l07-step1-scustom-full.png`]**  
+> *SE16 → SCUSTOM baseline: full result set with COUNTRY=DE rows visible. Note the total row count shown in the status bar.*
+
 > ⚠️ Write down the **total row count** and how many German entries (`COUNTRY = DE`) you can see. You will compare this after the policy is applied.
 
 ---
@@ -71,6 +74,8 @@ The instructor has pre-configured a Data Restriction policy that enforces the bu
 | `USER.ROLE NOT EQ Z_GERMAN` evaluates to **TRUE** (you don't have the role) | All rows where `COUNTRY = DE` are removed from the SE16 result set |
 | `USER.ROLE NOT EQ Z_GERMAN` evaluates to **FALSE** (you have the role) | No restriction — full result set returned |
 
+> **💡 Exposed Attribute:** The policy condition (`USER.ROLE NOT EQ Z_GERMAN`) contains no data attribute — it only references a user attribute. Pathlock requires at least one data attribute to be assigned in the Policy Administration Point so it knows *what data* to enforce against. Here, `DATA.TABLE_NAME` is assigned as the exposed attribute — it tells the engine that this policy applies when the user is browsing a table. The actual row filter is driven by the `DATA.S_COUNTRY = DE` restriction action.
+
 > This is **row-level access control** — not masking. The rows are absent, not starred out.
 > A user without `Z_GERMAN` cannot even tell how many German records exist.
 
@@ -83,6 +88,9 @@ The instructor has pre-configured a Data Restriction policy that enforces the bu
 | 1 | Run `SE16` → table `SCUSTOM` → **Execute (F8)** | Result set loads |
 | 2 | Check the **total row count** | Compare with your Step 1 baseline |
 | 3 | Filter for `COUNTRY = DE` | Result depends on your role (see below) |
+
+> 📸 **[Screenshot — `screenshots/l07-step4-scustom-filtered.png`]**  
+> *SE16 → SCUSTOM after policy active (user without Z_GERMAN): lower row count, COUNTRY=DE filter returns 0 entries. No error shown — rows are simply absent.*
 
 | Your role | What you see |
 |---|---|
@@ -135,6 +143,8 @@ Every previous level used `USER.ROLE` as a **condition** to decide *how* data is
 **The completion code is the name of the SAP role that grants access to German entries.**
 
 Enter it exactly as it appears in the policy condition — uppercase, underscore included.
+
+Go to **[https://pathlock.academy/submit](https://pathlock.academy/submit)** → select **L7 — Regional Access Control** → enter the code.
 
 ---
 
