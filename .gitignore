@@ -1,0 +1,7 @@
+# Source video files — convert to MP4 before committing
+*.mov
+*.avi
+*.mkv
+
+# macOS
+.DS_Store
