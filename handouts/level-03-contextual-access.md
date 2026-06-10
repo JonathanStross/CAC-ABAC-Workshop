@@ -27,12 +27,12 @@ In Level 2 you created a policy that masks the `EMAIL` field for your own user. 
 
 ## The Key Idea
 
-Every participant in this workshop has a unique VPN IP address (e.g. `10.8.0.12`). The `USER.NETWORK` attribute in Pathlock DAC resolves to that IP at the moment a user logs in.
+Every participant in this workshop has a unique VPN IP address (e.g. `10.8.0.12`). The `USER.IP_ADDRESS` attribute in Pathlock DAC resolves to that IP at the moment a user logs in.
 
 By setting the policy condition to:
 
 ```
-USER.NETWORK NOT EQ <your_VPN_IP>
+USER.IP_ADDRESS NOT EQ <your_VPN_IP>
 ```
 
 …the masking rule fires for **everyone whose IP is not yours**. From their perspective, the data is masked. From yours, it is visible. This is workstation-locked access control — with zero SAP changes.
@@ -53,9 +53,9 @@ Use the widget below. Enter your SAP username — it shows your own VPN IP and l
 
 ---
 
-## Step 2 — Explore the `USER.NETWORK` Attribute
+## Step 2 — Explore the `USER.IP_ADDRESS` Attribute
 
-A **User Attribute** in Pathlock DAC defines a piece of context about the user at runtime. The `USER.NETWORK` attribute has been pre-created in the system — it resolves to the client's source IP address at the moment the SAP session starts.
+A **User Attribute** in Pathlock DAC defines a piece of context about the user at runtime. The `USER.IP_ADDRESS` attribute has been pre-created in the system — it resolves to the client's source IP address at the moment the SAP session starts.
 
 | # | Action | What you see |
 |---|---|---|
@@ -63,7 +63,7 @@ A **User Attribute** in Pathlock DAC defines a piece of context about the user a
 | 2 | Click the **Functional Configuration** tab (second tab) | Left tree updates |
 | 3 | Expand **Policy Information Point** in the left tree | Sub-items appear |
 | 4 | Double-click **User Attribute Master** | List of all user attributes |
-| 5 | Find and open **`USER.NETWORK`** | Attribute detail screen opens |
+| 5 | Find and open **`USER.IP_ADDRESS`** | Attribute detail screen opens |
 | 6 | Read the **Description** and **Technical Name** fields | Note them down — you will need the Attribute ID at the end |
 
 ---
@@ -142,7 +142,7 @@ Now add a rule condition: mask EMAIL for anyone whose VPN IP is **not** yours.
 | 3 | Check whether edit mode is already active — look for the toolbar buttons: **Check entries** (scale icon), **Append Row** (blank page icon), **+** and **−**. If not, click **Change Mode** (pencil icon). | Edit mode active |
 | 4 | Click the **Append Row** button (📄 blank page icon) to create a new condition | A blank condition row appears |
 | 5 | In the **Condition ID** field: type `1` directly, or press **F4** and select `1` | Condition ID set to `1` |
-| 6 | In the **Attribute ID** field: press **F4**, search for and select **`USER.NETWORK`** | Attribute set |
+| 6 | In the **Attribute ID** field: press **F4**, search for and select **`USER.IP_ADDRESS`** | Attribute set |
 | 7 | Set the **Operator** to `NOT EQ` (≠) | Operator set |
 | 8 | In the **Value** field: type your VPN IP directly (e.g. `10.8.0.5` — from Step 1) | Value filled |
 | 9 | Click the **Check entries** button (⚖️ scale icon) to validate — no errors should appear | Validation passed |
@@ -157,7 +157,7 @@ Policy Name: Mask passenger street address based on network location
 
 Rule:
 
-IF USER.NETWORK NOT EQ <YOUR VPN IP>
+IF USER.IP_ADDRESS NOT EQ <YOUR VPN IP>
 ```
 
 > **What this means:** the policy fires (masking is applied) for all sessions where the VPN IP ≠ your IP. Your own session is exempt.
@@ -172,7 +172,7 @@ IF USER.NETWORK NOT EQ <YOUR VPN IP>
 > | `NOT IN` | Is not one of | Exempt a list of trusted IPs |
 > | `BT` | Between | Mask for an IP range |
 >
-> The same operators apply to every attribute — `USER.NETWORK`, `USER.ID`, `USER.ROLE`, time, date, and any custom attribute you define.
+> The same operators apply to every attribute — `USER.IP_ADDRESS`, `USER.ID`, `USER.ROLE`, time, date, and any custom attribute you define.
 
 ---
 
@@ -208,7 +208,7 @@ Policy Enforcement Type: Data Masking
 
 Rule:
 
-IF USER.NETWORK NOT EQ <YOUR VPN IP>
+IF USER.IP_ADDRESS NOT EQ <YOUR VPN IP>
 
 
 THEN DENY ACCESS TO ATTRIBUTES:
@@ -238,7 +238,7 @@ Stay on your own machine. Your VPN IP is the one you entered as the exception va
 ![SE16 → SCUSTOM on your own machine — STREET visible](/screenshots/l03-step7a-street-visible.png)
 *Your own machine: STREET column shows real addresses — your IP matches the exception, policy does not fire.*
 
-Your VPN IP matches the exception you configured — the condition `USER.NETWORK NOT EQ <your IP>` evaluates to FALSE → policy does not fire.
+Your VPN IP matches the exception you configured — the condition `USER.IP_ADDRESS NOT EQ <your IP>` evaluates to FALSE → policy does not fire.
 
 ### Test B — On your partner's laptop (should be MASKED)
 
@@ -254,7 +254,7 @@ Walk to your partner's laptop. Log into SAP with **your own credentials** — yo
 ![SE16 → SCUSTOM on partner's machine — STREET masked](/screenshots/l03-step7b-street-masked.png)
 *Partner's machine, logged in as YOUR user: STREET shows `***`. Same user, different IP, different result.*
 
-Source IP = partner's VPN IP ≠ your exception → `USER.NETWORK NOT EQ <your IP>` evaluates to TRUE → masking fires.
+Source IP = partner's VPN IP ≠ your exception → `USER.IP_ADDRESS NOT EQ <your IP>` evaluates to TRUE → masking fires.
 
 **This is contextual ABAC.** Same server. Same client. Same table. Same role. Different VPN IP. Different result. Zero SAP changes.
 
@@ -266,7 +266,7 @@ Source IP = partner's VPN IP ≠ your exception → `USER.NETWORK NOT EQ <your I
 |---|---|
 | What changes in SAP were needed? | **None** — no role change, no authorisation object |
 | What changes in Pathlock were needed? | One policy, one condition, one action |
-| Does this scale to 2,000 users? | Yes — change the condition to `USER.NETWORK NOT IN 10.8.0.0/24` and it covers the entire VPN subnet |
+| Does this scale to 2,000 users? | Yes — change the condition to `USER.IP_ADDRESS NOT IN 10.8.0.0/24` and it covers the entire VPN subnet |
 | How does this compare to L2? | L2 = user-identity scope on EMAIL. L3 = network-location scope on STREET. Stack both policies and you have defence in depth: identity + location, two different fields |
 
 ---
