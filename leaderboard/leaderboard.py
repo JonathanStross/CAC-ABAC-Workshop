@@ -1184,7 +1184,7 @@ REGISTER_TEMPLATE = """
 
           <p style="color:#ccc;font-size:0.88em;margin:0 0 10px"><strong>Leaderboard visibility.</strong> Your display name will be shown publicly on the leaderboard. If you do not wish to share personally identifiable information, use a fictive name in the field above.</p>
 
-          <p style="color:#ccc;font-size:0.88em;margin:0 0 18px"><strong>Data retention.</strong> Your SAP account and registration data will be deleted at the end of the course. To retain access for an extended training period, opt in by <strong>Friday</strong>. If you do not opt in, all data is deleted without further notice.</p>
+          <p style="color:#ccc;font-size:0.88em;margin:0 0 18px"><strong>Data retention.</strong> Access will be revoked after this session and all data will be deleted immediately. If you would like prolonged access, reach out to <a href="mailto:jonathan.stross@pathlock.com" style="color:#c8102e">jonathan.stross@pathlock.com</a>.</p>
 
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer;border-top:1px solid #333;padding-top:14px">
             <input type="checkbox" name="w_agree" required style="width:auto;padding:0;margin:0;flex-shrink:0;accent-color:#c8102e;width:16px;height:16px">
