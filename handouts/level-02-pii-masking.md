@@ -115,7 +115,7 @@ A **Policy** is the container that holds the masking rules and links them to the
 |---|---|---|
 | 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(second tab)** | Left tree updates |
 | 2 | **Double-click** on **Policy Administration Point** in the left tree | List of all existing policies opens |
-| 3 | Click the **Change Mode** button in the top toolbar (pencil icon) | Screen switches to edit mode |
+| 3 | Enter change mode by clicking **Change** on the top left hand side | Screen switches to edit mode |
 | 4 | Click the **Create** button (📄 blank page icon at the top of the policy list) | A blank policy form opens |
 | 5 | Enter the **Policy Name**: `MASK_EMAIL_<YOURUSERNAME>` — e.g. `MASK_EMAIL_AMUELLER` | Field fills in |
 | 6 | Enter the **Description**: `Mask passenger email for my user` | Field fills in |
