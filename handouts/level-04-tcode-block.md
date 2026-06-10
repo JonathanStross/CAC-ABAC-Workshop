@@ -19,7 +19,7 @@ The DPA audit finding #3 reads:
 
 > *"Booking agents and analysts can run sensitive transactions — including table browser SE16, payment reports and finance postings — at any hour of the day. No time-of-day restriction exists. Access to financial and PII data must be limited to authorised business hours. SOX Section 404 deficiency."*
 
-In L1 and L2 you masked **fields**. This level introduces a completely different enforcement type: **blocking a TCode entirely** based on the time of day.
+In L1 and L2 you masked **fields**. This level introduces a completely different enforcement type: **blocking access to a dataset entirely** based on the time of day.
 
 The policy fires whenever the current time falls **outside** your configured window. Depending on when the workshop runs, you may need to adjust the time range so the block fires during your session — see the hint in Step 3.
 
