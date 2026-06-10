@@ -79,6 +79,9 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 | 3 | Click **Technical Mapping** | Mapping entries for `DATA.S_EMAIL` |
 | 4 | Find the entry for `DATA.S_EMAIL` — note the SAP Data Element shown | You should see **`S_EMAIL`** — the same element you found in Step 1 ✅ |
 
+![Technical Mapping — DATA.S_EMAIL to S_EMAIL](/screenshots/l2_technical_mapping.png)
+*Technical Mapping: `DATA.S_EMAIL` mapped to SAP Data Element `S_EMAIL` — connecting the business attribute to the physical field.*
+
 > **The "aha":** DAC bridges the gap between a business concept (`DATA.S_EMAIL`) and the SAP technical layer (`S_EMAIL`). You found both ends yourself.
 
 > ⚠️ All other configuration in this level is done in the **Functional Configuration tab (second tab)**.
