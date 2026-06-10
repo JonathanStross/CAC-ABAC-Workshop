@@ -404,7 +404,7 @@ function findPeers() {
       } else {
         html += '<p style="margin-top:0.8em;color:#f39c12;font-size:0.85em">'
               + '&#x26A0;&#xFE0F; You&apos;re the only one on your server so far. '
-              + 'Ask your instructor to play the role of lab partner, or move on and revisit this demo later.</p>';
+              + 'Ask your instructor to play the role of lab partner, or use your own IP — see the <em>No partner available?</em> note in Step 7.</p>';
       }
       out.innerHTML = html;
     })
