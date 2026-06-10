@@ -104,7 +104,7 @@ AND USER.ID EQ <YOURUSERNAME>
 
 ---
 
-## Step 4 — Add the TCode Block Action
+## Step 4 — Add the Block Action
 
 The **Policy Enforcement Point** for a TCode block is under **Data Restriction** — the same tree node as in L8. At least one Data Attribute must be linked to the policy, or the enforcement point cannot be saved.
 
