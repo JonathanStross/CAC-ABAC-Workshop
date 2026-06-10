@@ -118,6 +118,8 @@ WireGuard typically establishes the tunnel within **5–15 seconds** of activati
 
 > ⚠️ Your WireGuard tunnel must be **Active** before SAP can connect — the server is only reachable over the VPN.
 
+**SAP GUI for Windows / macOS (native)**
+
 | # | Action |
 |---|---|
 | 1 | Open **SAP Logon** (look for the gold SAP icon) |
@@ -137,6 +139,23 @@ WireGuard typically establishes the tunnel within **5–15 seconds** of activati
 
 ![SAP Logon — Custom Application Server dialog](/screenshots/l01-saplogon-connection.png)
 *SAP Logon: New Custom Application Server filled in with `10.8.0.1`, instance `00`, SID `A4H`.*
+
+---
+
+**SAP GUI for Java (cross-platform)**
+
+If you are using the Java-based SAP GUI (common on Linux or older macOS setups), use the **Advanced** connection string instead of filling in individual fields:
+
+| Field | Value |
+|---|---|
+| Connection type | **Advanced** |
+| Connection string | `conn=/H/10.8.0.1/S/3200` |
+| Description | `Meridian AG Workshop` |
+
+![SAP GUI for Java — Advanced connection string](/screenshots/l1_java_gui_settings.png)
+*Java GUI: enter the connection string `conn=/H/10.8.0.1/S/3200` in the Advanced tab. Port 3200 = SAP dispatcher, instance 00.*
+
+> 💡 The string breaks down as: `/H/` = host, `10.8.0.1` = VPN gateway, `/S/` = service port, `3200` = SAP instance 00 dispatcher port.
 
 ---
 
