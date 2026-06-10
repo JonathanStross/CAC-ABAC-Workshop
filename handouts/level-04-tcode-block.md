@@ -78,7 +78,7 @@ The policy fires whenever the current time falls **outside** your configured win
 | 4 | Click **Append Row** (📄 blank page icon) — enter **Condition ID `1`** | Blank condition row |
 | 5 | **Attribute**: `DATA.APPLICATION` · **Operator**: `EQ` · **Value**: `SE16` | TCode scoped |
 | 6 | Click **Append Row** again — enter **Condition ID `1`** again | Second condition row (AND) |
-| 7 | **Attribute**: `USER.CURRENT_TIME` · **Operator**: `IN` · **Value**: `080000-160000` | Time window set |
+| 7 | **Attribute**: `USER.CURRENT_TIME` · **Operator**: `IN` · click **Define Ranges** and enter `080000` in the **From** field and `160000` in the **To** field → **Accept** | Time window set |
 | 8 | Click **Append Row** again — enter **Condition ID `1`** again | Third condition row (AND) |
 | 9 | **Attribute**: `USER.ID` · **Operator**: `EQ` · **Value**: your SAP username (e.g. `DEVELOPER`) | User scoped |
 | 10 | Click **Save** | All three conditions saved |
