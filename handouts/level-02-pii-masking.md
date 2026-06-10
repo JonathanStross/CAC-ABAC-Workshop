@@ -207,6 +207,9 @@ DATA.S_EMAIL
 
 > You have now told DAC: *"When my policy condition is met, mask the field defined by `DATA.S_EMAIL`."*
 
+![Configuring the Policy Enforcement Point — Data Masking](/videos/l2_enforcement_point.mp4)
+*Walkthrough: opening Data Masking, inserting a row, linking policy + attribute, saving and verifying the Details output.*
+
 ---
 
 ## Step 7 — Test: Verify the Masking Works
