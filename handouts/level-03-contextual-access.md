@@ -234,8 +234,8 @@ Stay on your own machine. Your VPN IP is the one you entered as the exception va
 | 1 | Run **`SE16`** → table `SCUSTOM` → **Execute (F8)** | Full table loads |
 | 2 | Look at the `STREET` column | **Full street addresses visible** ✅ |
 
-> 📸 **[Screenshot — `screenshots/l03-step7a-street-visible.png`]**  
-> *SE16 → SCUSTOM on your own machine: STREET column showing real addresses (policy does not fire — source IP matches your exception).*
+![SE16 → SCUSTOM on your own machine — STREET visible](/screenshots/l03-step7a-street-visible.png)
+*Your own machine: STREET column shows real addresses — your IP matches the exception, policy does not fire.*
 
 Your VPN IP matches the exception you configured — the condition `USER.NETWORK NOT EQ <your IP>` evaluates to FALSE → policy does not fire.
 
@@ -250,8 +250,8 @@ Walk to your partner's laptop. Log into SAP with **your own credentials** — yo
 | 3 | Look at the `STREET` column | **`***` — masked** ✅ |
 | 4 | Log out | Leave the machine clean for your partner |
 
-> 📸 **[Screenshot — `screenshots/l03-step7b-street-masked.png`]**  
-> *SE16 → SCUSTOM on partner's machine (logged in as YOUR user): STREET column showing `***`. Same user. Different machine. Different result.*
+![SE16 → SCUSTOM on partner's machine — STREET masked](/screenshots/l03-step7b-street-masked.png)
+*Partner's machine, logged in as YOUR user: STREET shows `***`. Same user, different IP, different result.*
 
 Source IP = partner's VPN IP ≠ your exception → `USER.NETWORK NOT EQ <your IP>` evaluates to TRUE → masking fires.
 

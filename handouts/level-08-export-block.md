@@ -53,8 +53,8 @@ Before the download block policy can work, each table needs a sensitivity label.
 | 6 | Insert another row: **Table**: `SCARR` — **Label**: `Public` | Row filled in |
 | 7 | **Save** | Three classification entries saved |
 
-> 📸 **[Screenshot — `screenshots/l08-step1-classification.png`]**  
-> *`/APPSDM/DC` Data Classification screen with three rows saved: SCUSTOM=Restricted-PII, SBOOK=Internal-Financial, SCARR=Public.*
+![/APPSDM/DC — three classification entries saved](/screenshots/l08-step1-classification.png)
+*Data Classification screen: SCUSTOM=Restricted-PII, SBOOK=Internal-Financial, SCARR=Public.*
 
 **Your classification table should now read:**
 
@@ -121,8 +121,8 @@ No block yet. That's the finding. Now fix it.
 | 2 | **System → List → Save → Local File** |
 | 3 | Blocked tables show: *"Pathlock ABAC: You don't have permission to download this data."* |
 
-> 📸 **[Screenshot — `screenshots/l08-step4-export-blocked.png`]**  
-> *SAP block dialog: "Pathlock ABAC: You don't have permission to download this data." triggered when attempting System → List → Save → Local File on SCUSTOM.*
+![Pathlock export block dialog](/screenshots/l08-step4-export-blocked.png)
+*Export blocked: "Pathlock ABAC: You don't have permission to download this data." — triggered on SCUSTOM and SBOOK, not on SCARR.*
 
 ---
 
@@ -157,5 +157,12 @@ Go to **[https://pathlock.academy/submit](https://pathlock.academy/submit)** →
 | **`DATA.CLASS_LABEL`** | Reads the classification of the active table at runtime |
 
 > *"The data leaving the building is the breach. We stopped it at the door."*
+
+---
+
+## 📥 Reference Material
+
+→ [Download: BLOCK_DOWNLOAD_BY_CLASSIFICATION — policy export](/files/BLOCK_DOWNLOAD_BY_CLASSIFICATION.xml)  
+→ [Download: Data Classification cheat sheet](/files/data-classification-cheatsheet.pdf)
 
 *Next: [Level 9 — Fiori / OData Masking →](/levels/9)*

@@ -92,8 +92,8 @@ It maps to the `LOCCURAM` field in table `SBOOK` — the local currency credit c
 | 1 | Run `SE16` → table `SBOOK` → Execute (F8) | Booking records load |
 | 2 | Find the `LOCCURAM` column | **`***`** — masked ✅ |
 
-> 📸 **[Screenshot — `screenshots/l06-test1-loccuram-masked.png`]**  
-> *SE16 → SBOOK: LOCCURAM (credit card reference) column showing `***`. Policy triggered by USER.ROLE EQ ZRANALYST.*
+![SE16 → SBOOK — LOCCURAM masked](/screenshots/l06-test1-loccuram-masked.png)
+*SBOOK: LOCCURAM (credit card reference) showing `***` — triggered by USER.ROLE EQ ZRANALYST.*
 
 ### Test 2 — Financial posting blocked
 
@@ -102,8 +102,8 @@ It maps to the `LOCCURAM` field in table `SBOOK` — the local currency credit c
 | 1 | Type `/NFB01` in the command field → Enter | **Pathlock block screen** ✅ |
 | 2 | Read the block message | Confirms: access denied by policy |
 
-> 📸 **[Screenshot — `screenshots/l06-test2-fb01-blocked.png`]**  
-> *Pathlock block screen on FB01: "Access to transaction FB01 has been denied." Both controls triggered by the same single policy.*
+![Pathlock block screen on FB01](/screenshots/l06-test2-fb01-blocked.png)
+*FB01 blocked: "Access to transaction FB01 has been denied." One condition, two enforcements.*
 
 Both controlled by one condition. The analyst's role triggered both enforcements at once.
 

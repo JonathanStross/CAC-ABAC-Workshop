@@ -36,6 +36,10 @@ services:
       - /root/.ssh/id_ed25519:/secrets/wg_ssh_key:ro
       # Level guides: mount handouts/ from the git clone so content updates = git pull only
       - /opt/cac-workshop/handouts:/handouts:ro
+      # Screenshots embedded in level guides — drop .png files here, git pull picks them up
+      - /opt/cac-workshop/screenshots:/screenshots:ro
+      # Downloadable files (policy templates, cheat sheets) — linked from level guides
+      - /opt/cac-workshop/files:/files:ro
       # Level codes: mount from git clone so codes update with workshop-pull (not baked into image)
       - /opt/cac-workshop/leaderboard/level_codes.json:/data/level_codes.json:ro
 

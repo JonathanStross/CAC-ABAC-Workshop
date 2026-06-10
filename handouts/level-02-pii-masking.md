@@ -40,11 +40,11 @@ First, confirm the issue is real — and find the technical identifier for the e
 | 4 | Click **Technical Info** (button in the popup) | Technical details for the field |
 | 5 | Note the value in the **Data Element** field | You should see `S_EMAIL` |
 
-> 📸 **[Screenshot — `screenshots/l02-step1-scustom-before.png`]**  
-> *SE16 → SCUSTOM: full passenger records with EMAIL column showing real addresses. This is the audit finding.*
+![SE16 → SCUSTOM before masking](/screenshots/l02-step1-scustom-before.png)
+*SCUSTOM: EMAIL column showing real addresses — the audit finding in plain sight.*
 
-> 📸 **[Screenshot — `screenshots/l02-step1-technical-info.png`]**  
-> *F1 help popup → Technical Info button: Data Element field showing `S_EMAIL`.*
+![F1 Technical Info — Data Element S_EMAIL](/screenshots/l02-step1-technical-info.png)
+*F1 → Technical Info: Data Element field showing `S_EMAIL`.*
 
 > ⚠️ Write down `S_EMAIL` — you will need it in the next step.
 
@@ -150,8 +150,8 @@ Rule:
 IF USER.ID EQ <YOURUSERNAME>
 ```
 
-> 📸 **[Screenshot — `screenshots/l02-step5-details.png`]**  
-> *Policy Rules → Details screen showing the `IF USER.ID EQ <USERNAME>` rule text.*
+![Policy Rules Details — IF USER.ID EQ condition](/screenshots/l02-step5-details.png)
+*Policy Rules → Details: the rule text confirming `IF USER.ID EQ <USERNAME>`.*
 
 > This condition reads: *"Only apply this policy when the currently logged-in user ID equals AMUELLER."*  
 > Your colleagues' sessions will not be affected at all.
@@ -210,8 +210,8 @@ Pathlock DAC policies take effect immediately — in most cases you will see the
 | 2 | If emails are still visible — **log out** (System → Log Off) and **log back in**, then repeat step 1 | Masking now active ✅ |
 | 3 | Ask a colleague sitting next to you to open `SE16` → `SCUSTOM` | Their `EMAIL` column still shows real addresses — your policy only affects your own session ✅ |
 
-> 📸 **[Screenshot — `screenshots/l02-step7-email-masked.png`]**  
-> *SE16 → SCUSTOM: EMAIL column showing `***` for all rows. Place side-by-side with `l02-step1-scustom-before.png` for maximum impact.*
+![SE16 → SCUSTOM after masking](/screenshots/l02-step7-email-masked.png)
+*SCUSTOM: EMAIL column showing `***` for all rows. Compare with the before screenshot above.*
 
 > **Still seeing real emails after re-login?**  
 > → Check Step 5: the `USER.ID` value must be your exact SAP username, uppercase, no spaces.  

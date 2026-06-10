@@ -78,8 +78,8 @@ sudo cp YourName_customer.conf /etc/wireguard/wg-workshop.conf
 sudo wg-quick up wg-workshop
 ```
 
-> 📸 **[Screenshot — `screenshots/l01-wireguard-active.png`]**  
-> *WireGuard app showing the tunnel in **Active** / green state. Participants use this to confirm the VPN is up before proceeding.*
+![WireGuard tunnel in Active state](/screenshots/l01-wireguard-active.png)
+*WireGuard showing the tunnel Active (green). Confirm this before trying to connect to SAP.*
 
 **Verify the connection**
 
@@ -114,8 +114,8 @@ WireGuard typically establishes the tunnel within **5–15 seconds** of activati
 | System ID (SID) | `A4H` |
 | Client | **see your registration confirmation page** |
 
-> 📸 **[Screenshot — `screenshots/l01-saplogon-connection.png`]**  
-> *SAP Logon — "New Custom Application Server" dialog with `10.8.0.1`, instance `00`, SID `A4H` filled in.*
+![SAP Logon — Custom Application Server dialog](/screenshots/l01-saplogon-connection.png)
+*SAP Logon: New Custom Application Server filled in with `10.8.0.1`, instance `00`, SID `A4H`.*
 
 ---
 
@@ -156,8 +156,8 @@ You are now inside Meridian AG's live SAP environment. Take a few minutes to loo
 
 This is exactly what the external auditors flagged — and it is why you are here. Over the following levels, you will fix this.
 
-> 📸 **[Screenshot — `screenshots/l01-scustom-unprotected.png`]**  
-> *SE16 → SCUSTOM result: passenger names, emails, phone numbers, credit card references — all fully visible. This is the "before" state the entire workshop is built around.*
+![SE16 → SCUSTOM — unprotected passenger data](/screenshots/l01-scustom-unprotected.png)
+*SCUSTOM result: passenger names, emails, addresses, credit card references — fully visible. This is the "before" state.*
 
 ---
 

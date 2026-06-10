@@ -16,7 +16,7 @@ Or via Docker:
     docker run -d -p 9000:9000 --name dac-leaderboard dac-leaderboard
 """
 
-from flask import Flask, request, redirect, render_template_string, jsonify, Response, send_file
+from flask import Flask, request, redirect, render_template_string, jsonify, Response, send_file, send_from_directory, abort
 import sqlite3, hashlib, json, os, re, time, hmac, base64
 from datetime import datetime
 try:
@@ -33,6 +33,10 @@ CONFIG_FILE = "/data/level_codes.json"
 LOGO_PATH = os.path.join(os.path.dirname(__file__), "pathlock-logo.svg")
 # Level guide .md files — lives one directory above the leaderboard/ folder
 HANDOUTS_DIR = os.path.join(os.path.dirname(__file__), "..", "handouts")
+# Screenshots embedded in level guides — git-tracked, updated via git pull
+SCREENSHOTS_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
+# Downloadable files (policy templates, cheat sheets, etc.) — git-tracked
+FILES_DIR = os.path.join(os.path.dirname(__file__), "..", "files")
 
 # ---------------------------------------------------------------------------
 # Security config — set via environment variables
@@ -226,6 +230,22 @@ def _detect_shenanigans(fields: dict[str, str]) -> str | None:
 @app.route("/logo")
 def logo():
     return send_file(LOGO_PATH, mimetype="image/svg+xml")
+
+@app.route("/screenshots/<path:filename>")
+def screenshot(filename):
+    """Serve screenshot images embedded in level guides."""
+    safe = os.path.realpath(os.path.join(SCREENSHOTS_DIR, filename))
+    if not safe.startswith(os.path.realpath(SCREENSHOTS_DIR)):
+        abort(403)
+    return send_from_directory(os.path.realpath(SCREENSHOTS_DIR), filename)
+
+@app.route("/files/<path:filename>")
+def download_file(filename):
+    """Serve downloadable workshop files (policy templates, cheat sheets, etc.)."""
+    safe = os.path.realpath(os.path.join(FILES_DIR, filename))
+    if not safe.startswith(os.path.realpath(FILES_DIR)):
+        abort(403)
+    return send_from_directory(os.path.realpath(FILES_DIR), filename, as_attachment=True)
 
 # ---------------------------------------------------------------------------
 # Level guide renderer — markdown files from the handouts/ directory

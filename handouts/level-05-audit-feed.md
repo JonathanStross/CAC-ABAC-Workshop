@@ -91,8 +91,8 @@ Create log entries by accessing the data your policy governs:
 | 4 | Find your `SE16 → SCUSTOM` entries | Timestamped entries |
 | 5 | Click into one entry and read all columns | Full context record |
 
-> 📸 **[Screenshot — `screenshots/l05-step3-feed-entries.png`]**  
-> *DAC Feed viewer filtered to your username: rows showing Timestamp, TCode=SE16, Attribute=DATA.S_EMAIL, Policy=MASK_EMAIL_\<USER\>, Action=Masked, Source IP=10.8.0.x.*
+![DAC Feed viewer — filtered to your user](/screenshots/l05-step3-feed-entries.png)
+*DAC Feed: entries showing Timestamp, TCode=SE16, Attribute=DATA.S_EMAIL, Action=Masked, Source IP=10.8.0.x.*
 
 **Every entry shows:**
 

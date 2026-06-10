@@ -90,8 +90,8 @@ The policy fires whenever the current time falls **outside** your configured win
 > 5. Once Step 4 is done, run **`SE16`** — it still works (you are inside the window).
 > 6. Step back out (F3), wait for the window to close, then run **`SE16`** again — blocked.
 
-> 📸 **[Screenshot — `screenshots/l04-step3-system-status.png`]**  
-> *SAP GUI → System menu → Status: the System Time field (24h clock) participants use to calibrate the 5-minute window.*
+![SAP System → Status — server time](/screenshots/l04-step3-system-status.png)
+*System → Status: note the System Time field (24h) to calibrate your 5-minute window.*
 
 ---
 
@@ -126,8 +126,8 @@ The **Policy Enforcement Point** for a TCode block is under **Data Restriction**
 | 2 | Read the block message on screen | The message contains your completion code ✅ |
 | 3 | Note down the code | |
 
-> 📸 **[Screenshot — `screenshots/l04-step5-block-screen.png`]**  
-> *Pathlock block screen: "Access to transaction SE16 has been denied" with the completion code visible in the message body.*
+![Pathlock TCode block screen on SE16](/screenshots/l04-step5-block-screen.png)
+*Pathlock block screen: access to SE16 denied. The completion code is in the message body.*
 
 This is exactly what a Meridian AG booking agent would see if they tried to access passenger data at midnight.
 

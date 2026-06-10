@@ -35,8 +35,8 @@ First, run `SE16` on `SCUSTOM` and note what you see.
 | 2 | Note the **total row count** (bottom status bar) | e.g. `135 entries` |
 | 3 | Look for entries where **`COUNTRY`** = `DE` | German passenger records |
 
-> 📸 **[Screenshot — `screenshots/l07-step1-scustom-full.png`]**  
-> *SE16 → SCUSTOM baseline: full result set with COUNTRY=DE rows visible. Note the total row count shown in the status bar.*
+![SE16 → SCUSTOM baseline — DE rows visible](/screenshots/l07-step1-scustom-full.png)
+*Baseline before policy: SCUSTOM with COUNTRY=DE rows visible. Note the row count in the status bar.*
 
 > ⚠️ Write down the **total row count** and how many German entries (`COUNTRY = DE`) you can see. You will compare this after the policy is applied.
 
@@ -89,8 +89,8 @@ The instructor has pre-configured a Data Restriction policy that enforces the bu
 | 2 | Check the **total row count** | Compare with your Step 1 baseline |
 | 3 | Filter for `COUNTRY = DE` | Result depends on your role (see below) |
 
-> 📸 **[Screenshot — `screenshots/l07-step4-scustom-filtered.png`]**  
-> *SE16 → SCUSTOM after policy active (user without Z_GERMAN): lower row count, COUNTRY=DE filter returns 0 entries. No error shown — rows are simply absent.*
+![SE16 → SCUSTOM after policy — DE rows absent](/screenshots/l07-step4-scustom-filtered.png)
+*After policy active (user without Z_GERMAN): lower row count, COUNTRY=DE filter returns 0 entries. No error — rows are simply gone.*
 
 | Your role | What you see |
 |---|---|
