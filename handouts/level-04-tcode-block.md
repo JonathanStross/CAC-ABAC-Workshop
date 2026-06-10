@@ -74,23 +74,33 @@ The policy fires whenever the current time falls **outside** your configured win
 |---|---|---|
 | 1 | In the left tree, double-click **Policy Administration Point → Rules** | Selection dialog |
 | 2 | Select your policy and confirm | Rules list |
-| 3 | Click **Change Mode** → **New** | Blank condition row |
-| 4 | **Attribute**: `USER.CURRENT_TIME` | |
-| 5 | **Operator**: `NOT IN` | |
-| 6 | **Value**: a 5-minute window starting now — check **System → Status** for the server time (format `HHMMSS`), then enter e.g. `142300-142800` | Time range in HHMMSS format |
-| 7 | Save | Condition saved |
+| 3 | Click **Change Mode** (pencil icon) if not already in edit mode | Edit mode active |
+| 4 | Click **Append Row** (📄 blank page icon) — enter **Condition ID `1`** | Blank condition row |
+| 5 | **Attribute**: `DATA.APPLICATION` · **Operator**: `EQ` · **Value**: `SE16` | TCode scoped |
+| 6 | Click **Append Row** again — enter **Condition ID `1`** again | Second condition row (AND) |
+| 7 | **Attribute**: `USER.CURRENT_TIME` · **Operator**: `IN` · **Value**: `080000-160000` | Time window set |
+| 8 | Click **Append Row** again — enter **Condition ID `1`** again | Third condition row (AND) |
+| 9 | **Attribute**: `USER.ID` · **Operator**: `EQ` · **Value**: your SAP username (e.g. `DEVELOPER`) | User scoped |
+| 10 | Click **Save** | All three conditions saved |
+| 11 | Select any condition row and click **Details** — confirm the logic reads: | |
 
-> **☕ Good timing — you have ~5 minutes:**
->
-> 1. Check the exact server time: in SAP GUI go to **System menu → Status** — note the **User Time** field (format `HHMMSS`, server clock).
-> 2. Set the **Value** to a 5-minute window starting now — e.g. if User Time shows `142300`, enter `142300-142800`.
-> 3. Save — the window is now counting down.
-> 4. Use the remaining time to complete **Step 4** below (add the Data Restriction action).
-> 5. Once Step 4 is done, run **`SE16`** — it still works (you are inside the window).
-> 6. Step back out (F3), wait for the window to close, then run **`SE16`** again — blocked.
+```
+IF DATA.APPLICATION EQ SE16
+AND USER.CURRENT_TIME IN 080000-160000
+AND USER.ID EQ <YOURUSERNAME>
+```
+
+> 💡 **AND vs OR — how Condition IDs work:**  
+> All rows sharing the **same Condition ID** (e.g. `1`) are joined with **AND** — all must be true for the policy to fire.  
+> If you add a row with **Condition ID `2`**, that creates a separate **OR** branch — the policy fires if branch 1 OR branch 2 is true.  
+> Example: `1 / DATA.APPLICATION EQ SE16` + `2 / DATA.APPLICATION EQ SE17` would block both SE16 and SE17.
+
+> **☕ Adjust the time window for your session:**  
+> Check the exact server time: in SAP GUI go to **System menu → Status** — note the **User Time** field (format `HHMMSS`).  
+> If you want to see the block fire *now*, set the value to a 5-minute window starting at the current time — e.g. if User Time shows `142300`, enter `142300-142800`. Save, complete Step 4, then run `SE16` after the window closes.
 
 ![SAP System → Status — server time](/screenshots/l04-step3-system-status.png)
-*System → Status: note the System Time field (24h) to calibrate your 5-minute window.*
+*System → Status: note the User Time field (HHMMSS) to calibrate your time window.*
 
 ---
 
