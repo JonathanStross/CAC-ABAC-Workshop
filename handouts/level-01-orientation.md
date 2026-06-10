@@ -26,7 +26,7 @@ Before this level you must have completed registration at **[https://pathlock.ac
 | 3 | On the confirmation page: **download your WireGuard `.conf` file** and your **credentials `.txt` file** — both links appear after successful registration |
 | 4 | Save both files somewhere you can find them — you need them in Steps 1 and 3 below |
 
-![Registration confirmation page — download links for .conf and credentials](/screenshots/l01-credentials-screen.png)
+![Registration confirmation page — download links for .conf and credentials](/screenshots/l1_credentials_screen.png)
 *Registration confirmation: download your WireGuard `.conf` and your credentials `.txt` from here. If you close this page the links are gone — ask your instructor to reset your password.*
 
 > ⚠️ **If you skipped registration** — stop here, go to `https://pathlock.academy/register`, and complete it before continuing. You cannot connect to the SAP system without a WireGuard config and a valid SAP user.
