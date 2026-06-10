@@ -40,8 +40,8 @@ First, confirm the issue is real — and find the technical identifier for the e
 | 4 | Click **Technical Info** (button in the popup) | Technical details for the field |
 | 5 | Note the value in the **Data Element** field | You should see `S_EMAIL` |
 
-![SE16 → SCUSTOM before masking](/screenshots/l02-step1-scustom-before.png)
-*SCUSTOM: EMAIL column showing real addresses — the audit finding in plain sight.*
+![SE16 → SCUSTOM — passenger email addresses fully visible](/screenshots/l2_scustom_email.png)
+*SCUSTOM: EMAIL column showing real passenger email addresses — unmasked, unrestricted. This is the audit finding.*
 
 ![F1 Technical Info — Data Element S_EMAIL](/screenshots/l02-step1-technical-info.png)
 *F1 → Technical Info: Data Element field showing `S_EMAIL`.*
