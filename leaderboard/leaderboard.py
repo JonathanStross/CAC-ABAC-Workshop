@@ -1128,32 +1128,21 @@ REGISTER_TEMPLATE = """
         <input type="text" name="company" placeholder="e.g. Contoso AG" value="{{ form_company or '' }}">
 
         <div style="background:#1a1a2e;border:1px solid #c0392b;border-radius:8px;padding:20px;margin:20px 0">
-          <h3 style="color:#e74c3c;margin-top:0;margin-bottom:6px">⚠️ Participant Agreement</h3>
-          <p style="color:#aaa;font-size:0.85em;margin-top:0;margin-bottom:16px">Read and accept all five terms before registering.</p>
+          <h3 style="color:#e74c3c;margin-top:0;margin-bottom:12px">⚠️ Participant Agreement</h3>
 
-          <label style="display:flex;gap:10px;margin-bottom:14px;cursor:pointer;align-items:flex-start">
-            <input type="checkbox" name="w_screenshots" required style="margin-top:3px;flex-shrink:0">
-            <span><strong>No screenshots or recordings.</strong> Photography, screen recording, and sharing of any system contents outside this session is strictly prohibited.</span>
-          </label>
+          <p style="color:#ccc;font-size:0.88em;margin:0 0 10px"><strong>No screenshots or recordings.</strong> Photography, screen recording, and sharing of any system contents outside this session is strictly prohibited.</p>
 
-          <label style="display:flex;gap:10px;margin-bottom:14px;cursor:pointer;align-items:flex-start">
-            <input type="checkbox" name="w_privileges" required style="margin-top:3px;flex-shrink:0">
-            <span><strong>Responsible use of elevated privileges.</strong> You will receive broad SAP access (SAP_ALL). Any misuse, data exfiltration, or access beyond the scope of this workshop will result in <strong>immediate disqualification</strong> and may lead to <strong>legal action</strong>.</span>
-          </label>
+          <p style="color:#ccc;font-size:0.88em;margin:0 0 10px"><strong>Responsible use of elevated privileges.</strong> You will receive broad SAP access (SAP_ALL). Any misuse, data exfiltration, or access beyond the scope of this workshop will result in <strong>immediate disqualification</strong> and may lead to <strong>legal action</strong>.</p>
 
-          <label style="display:flex;gap:10px;margin-bottom:14px;cursor:pointer;align-items:flex-start">
-            <input type="checkbox" name="w_shared" required style="margin-top:3px;flex-shrink:0">
-            <span><strong>Shared system etiquette.</strong> The SAP environment is shared with other participants. Do not modify others' configurations, users, or data. Be mindful and respectful at all times.</span>
-          </label>
+          <p style="color:#ccc;font-size:0.88em;margin:0 0 10px"><strong>Shared system etiquette.</strong> The SAP environment is shared with other participants. Do not modify others' configurations, users, or data. Be mindful and respectful at all times.</p>
 
-          <label style="display:flex;gap:10px;margin-bottom:14px;cursor:pointer;align-items:flex-start">
-            <input type="checkbox" name="w_leaderboard" required style="margin-top:3px;flex-shrink:0">
-            <span><strong>Leaderboard visibility.</strong> Your display name will be shown publicly on the leaderboard. If you do not wish to share personally identifiable information, use a fictive name in the field above.</span>
-          </label>
+          <p style="color:#ccc;font-size:0.88em;margin:0 0 10px"><strong>Leaderboard visibility.</strong> Your display name will be shown publicly on the leaderboard. If you do not wish to share personally identifiable information, use a fictive name in the field above.</p>
 
-          <label style="display:flex;gap:10px;margin-bottom:0;cursor:pointer;align-items:flex-start">
-            <input type="checkbox" name="w_retention" required style="margin-top:3px;flex-shrink:0">
-            <span><strong>Data retention.</strong> Your SAP account and registration data will be deleted at the end of the course. To retain access for an extended training period, opt in by <strong>Friday</strong>. If you do not opt in, all data is deleted without further notice.</span>
+          <p style="color:#ccc;font-size:0.88em;margin:0 0 18px"><strong>Data retention.</strong> Your SAP account and registration data will be deleted at the end of the course. To retain access for an extended training period, opt in by <strong>Friday</strong>. If you do not opt in, all data is deleted without further notice.</p>
+
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;border-top:1px solid #333;padding-top:14px">
+            <input type="checkbox" name="w_agree" required style="width:auto;padding:0;margin:0;flex-shrink:0;accent-color:#c8102e;width:16px;height:16px">
+            <span style="color:#fff;font-size:0.9em;font-weight:600">I have read and agree to all of the above terms.</span>
           </label>
         </div>
 
@@ -1390,9 +1379,8 @@ def register():
         return err("SAP username may only contain letters, digits and underscore.")
 
     # ---- Waiver check ------------------------------------------------------
-    waiver_fields = ["w_screenshots", "w_privileges", "w_shared", "w_leaderboard", "w_retention"]
-    if not all(request.form.get(f) for f in waiver_fields):
-        return err("You must accept all terms in the Participant Agreement to register.")
+    if not request.form.get("w_agree"):
+        return err("You must accept the Participant Agreement to register.")
 
     # ---- Check duplicates --------------------------------------------------
     db = get_db()
