@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| 🎯 **Goal** | Create a policy that **blocks `SE16`** outside business hours using the `USER.TIME` attribute |
+| 🎯 **Goal** | Create a policy that **blocks `SE16`** outside business hours using the `USER.CURRENT_TIME` attribute |
 | ⏱ **Time** | 15 minutes |
 | 🏆 **Points** | 100 |
 | 💡 **Difficulty** | 🟡 Hints |
@@ -27,9 +27,9 @@ The policy fires whenever the current time falls **outside** your configured win
 
 ---
 
-## Step 1 — Explore the `USER.TIME` Attribute
+## Step 1 — Explore the `USER.CURRENT_TIME` Attribute
 
-`USER.TIME` is a pre-created User Attribute in Pathlock DAC. Unlike `USER.ID` (identity) or `USER.IP_ADDRESS` (network location), this one resolves to the **current server time** at the moment the policy is evaluated — every single time a transaction is called.
+`USER.CURRENT_TIME` is a pre-created User Attribute in Pathlock DAC. Unlike `USER.ID` (identity) or `USER.IP_ADDRESS` (network location), this one resolves to the **current server time** at the moment the policy is evaluated — every single time a transaction is called.
 
 | # | Action | What you see |
 |---|---|---|
@@ -37,7 +37,7 @@ The policy fires whenever the current time falls **outside** your configured win
 | 2 | Click the **Functional Configuration** tab (second tab) | Left tree updates |
 | 3 | Expand **Policy Information Point** in the left tree | Sub-items appear |
 | 4 | Double-click **User Attribute Master** | List of all user attributes |
-| 5 | Find and open **`USER.TIME`** | Attribute detail screen — the attribute details including format (`HHMMSS` — system time from **System → Status**) are displayed directly |
+| 5 | Find and open **`USER.CURRENT_TIME`** | Attribute detail screen — the attribute details including format (`HHMMSS` — system time from **System → Status**) are displayed directly |
 
 > **Three ABAC condition types so far:**
 
@@ -45,7 +45,7 @@ The policy fires whenever the current time falls **outside** your configured win
 |---|---|---|
 | L2 | `USER.ID` | Who you are |
 | L3 | `USER.IP_ADDRESS` | Where you connect from |
-| L4 | `USER.TIME` | When you connect |
+| L4 | `USER.CURRENT_TIME` | When you connect |
 
 ---
 
@@ -75,7 +75,7 @@ The policy fires whenever the current time falls **outside** your configured win
 | 1 | In the left tree, double-click **Policy Administration Point → Rules** | Selection dialog |
 | 2 | Select your policy and confirm | Rules list |
 | 3 | Click **Change Mode** → **New** | Blank condition row |
-| 4 | **Attribute**: `USER.TIME` | |
+| 4 | **Attribute**: `USER.CURRENT_TIME` | |
 | 5 | **Operator**: `NOT IN` | |
 | 6 | **Value**: a 5-minute window starting now — check **System → Status** for the server time (format `HHMMSS`), then enter e.g. `142300-142800` | Time range in HHMMSS format |
 | 7 | Save | Condition saved |
@@ -153,7 +153,7 @@ You need `SE16` for the rest of the workshop — deactivate the policy before co
 |---|---|
 | What changed in SAP? | **Nothing** — no authorisation object, no role change |
 | What enforcement type was this? | **TCode Block** — completely different from field masking |
-| Can you combine this with L1/L2? | Yes — stack conditions: `USER.TIME NOT IN 080000-180000 AND USER.IP_ADDRESS NOT EQ 10.8.0.X` |
+| Can you combine this with L1/L2? | Yes — stack conditions: `USER.CURRENT_TIME NOT IN 080000-180000 AND USER.IP_ADDRESS NOT EQ 10.8.0.X` |
 | What other TCodes could you block? | `FB01`, `F110`, `SE37`, `SM59` — any sensitive transaction |
 | Does this survive a role change? | Yes — the policy is independent of SAP authorisation objects |
 
