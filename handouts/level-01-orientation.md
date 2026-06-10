@@ -15,7 +15,25 @@
 
 ## Prerequisites
 
-Make sure you have the following **installed** before you begin:
+**Step 0 — Register first**
+
+Before this level you must have completed registration at **[https://pathlock.academy/register](https://pathlock.academy/register)**:
+
+| # | What to do |
+|---|---|
+| 1 | Go to **https://pathlock.academy/register** and enter the access code your instructor gave you |
+| 2 | Fill in your details and **accept the Participant Agreement** (the checkbox at the bottom) |
+| 3 | On the confirmation page: **download your WireGuard `.conf` file** and your **credentials `.txt` file** — both links appear after successful registration |
+| 4 | Save both files somewhere you can find them — you need them in Steps 1 and 3 below |
+
+![Registration confirmation page — download links for .conf and credentials](/screenshots/l01-credentials-screen.png)
+*Registration confirmation: download your WireGuard `.conf` and your credentials `.txt` from here. If you close this page the links are gone — ask your instructor to reset your password.*
+
+> ⚠️ **If you skipped registration** — stop here, go to `https://pathlock.academy/register`, and complete it before continuing. You cannot connect to the SAP system without a WireGuard config and a valid SAP user.
+
+---
+
+Make sure you also have the following **installed** before you begin:
 
 | | Requirement | Download |
 |---|---|---|
@@ -23,8 +41,8 @@ Make sure you have the following **installed** before you begin:
 | 📦 | **WireGuard** installed and running | [wireguard.com/install](https://www.wireguard.com/install/) |
 | 🖥️ | **SAP GUI** installed | Ask your instructor or your IT team |
 | 🌐 | **Google Chrome** or **Microsoft Edge** | [chrome](https://www.google.com/chrome/) / [edge](https://www.microsoft.com/edge) — needed for L8 Fiori |
-| 📄 | Your **WireGuard `.conf` file** | Downloaded from your registration confirmation page |
-| 🔑 | Your **SAP credentials** | From your registration confirmation page (username + temporary password + client number) |
+| 📄 | Your **WireGuard `.conf` file** | Downloaded from your registration confirmation page *(Step 0 above)* |
+| 🔑 | Your **SAP credentials `.txt`** | Downloaded from your registration confirmation page *(Step 0 above)* |
 
 > ⚠️ **If you have not installed WireGuard or SAP GUI yet — do it now before continuing.**
 > If you run into installation issues, ask your instructor or your IT team.
