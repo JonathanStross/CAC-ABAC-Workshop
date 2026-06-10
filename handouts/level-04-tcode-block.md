@@ -106,22 +106,20 @@ AND USER.ID EQ <YOURUSERNAME>
 
 ## Step 4 — Add the Block Action
 
-The **Policy Enforcement Point** for a TCode block is under **Data Restriction** — the same tree node as in L8. At least one Data Attribute must be linked to the policy, or the enforcement point cannot be saved.
+The **Policy Enforcement Point** for a block action is under **Data Restriction**.
 
 | # | Action | What you see |
 |---|---|---|
 | 1 | In **`/N/APPSDM/ABAC`**, click the **Functional Configuration** tab **(second tab)** | Left tree updates |
 | 2 | **Double-click** on **Policy Enforcement Point** in the left tree | Sub-items appear: **Data Masking** and **Data Restriction** |
 | 3 | **Double-click** on **Data Restriction** | List of all active restriction enforcement points |
-| 4 | Check whether edit mode is already active — look for the **Insert Row** (blank page icon) button. If not, click **Change Mode** (pencil icon) in the top toolbar. | Edit mode active |
-| 5 | Click the **Insert Row** button (📄 blank page icon) | A blank row appears |
+| 4 | Enter change mode by clicking **Change** on the top left-hand side — if the **Append Row** button is already visible, you are already in edit mode | Edit mode active |
+| 5 | Click the **Append Row** button (📄 blank page icon) | A blank row appears |
 | 6 | Check the **Active** flag | Row is marked active |
-| 7 | In the **Policy** field, select or type `BLOCK_SE16_HOURS_<YOURUSERNAME>` | Your policy linked |
-| 8 | **Action Type**: `Block TCode` | Different from Masking |
-| 9 | **TCode**: `SE16` | The table browser |
-| 10 | **Data Attribute**: `DATA.TABLE_NAME` — required as an *exposed attribute* | Every Data Restriction enforcement point needs at least one data attribute assigned, even when the policy condition contains no data attribute. `DATA.TABLE_NAME` is the logical choice here: it identifies the table being browsed in SE16. |
-| 11 | **Block Message**: read carefully — **the completion code is in this message** 🏆 | |
-| 12 | Click **Save** | Enforcement point saved — policy is now live |
+| 7 | Set the **Action** dropdown to **`Deny`** | Action set |
+| 8 | In the **Policy** field, select or type `BLOCK_SE16_HOURS_<YOURUSERNAME>` | Your policy linked |
+| 9 | **Block Message**: read carefully — **the completion code is in this message** 🏆 | |
+| 10 | Click **Save** | Enforcement point saved — policy is now live |
 
 > ⚠️ The completion code is pre-filled in the Block Message by your instructor. Note it down now — you'll need it to submit to the leaderboard.
 
