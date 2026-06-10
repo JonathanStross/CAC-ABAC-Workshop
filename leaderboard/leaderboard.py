@@ -273,6 +273,9 @@ LEVEL_FILES = {
     9:  "level-09-fiori-masking.md",
 }
 
+# Levels not yet released — greyed out on index, joke page if accessed by URL
+LOCKED_LEVELS = {6, 7, 8, 9}
+
 LEVEL_STYLE = """
 <style>
   *,*::before,*::after{box-sizing:border-box}
@@ -430,11 +433,16 @@ def levels_index():
     items.sort(key=lambda x: x[0])
     rows = ""
     for n, key, title, pts, avail in items:
-        if avail:
+        if n in LOCKED_LEVELS:
+            link = f"<span style='color:#444'>{key} — {title} <em style='font-size:0.8em'>(not yet available)</em></span>"
+            pts_str = f"<span style='color:#333'>{pts} pts</span>"
+        elif avail:
             link = f"<a href='/levels/{n}' style='color:#2ecc71'>{key} — {title}</a>"
+            pts_str = f"<span style='color:#aaa'>{pts} pts</span>"
         else:
             link = f"<span style='color:#555'>{key} — {title} <em style='font-size:0.8em'>(coming soon)</em></span>"
-        rows += f"<tr><td>{link}</td><td style='color:#aaa'>{pts} pts</td></tr>"
+            pts_str = f"<span style='color:#aaa'>{pts} pts</span>"
+        rows += f"<tr><td>{link}</td><td>{pts_str}</td></tr>"
     return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level Guides — DAC: Practitioner Level</title>{LEVEL_STYLE}</head>
 <body>
   {_topbar('/levels')}
@@ -449,6 +457,32 @@ def levels_index():
 def level_guide(level_num):
     if not _has_access_cookie():
         return redirect("/register")
+    if level_num in LOCKED_LEVELS:
+        return render_template_string("""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Nice try</title>""" + LEVEL_STYLE + """
+<style>
+  .locked{display:flex;flex-direction:column;align-items:center;justify-content:center;
+          min-height:80vh;text-align:center;padding:40px}
+  .locked .emoji{font-size:6rem;margin-bottom:24px;animation:bounce .6s ease infinite alternate}
+  @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-14px)}}
+  .locked h1{font-size:2.4rem;color:#c8102e;margin:0 0 16px}
+  .locked p{color:#aaa;font-size:1.1rem;max-width:480px;margin:0 0 32px}
+  .locked .sub{font-size:0.85rem;color:#444;margin-top:8px}
+</style>
+</head>
+<body>
+""" + _topbar("/levels") + """
+  <div class="locked">
+    <div class="emoji">🔒</div>
+    <h1>The joke's on you.</h1>
+    <p>This level hasn't been unlocked yet.<br>
+       Finish the levels that <em>are</em> available first — your instructor will unlock this one when it's time.</p>
+    <a href="/levels" class="btn">← Back to Levels</a>
+    <p class="sub">Nice URL guessing though. That's the ABAC spirit.</p>
+  </div>
+</body>
+</html>""")
     if level_num not in LEVEL_FILES:
         return "Level not found.", 404
     md_path = os.path.join(HANDOUTS_DIR, LEVEL_FILES[level_num])
@@ -1225,7 +1259,12 @@ SUBMIT_TEMPLATE = """
       <label>Level</label>
       <select name="level">
         {% for lvl, info in levels.items() %}
+        {% set lvl_num = lvl[1:]|int %}
+        {% if lvl_num in locked_levels %}
+        <option value="{{ lvl }}" disabled style="color:#555">{{ lvl }} — {{ info.title }} (not yet available)</option>
+        {% else %}
         <option value="{{ lvl }}">{{ lvl }} — {{ info.title }}</option>
+        {% endif %}
         {% endfor %}
       </select>
       <label>Completion code</label>
@@ -1546,12 +1585,12 @@ def submit():
         if not participant:
             msg, msg_type = f"SAP username '{sap_username}' not found. Please register first.", "err"
             db.close()
-            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
+            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes, locked_levels=LOCKED_LEVELS)
 
         if participant["locked"]:
             msg, msg_type = "Your account has been locked by the instructor. Please raise your hand.", "err"
             db.close()
-            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
+            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes, locked_levels=LOCKED_LEVELS)
 
         # Check not already submitted correctly
         already = db.execute(
@@ -1607,7 +1646,7 @@ def submit():
         db.commit()
         db.close()
 
-    return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes)
+    return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes, locked_levels=LOCKED_LEVELS)
 
 @app.route("/admin")
 def admin():
