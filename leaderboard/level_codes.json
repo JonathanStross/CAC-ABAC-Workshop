@@ -3,7 +3,7 @@
   "L1":  { "code": "42.",                               "points": 100, "title": "Orientation" },
   "L2":  { "code": "DATA.S_EMAIL",                      "points": 100, "title": "PII Masking" },
   "L3":  { "code": "USER.IP_ADDRESS",                 "points": 100, "title": "Contextual Access" },
-  "L4":  { "code": "SET_BEFORE_SESSION",                "points": 100, "title": "Time-Based TCode Block" },
+  "L4":  { "code": "42",                               "points": 100, "title": "Time-Based TCode Block" },
   "L5":  { "code": "Masked",                            "points": 150, "title": "DAC Feed" },
   "L6":  { "code": "SET_BEFORE_SESSION",                "points": 150, "title": "Overprivileged Role (SoD + PCI)" },
   "L7":  { "code": "Z_GERMAN",                          "points": 100, "title": "Regional Access Control" },
