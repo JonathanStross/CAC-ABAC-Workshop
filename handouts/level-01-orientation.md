@@ -96,8 +96,11 @@ sudo cp YourName_customer.conf /etc/wireguard/wg-workshop.conf
 sudo wg-quick up wg-workshop
 ```
 
+![WireGuard — importing and activating the tunnel](/screenshots/l1_wireguard_import_activate.png)
+*Import your `.conf` file via the bottom-left button, then click Activate. The tunnel entry appears in the list.*
+
 ![WireGuard tunnel in Active state](/screenshots/l01-wireguard-active.png)
-*WireGuard showing the tunnel Active (green). Confirm this before trying to connect to SAP.*
+*Status shows Active (green). Confirm this before moving on.*
 
 **Verify the connection**
 
