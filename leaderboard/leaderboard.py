@@ -695,6 +695,7 @@ STYLE = """
   .btn.secondary:hover { background: #3a3a5e; }
   form { background: #1a1a2e; padding: 30px; border-radius: 8px; max-width: 500px; margin: 0 auto; }
   input, select { width: 100%; padding: 10px; margin: 8px 0 16px; background: #0f0f1a; border: 1px solid #3a3a5e; color: #e0e0e0; border-radius: 4px; font-size: 1em; }
+  input[type="checkbox"] { width: auto; padding: 0; margin: 3px 0 0; flex-shrink: 0; }
   .msg { padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; }
   .msg.ok { background: #1a3a1a; border: 1px solid #2ecc71; color: #2ecc71; }
   .msg.err { background: #3a1a1a; border: 1px solid #c8102e; color: #ff6b6b; }
