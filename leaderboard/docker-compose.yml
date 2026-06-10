@@ -38,6 +38,8 @@ services:
       - /opt/cac-workshop/handouts:/handouts:ro
       # Screenshots embedded in level guides — drop .png files here, git pull picks them up
       - /opt/cac-workshop/screenshots:/screenshots:ro
+      # Video walkthroughs embedded in level guides — drop .mp4 files here, git pull picks them up
+      - /opt/cac-workshop/videos:/videos:ro
       # Downloadable files (policy templates, cheat sheets) — linked from level guides
       - /opt/cac-workshop/files:/files:ro
       # Level codes: mount from git clone so codes update with workshop-pull (not baked into image)
