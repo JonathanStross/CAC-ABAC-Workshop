@@ -159,8 +159,8 @@ Rule:
 IF USER.ID EQ <YOURUSERNAME>
 ```
 
-![Policy Rules Details — IF USER.ID EQ condition](/screenshots/l02-step5-details.png)
-*Policy Rules → Details: the rule text confirming `IF USER.ID EQ <USERNAME>`.*
+![Creating a rule condition — USER.ID EQ your username](/videos/l2_create_rule.mp4)
+*Walkthrough: opening the Rules dialog, appending a row, setting USER.ID EQ and saving the condition.*
 
 > This condition reads: *"Only apply this policy when the currently logged-in user ID equals AMUELLER."*  
 > Your colleagues' sessions will not be affected at all.
