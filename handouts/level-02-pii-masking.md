@@ -65,6 +65,9 @@ A **Data Attribute** in Pathlock DAC defines *what data* a policy acts on. It is
 | 5 | Find and open **`DATA.S_EMAIL`** | Attribute detail screen opens |
 | 6 | Read the **Attribute ID** field at the top — **note it down** | — |
 
+![Data Attribute Master — DATA.S_EMAIL](/screenshots/l2_data_attribute_master.png)
+*Data Attribute Master: `DATA.S_EMAIL` open, showing the Attribute ID and description.*
+
 > **Convention:** All Data Attributes start with `DATA.`
 
 **2b — Confirm the Technical Mapping**
