@@ -126,6 +126,9 @@ A **Policy** is the container that holds the masking rules and links them to the
 
 > ⚠️ If you get a "duplicate name" error, someone already used that name — double-check your username is in the policy name.
 
+![Creating a masking policy — full walkthrough](/videos/l2_create_policy.mp4)
+*Walkthrough: Policy Administration Point → Change mode → Create → fill fields → Save.*
+
 ---
 
 ## Step 5 — Add a Rule Condition
