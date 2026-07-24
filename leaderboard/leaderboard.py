@@ -2068,6 +2068,9 @@ ENROLL_TEMPLATE = """<!DOCTYPE html>
     padding:10px 14px;color:#fff;font-size:1rem;box-sizing:border-box}
   .field input:focus{outline:none;border-color:#4f8ef7}
   .field .hint{font-size:0.78rem;color:#666;margin-top:5px}
+  .uname-ok{border-color:#27ae60 !important}
+  .uname-err{border-color:#c0392b !important}
+  .uname-feedback{font-size:0.78rem;margin-top:5px;min-height:16px}
   .msg-err{background:#3a1a1a;border:1px solid #c0392b;color:#e74c3c;padding:12px 16px;border-radius:6px;margin-bottom:20px;font-size:0.9rem}
   .msg-ok{background:#0f2a1a;border:1px solid #27ae60;color:#2ecc71;padding:12px 16px;border-radius:6px;margin-bottom:20px;font-size:0.9rem}
   .submit-btn{width:100%;padding:12px;background:#c8102e;color:#fff;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:8px}
@@ -2115,9 +2118,11 @@ ENROLL_TEMPLATE = """<!DOCTYPE html>
     {% if msg %}<div class="msg-{{ msg_type }}">{{ msg }}</div>{% endif %}
     <form method="POST">
       <div class="field"><label>Choose your SAP username *</label>
-        <input name="sap_username" value="{{ form_sap }}" required placeholder="JSMITH" maxlength="12"
-               style="text-transform:uppercase">
-        <div class="hint">3–12 characters, letters/digits/underscore only. This becomes your login on the SAP system.</div></div>
+        <input id="sap_username" name="sap_username" value="{{ form_sap }}" required placeholder="JSMITH" maxlength="12"
+               style="text-transform:uppercase" autocomplete="off">
+        <div class="hint">3–12 characters, letters/digits/underscore only. This becomes your login on the SAP system.</div>
+        <div id="uname-fb" class="uname-feedback"></div>
+      </div>
       <div class="field"><label>Your personal invite token *</label>
         <input name="enroll_token" value="{{ form_token }}" required placeholder="sent to you by your instructor"
                style="font-family:monospace">
@@ -2128,10 +2133,46 @@ ENROLL_TEMPLATE = """<!DOCTYPE html>
           I accept that this system is for training purposes only, my activity may be monitored, and access will be revoked after the session.
         </label>
       </div>
-      <button class="submit-btn" type="submit">Enroll →</button>
+      <button class="submit-btn" type="submit" id="enroll-btn">Enroll →</button>
     </form>
   {% endif %}
 </div>
+<script>
+(function(){
+  var inp = document.getElementById('sap_username');
+  var fb  = document.getElementById('uname-fb');
+  var btn = document.getElementById('enroll-btn');
+  if (!inp) return;
+  var timer, lastVal = '';
+  function check(val) {
+    val = val.toUpperCase().trim();
+    if (val === lastVal) return;
+    lastVal = val;
+    if (!val) { fb.textContent=''; inp.className=''; return; }
+    if (val.length < 3) { setFb(false,'Too short'); return; }
+    if (!/^[A-Z0-9_]+$/.test(val)) { setFb(false,'Letters, digits and _ only'); return; }
+    fb.style.color='#666'; fb.textContent='Checking…';
+    fetch('/api/check-username?u=' + encodeURIComponent(val))
+      .then(function(r){ return r.json(); })
+      .then(function(d){ setFb(d.available, d.msg); })
+      .catch(function(){ fb.textContent=''; });
+  }
+  function setFb(ok, msg) {
+    fb.textContent = msg;
+    fb.style.color = ok ? '#2ecc71' : '#e74c3c';
+    inp.classList.toggle('uname-ok',  ok);
+    inp.classList.toggle('uname-err', !ok);
+    if (btn) btn.disabled = !ok;
+    if (btn) btn.style.opacity = ok ? '1' : '0.5';
+  }
+  inp.addEventListener('input', function(){
+    clearTimeout(timer);
+    timer = setTimeout(function(){ check(inp.value); }, 350);
+  });
+  // Force uppercase as user types
+  inp.addEventListener('input', function(){ inp.value = inp.value.toUpperCase(); });
+})();
+</script>
 </body></html>
 """
 
@@ -2293,6 +2334,30 @@ def download_wg_conf(sap_username):
         row["wg_conf"],
         mimetype="text/plain",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@app.route("/api/check-username")
+def api_check_username():
+    """Quick availability check for SAP username during enroll form."""
+    if not _is_logged_in():
+        return jsonify({"error": "not logged in"}), 401
+    raw = request.args.get("u", "").upper().strip()
+    if not raw:
+        return jsonify({"available": False, "msg": ""})
+    if len(raw) < 3 or len(raw) > 12:
+        return jsonify({"available": False, "msg": "Must be 3–12 characters"})
+    if not re.match(r'^[A-Z0-9_]+$', raw):
+        return jsonify({"available": False, "msg": "Letters, digits and _ only"})
+    SAP_DEFAULTS = {"SAP*","DDIC","DEVELOPER","SAPCPIC","TMSADM","EARLYWATCH",
+                    "RFCUSER","SOLMAN_BTC","SM_INTERN","SAPSYS","SAPJSF","SAPABC"}
+    if raw in SAP_DEFAULTS:
+        return jsonify({"available": False, "msg": "Reserved system username"})
+    db = get_db()
+    taken = db.execute("SELECT 1 FROM participants WHERE sap_username=?", (raw,)).fetchone()
+    db.close()
+    if taken:
+        return jsonify({"available": False, "msg": "Already taken — choose another"})
+    return jsonify({"available": True, "msg": "✓ Available"})
 
 
 @app.route("/api/provision-status")
