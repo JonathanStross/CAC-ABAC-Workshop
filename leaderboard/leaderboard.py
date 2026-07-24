@@ -16,8 +16,8 @@ Or via Docker:
     docker run -d -p 9000:9000 --name dac-leaderboard dac-leaderboard
 """
 
-from flask import Flask, request, redirect, render_template_string, jsonify, Response, send_file, send_from_directory, abort
-import sqlite3, hashlib, json, os, re, time, hmac, base64
+from flask import Flask, request, redirect, render_template_string, jsonify, Response, send_file, send_from_directory, abort, session
+import sqlite3, hashlib, json, os, re, time, hmac, base64, secrets
 from datetime import datetime
 try:
     import markdown as _markdown_lib
@@ -28,6 +28,7 @@ from sap_user import create_workshop_user, user_exists, lock_sap_user, unlock_sa
 from wireguard_peer import create_customer_peer, remove_customer_peer, WG_AVAILABLE
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 DB = "/data/leaderboard.db"
 CONFIG_FILE = "/data/level_codes.json"
 LOGO_PATH = os.path.join(os.path.dirname(__file__), "pathlock-logo.svg")
@@ -49,21 +50,49 @@ VIDEOS_DIR = os.path.join(os.path.dirname(__file__), "..", "videos")
 # Example:  REGISTER_CODE=meridian2026
 REGISTER_CODE    = os.environ.get("REGISTER_CODE", "").strip()
 
-# Shared cookie name and helper — set after successful class enrollment
-_ACCESS_COOKIE = "wb_access"
+# ---------------------------------------------------------------------------
+# Auth helpers — session-based login
+# ---------------------------------------------------------------------------
 
-def _access_token() -> str:
-    """HMAC token stored in the access cookie once the user has enrolled in a class."""
-    return hashlib.sha256(REGISTER_CODE.encode()).hexdigest() if REGISTER_CODE else "enrolled"
+def _hash_password(password: str) -> str:
+    """SHA-256 hash with a fixed pepper. Not bcrypt but good enough for a workshop."""
+    pepper = os.environ.get("SECRET_KEY", "workshop-pepper")
+    return hashlib.sha256((pepper + password).encode()).hexdigest()
 
+def _current_user():
+    """Return the logged-in user row (participant first, then pending_reg), or None."""
+    email = session.get("user_email")
+    if not email:
+        return None, None
+    db = get_db()
+    p = db.execute("SELECT * FROM participants WHERE email=?", (email,)).fetchone()
+    if p:
+        db.close()
+        return "enrolled", p
+    pr = db.execute("SELECT * FROM pending_registrations WHERE email=?", (email,)).fetchone()
+    db.close()
+    if pr:
+        return pr["status"], pr  # status: pending | approved | rejected
+    return None, None
+
+def _is_logged_in() -> bool:
+    return "user_email" in session
+
+def _is_enrolled() -> bool:
+    """True only if the user has completed enrollment (has a participant row)."""
+    email = session.get("user_email")
+    if not email:
+        return False
+    db = get_db()
+    row = db.execute("SELECT 1 FROM participants WHERE email=?", (email,)).fetchone()
+    db.close()
+    return row is not None
+
+# Keep for backward compat — old code uses _has_access_cookie()
 def _has_access_cookie() -> bool:
-    """Return True if the browser has a valid access cookie (set at enrollment)."""
-    if not REGISTER_CODE:
-        return True
-    token = request.cookies.get(_ACCESS_COOKIE, "")
-    return hmac.compare_digest(token, _access_token())
+    return _is_enrolled()
 
-# HTTP Basic Auth for /admin routes.
+# ---------------------------------------------------------------------------
 # ADMIN_USER: email / username accepted  (default: admin)
 # ADMIN_PASSWORD: password
 ADMIN_USER       = os.environ.get("ADMIN_USER",     "admin").strip()
@@ -578,6 +607,7 @@ def init_db():
             email         TEXT NOT NULL UNIQUE,
             company       TEXT,
             message       TEXT,
+            password_hash TEXT,
             submitted_at  TEXT DEFAULT (datetime('now')),
             status        TEXT DEFAULT 'pending'  -- pending | approved | rejected
         );
@@ -598,6 +628,7 @@ def init_db():
             email         TEXT NOT NULL UNIQUE,
             sap_username  TEXT NOT NULL UNIQUE,
             company       TEXT,
+            password_hash TEXT,
             class_id      INTEGER REFERENCES classes(id),
             sap_created   INTEGER DEFAULT 0,
             wg_ip         TEXT,
@@ -632,9 +663,14 @@ def init_db():
         ("sap_client",      "TEXT"),
         ("waiver_accepted", "INTEGER DEFAULT 0"),
         ("class_id",        "INTEGER"),
+        ("password_hash",   "TEXT"),
     ]:
         if col not in existing:
             db.execute(f"ALTER TABLE participants ADD COLUMN {col} {typedef}")
+    # Migrate pending_registrations too
+    pr_existing = {row[1] for row in db.execute("PRAGMA table_info(pending_registrations)")}
+    if "password_hash" not in pr_existing:
+        db.execute("ALTER TABLE pending_registrations ADD COLUMN password_hash TEXT")
     db.commit()
     _seed_slots(db)
     db.close()
@@ -808,16 +844,36 @@ STYLE = """
 # Shared topbar snippet — injected into every main page
 # ---------------------------------------------------------------------------
 def _topbar(active: str = "", authenticated: bool = True) -> str:
-    public_links = [
-        ("/",         "&#127968;", "Academy"),   # always visible
-        ("/register", "📝",        "Register"),  # always visible
-    ]
-    auth_links = [
+    """
+    Build the topbar HTML.
+    authenticated=True  → show enrolled nav (Leaderboard/Levels/Submit + Profile/Logout)
+    authenticated=False → show public nav (Register/Sign in)
+    Baked-in template calls always pass True (auth-gated pages); the home page
+    passes the real value at request time.
+    """
+    try:
+        logged_in = _is_logged_in()
+    except RuntimeError:
+        # Called outside request context (module-level template build)
+        logged_in = authenticated
+
+    always_links = [("/", "&#127968;", "Academy")]
+    guest_links  = [("/register", "📝", "Register"), ("/login", "🔑", "Sign in")]
+    user_links   = [("/profile", "👤", "My Profile"), ("/logout", "↩", "Sign out")]
+    enrolled_links = [
         ("/leaderboard", "&#127942;", "Leaderboard"),
         ("/levels",      "📖",        "Levels"),
-        ("/submit",      "🔑",        "Submit"),
+        ("/submit",      "✅",         "Submit"),
     ]
-    links = public_links + (auth_links if authenticated else [])
+
+    links = always_links
+    if authenticated:
+        links += enrolled_links + user_links
+    elif logged_in:
+        links += user_links
+    else:
+        links += guest_links
+
     items = ""
     for href, icon, label in links:
         cls = ' class="active"' if active == href else ""
@@ -1335,7 +1391,9 @@ ACCESS_CODE_TEMPLATE = """
 # ---------------------------------------------------------------------------
 @app.route("/")
 def index():
-    auth = _has_access_cookie()
+    enrolled = _is_enrolled()
+    logged_in = _is_logged_in()
+    auth = enrolled  # enrolled users get full nav
     return render_template_string(HOME_TEMPLATE,
         authenticated=auth,
         topbar=_topbar("/", authenticated=auth))
@@ -1438,7 +1496,7 @@ REQUEST_TEMPLATE = """<!DOCTYPE html>
     </div>
   {% else %}
     <h1>Request Access</h1>
-    <p class="sub">Enter your details and we'll review your request. Once approved, you'll receive a class code to enroll.</p>
+    <p class="sub">Create your account. Your request will be reviewed by Pathlock before you can enroll.</p>
     {% if msg %}<div class="msg-{{ msg_type }}">{{ msg }}</div>{% endif %}
     <form method="POST">
       <div class="field"><label>Full name *</label>
@@ -1447,11 +1505,15 @@ REQUEST_TEMPLATE = """<!DOCTYPE html>
         <input name="email" type="email" value="{{ form_email }}" required placeholder="jane@company.com"></div>
       <div class="field"><label>Company</label>
         <input name="company" value="{{ form_company }}" placeholder="ACME Corp"></div>
+      <div class="field"><label>Password *</label>
+        <input name="password" type="password" required placeholder="Choose a password (min 8 characters)"></div>
+      <div class="field"><label>Confirm password *</label>
+        <input name="password2" type="password" required placeholder="Repeat your password"></div>
       <div class="field"><label>Why do you want access? (optional)</label>
         <textarea name="message" placeholder="e.g. attending the SAP security workshop on July 30th">{{ form_message }}</textarea></div>
       <button class="submit-btn" type="submit">Request Access →</button>
     </form>
-    <p style="text-align:center;color:#555;font-size:0.85rem;margin-top:20px">Already approved? <a href="/enroll" style="color:#888">Go to enrollment →</a></p>
+    <p style="text-align:center;color:#555;font-size:0.85rem;margin-top:20px">Already have an account? <a href="/login" style="color:#888">Sign in →</a></p>
   {% endif %}
 </div>
 </body></html>
@@ -1459,30 +1521,34 @@ REQUEST_TEMPLATE = """<!DOCTYPE html>
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    """Step 1: email-only request. Admin approves; user then enrolls with class code."""
+    """Step 1: create account + request access. Admin approves; user then enrolls."""
+    if _is_logged_in():
+        return redirect("/profile")
     ip = request.remote_addr or "unknown"
 
     if request.method == "GET":
         return render_template_string(REQUEST_TEMPLATE,
-            style=STYLE, topbar=_topbar("/register"),
+            style=STYLE, topbar=_topbar("/register", authenticated=False),
             submitted=False, msg=None, msg_type="ok",
             form_name="", form_email="", form_company="", form_message="")
 
     # POST — rate limit first
     if not _check_rate_limit(ip):
         return render_template_string(REQUEST_TEMPLATE,
-            style=STYLE, topbar=_topbar("/register"),
+            style=STYLE, topbar=_topbar("/register", authenticated=False),
             submitted=False, msg="Too many requests. Please wait a moment.", msg_type="err",
             form_name="", form_email="", form_company="", form_message="")
 
-    name    = _sanitize_text(request.form.get("name", ""), 80)
-    email   = _sanitize_text(request.form.get("email", "").lower(), 120)
-    company = _sanitize_text(request.form.get("company", ""), 80)
-    message = _sanitize_text(request.form.get("message", ""), 400)
+    name      = _sanitize_text(request.form.get("name", ""), 80)
+    email     = _sanitize_text(request.form.get("email", "").lower(), 120)
+    company   = _sanitize_text(request.form.get("company", ""), 80)
+    message   = _sanitize_text(request.form.get("message", ""), 400)
+    password  = request.form.get("password", "")
+    password2 = request.form.get("password2", "")
 
     def err(msg):
         return render_template_string(REQUEST_TEMPLATE,
-            style=STYLE, topbar=_topbar("/register"),
+            style=STYLE, topbar=_topbar("/register", authenticated=False),
             submitted=False, msg=msg, msg_type="err",
             form_name=name, form_email=email, form_company=company, form_message=message)
 
@@ -1490,35 +1556,290 @@ def register():
         return err("Full name is required.")
     if not email or "@" not in email or "." not in email.split("@")[-1]:
         return err("A valid work email is required.")
+    if not password or len(password) < 8:
+        return err("Password must be at least 8 characters.")
+    if password != password2:
+        return err("Passwords do not match.")
 
+    pw_hash = _hash_password(password)
     db = get_db()
-    # Already fully registered
+    # Already fully registered as participant
     if db.execute("SELECT 1 FROM participants WHERE email=?", (email,)).fetchone():
         db.close()
-        return err("That email is already registered. Go to /enroll to join a class.")
+        return err("That email is already enrolled. Sign in at /login.")
     # Already has a pending request
     existing = db.execute(
         "SELECT status FROM pending_registrations WHERE email=?", (email,)).fetchone()
     if existing:
+        # Update password if they're re-submitting
+        db.execute("UPDATE pending_registrations SET password_hash=? WHERE email=?", (pw_hash, email))
+        db.commit()
         db.close()
+        session["user_email"] = email
         if existing["status"] == "pending":
             return render_template_string(REQUEST_TEMPLATE,
-                style=STYLE, topbar=_topbar("/register"),
+                style=STYLE, topbar=_topbar("/register", authenticated=False),
                 submitted=True, name=name)
         if existing["status"] == "approved":
-            return err("Your request is already approved — go to /enroll and enter your class code.")
+            return redirect("/enroll")
         return err("Your previous request was not approved. Contact jonathan.stross@pathlock.com for help.")
 
     db.execute(
-        "INSERT INTO pending_registrations (name, email, company, message) VALUES (?,?,?,?)",
-        (name, email, company, message))
+        "INSERT INTO pending_registrations (name, email, company, message, password_hash) VALUES (?,?,?,?,?)",
+        (name, email, company, message, pw_hash))
     db.commit()
     db.close()
     app.logger.info("New access request from %s <%s>", name, email)
+    session["user_email"] = email  # log them in immediately so they can check /profile
 
     return render_template_string(REQUEST_TEMPLATE,
-        style=STYLE, topbar=_topbar("/register"),
+        style=STYLE, topbar=_topbar("/register", authenticated=False),
         submitted=True, name=name)
+
+
+# ---------------------------------------------------------------------------
+# Login / Logout
+# ---------------------------------------------------------------------------
+
+LOGIN_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Sign In — Pathlock Academy</title>
+{{ style | safe }}
+<style>
+  .auth-box{max-width:440px;margin:80px auto;padding:40px;background:#12121f;border-radius:12px;border:1px solid #1e1e35}
+  .auth-box h1{font-size:1.8rem;margin:0 0 8px;color:#fff}
+  .auth-box .sub{color:#aaa;margin:0 0 28px;font-size:0.95rem}
+  .field{margin-bottom:18px}
+  .field label{display:block;color:#bbb;font-size:0.85rem;margin-bottom:6px;letter-spacing:.04em}
+  .field input{width:100%;background:#0f0f1a;border:1px solid #2a2a45;border-radius:6px;
+    padding:10px 14px;color:#fff;font-size:1rem;box-sizing:border-box}
+  .field input:focus{outline:none;border-color:#4f8ef7}
+  .msg-err{background:#3a1a1a;border:1px solid #c0392b;color:#e74c3c;padding:12px 16px;border-radius:6px;margin-bottom:20px;font-size:0.9rem}
+  .submit-btn{width:100%;padding:12px;background:#c8102e;color:#fff;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:8px}
+  .submit-btn:hover{background:#a00d24}
+  .links{text-align:center;margin-top:18px;font-size:0.85rem;color:#555}
+  .links a{color:#888;text-decoration:none}
+  .links a:hover{color:#bbb}
+</style>
+</head>
+<body>
+{{ topbar | safe }}
+<div class="auth-box">
+  <h1>Sign In</h1>
+  <p class="sub">Use the email and password you set when you registered.</p>
+  {% if msg %}<div class="msg-err">{{ msg }}</div>{% endif %}
+  <form method="POST">
+    <div class="field"><label>Email</label>
+      <input name="email" type="email" value="{{ form_email }}" required autofocus placeholder="jane@company.com"></div>
+    <div class="field"><label>Password</label>
+      <input name="password" type="password" required placeholder="••••••••"></div>
+    <button class="submit-btn" type="submit">Sign In →</button>
+  </form>
+  <div class="links">
+    No account yet? <a href="/register">Request access</a> &nbsp;·&nbsp;
+    Already approved? <a href="/enroll">Enroll in a class</a>
+  </div>
+</div>
+</body></html>"""
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if _is_logged_in():
+        return redirect("/profile")
+    if request.method == "GET":
+        return render_template_string(LOGIN_TEMPLATE,
+            style=STYLE, topbar=_topbar("/login", authenticated=False),
+            msg=None, form_email="")
+    email    = _sanitize_text(request.form.get("email", "").lower(), 120)
+    password = request.form.get("password", "")
+
+    def err(msg):
+        return render_template_string(LOGIN_TEMPLATE,
+            style=STYLE, topbar=_topbar("/login", authenticated=False),
+            msg=msg, form_email=email)
+
+    if not email or not password:
+        return err("Email and password are required.")
+
+    pw_hash = _hash_password(password)
+    db = get_db()
+    # Check enrolled participants first
+    p = db.execute("SELECT * FROM participants WHERE email=? AND password_hash=?", (email, pw_hash)).fetchone()
+    if p:
+        db.close()
+        session["user_email"] = email
+        return redirect("/profile")
+    # Check pending registrations
+    pr = db.execute("SELECT * FROM pending_registrations WHERE email=? AND password_hash=?", (email, pw_hash)).fetchone()
+    db.close()
+    if pr:
+        session["user_email"] = email
+        return redirect("/profile")
+    return err("Incorrect email or password.")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+
+# ---------------------------------------------------------------------------
+# Profile page
+# ---------------------------------------------------------------------------
+
+PROFILE_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>My Profile — Pathlock Academy</title>
+{{ style | safe }}
+<style>
+  .profile-box{max-width:640px;margin:50px auto;padding:0 24px 60px}
+  .profile-header{background:#12121f;border:1px solid #1e1e35;border-radius:12px;padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;gap:20px}
+  .profile-avatar{width:64px;height:64px;background:#c8102e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;color:#fff;flex-shrink:0}
+  .profile-name{font-size:1.4rem;font-weight:700;color:#fff;margin:0 0 4px}
+  .profile-email{color:#888;font-size:0.9rem;margin:0}
+  .status-card{background:#12121f;border:1px solid #1e1e35;border-radius:10px;padding:22px 28px;margin-bottom:16px}
+  .status-card h3{font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;margin:0 0 14px}
+  .status-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .status-row:last-child{margin-bottom:0}
+  .status-label{color:#888;font-size:0.88rem;min-width:130px}
+  .status-value{color:#fff;font-size:0.88rem;font-weight:600}
+  .badge-pending{background:#2a2210;border:1px solid #f39c12;color:#f39c12;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700}
+  .badge-approved{background:#0f2a1a;border:1px solid #27ae60;color:#2ecc71;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700}
+  .badge-rejected{background:#3a1a1a;border:1px solid #c0392b;color:#e74c3c;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700}
+  .badge-enrolled{background:#0a1e2a;border:1px solid #2980b9;color:#3498db;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700}
+  .progress-bar-bg{background:#1a1a2e;border-radius:4px;height:10px;flex:1;overflow:hidden}
+  .progress-bar-fill{background:#c8102e;height:100%;border-radius:4px;transition:width .4s}
+  .action-btn{display:inline-block;background:#c8102e;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-size:0.9rem;font-weight:600;margin-top:8px}
+  .action-btn:hover{background:#a00d24}
+  .action-btn.secondary{background:#1e1e35;color:#aaa}
+  .action-btn.secondary:hover{background:#2a2a45;color:#fff}
+  .info-msg{background:#1a1a2e;border:1px solid #2a2a45;border-radius:8px;padding:14px 18px;color:#aaa;font-size:0.88rem;line-height:1.6}
+  .cred-block{background:#0f0f1a;border:1px solid #2a2a45;border-radius:8px;padding:16px;font-family:monospace;font-size:0.88rem;line-height:2}
+  .cred-block .lbl{color:#666;font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em}
+  .cred-block .val{color:#ffd700}
+</style>
+</head>
+<body>
+{{ topbar | safe }}
+<div class="profile-box">
+  <div class="profile-header">
+    <div class="profile-avatar">{{ name[0].upper() }}</div>
+    <div>
+      <div class="profile-name">{{ name }}</div>
+      <div class="profile-email">{{ email }}{% if company %} &nbsp;·&nbsp; {{ company }}{% endif %}</div>
+    </div>
+  </div>
+
+  <div class="status-card">
+    <h3>Access Status</h3>
+    <div class="status-row">
+      <span class="status-label">Pathlock Approval</span>
+      {% if enrolled %}
+        <span class="badge-enrolled">✓ Enrolled</span>
+      {% elif approval_status == 'approved' %}
+        <span class="badge-approved">✓ Approved — ready to enroll</span>
+      {% elif approval_status == 'pending' %}
+        <span class="badge-pending">⏳ Pending review</span>
+      {% else %}
+        <span class="badge-rejected">✗ Not approved</span>
+      {% endif %}
+    </div>
+    {% if enrolled %}
+    <div class="status-row">
+      <span class="status-label">Class</span>
+      <span class="status-value">{{ class_name or '—' }}</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">SAP Username</span>
+      <span class="status-value" style="font-family:monospace;color:#ffd700">{{ sap_username }}</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">SAP Client</span>
+      <span class="status-value" style="font-family:monospace">{{ sap_client }}</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if enrolled %}
+  <div class="status-card">
+    <h3>Progress</h3>
+    <div class="status-row">
+      <span class="status-label">Levels completed</span>
+      <span class="status-value">{{ levels_done }} / {{ total_levels }}</span>
+    </div>
+    <div class="status-row" style="align-items:center">
+      <span class="status-label">Score</span>
+      <span class="status-value">{{ total_score }} pts</span>
+    </div>
+    {% if total_levels > 0 %}
+    <div class="status-row" style="gap:16px;margin-top:4px">
+      <span class="status-label">Overall</span>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" style="width:{{ (levels_done / total_levels * 100)|int }}%"></div>
+      </div>
+      <span style="color:#888;font-size:0.8rem;min-width:36px">{{ (levels_done / total_levels * 100)|int }}%</span>
+    </div>
+    {% endif %}
+    <div style="margin-top:16px">
+      <a href="/levels" class="action-btn">📖 Open Levels</a>
+      <a href="/leaderboard" class="action-btn secondary" style="margin-left:8px">🏆 Leaderboard</a>
+    </div>
+  </div>
+  {% elif approval_status == 'approved' %}
+  <div class="info-msg">
+    ✅ Your access has been approved! Enter the class enrollment code your instructor gave you to get started.
+    <br><br><a href="/enroll" class="action-btn" style="display:inline-block;margin-top:4px">Enroll in a class →</a>
+  </div>
+  {% else %}
+  <div class="info-msg">
+    ⏳ Your request is being reviewed by the Pathlock team. You'll be able to enroll once approved.<br>
+    Questions? <a href="mailto:jonathan.stross@pathlock.com" style="color:#888">jonathan.stross@pathlock.com</a>
+  </div>
+  {% endif %}
+</div>
+</body></html>"""
+
+@app.route("/profile")
+def profile():
+    if not _is_logged_in():
+        return redirect("/login")
+    status, user = _current_user()
+    if not user:
+        session.clear()
+        return redirect("/login")
+
+    db = get_db()
+    codes = load_codes()
+    total_levels = len(codes)
+
+    if status == "enrolled":
+        sap_username = user["sap_username"]
+        sap_client   = user.get("sap_client", "")
+        # Get class name
+        cls_row = db.execute("SELECT name FROM classes WHERE id=?", (user["class_id"],)).fetchone() if user["class_id"] else None
+        class_name = cls_row["name"] if cls_row else ""
+        # Progress
+        levels_done = db.execute(
+            "SELECT COUNT(DISTINCT level) FROM submissions WHERE participant=? AND correct=1",
+            (sap_username,)).fetchone()[0]
+        total_score = db.execute(
+            "SELECT COALESCE(SUM(points),0) FROM submissions WHERE participant=? AND correct=1",
+            (sap_username,)).fetchone()[0]
+        db.close()
+        return render_template_string(PROFILE_TEMPLATE,
+            style=STYLE, topbar=_topbar("/profile", authenticated=True),
+            name=user["name"], email=user["email"], company=user.get("company",""),
+            enrolled=True, approval_status="approved",
+            sap_username=sap_username, sap_client=sap_client, class_name=class_name,
+            levels_done=levels_done, total_levels=total_levels, total_score=total_score)
+    else:
+        db.close()
+        return render_template_string(PROFILE_TEMPLATE,
+            style=STYLE, topbar=_topbar("/profile", authenticated=False),
+            name=user["name"], email=user["email"], company=user.get("company",""),
+            enrolled=False, approval_status=status,
+            sap_username="", sap_client="", class_name="",
+            levels_done=0, total_levels=total_levels, total_score=0)
 
 
 # ---------------------------------------------------------------------------
@@ -1582,12 +1903,9 @@ ENROLL_TEMPLATE = """<!DOCTYPE html>
     </div>
   {% else %}
     <h1>Enroll in a Class</h1>
-    <p class="sub">Your request must be approved before you can enroll. Enter your email, SAP username, and the class code your instructor provided.</p>
+    <p class="sub">Your request must be approved before you can enroll. Enter your SAP username and the class code your instructor provided.</p>
     {% if msg %}<div class="msg-{{ msg_type }}">{{ msg }}</div>{% endif %}
     <form method="POST">
-      <div class="field"><label>Your email *</label>
-        <input name="email" type="email" value="{{ form_email }}" required placeholder="jane@company.com">
-        <div class="hint">Must match the email you used to request access.</div></div>
       <div class="field"><label>Choose your SAP username *</label>
         <input name="sap_username" value="{{ form_sap }}" required placeholder="JSMITH" maxlength="12"
                style="text-transform:uppercase">
@@ -1611,32 +1929,32 @@ ENROLL_TEMPLATE = """<!DOCTYPE html>
 @app.route("/enroll", methods=["GET", "POST"])
 def enroll():
     """Step 2: approved users enroll in a specific class using the class code."""
+    if not _is_logged_in():
+        return redirect("/login")
     ip = request.remote_addr or "unknown"
+    logged_email = session["user_email"]
 
     if request.method == "GET":
         return render_template_string(ENROLL_TEMPLATE,
-            style=STYLE, topbar=_topbar("/enroll"),
+            style=STYLE, topbar=_topbar("/enroll", authenticated=False),
             success=False, msg=None, msg_type="ok",
-            form_email="", form_sap="", form_code="")
+            form_sap="", form_code="")
 
     if not _check_rate_limit(ip):
         return render_template_string(ENROLL_TEMPLATE,
-            style=STYLE, topbar=_topbar("/enroll"),
+            style=STYLE, topbar=_topbar("/enroll", authenticated=False),
             success=False, msg="Too many attempts. Please wait.", msg_type="err",
-            form_email="", form_sap="", form_code="")
+            form_sap="", form_code="")
 
-    email        = _sanitize_text(request.form.get("email", "").lower(), 120)
     sap_username = _sanitize_text(request.form.get("sap_username", "").upper(), 12)
     enroll_code  = _sanitize_text(request.form.get("enroll_code", "").strip(), 80)
 
     def err(msg):
         return render_template_string(ENROLL_TEMPLATE,
-            style=STYLE, topbar=_topbar("/enroll"),
+            style=STYLE, topbar=_topbar("/enroll", authenticated=False),
             success=False, msg=msg, msg_type="err",
-            form_email=email, form_sap=sap_username, form_code=enroll_code)
+            form_sap=sap_username, form_code=enroll_code)
 
-    if not email or "@" not in email:
-        return err("A valid email is required.")
     if not sap_username or len(sap_username) < 3 or len(sap_username) > 12:
         return err("SAP username must be 3–12 characters.")
     if not re.match(r'^[A-Z0-9_]+$', sap_username):
@@ -1646,7 +1964,6 @@ def enroll():
     if not request.form.get("w_agree"):
         return err("You must accept the participant agreement to enroll.")
 
-    # SAP default user check
     sap_defaults = {"SAP*","DDIC","DEVELOPER","SAPCPIC","TMSADM","EARLYWATCH",
                     "RFCUSER","SOLMAN_BTC","SM_INTERN","SAPSYS","SAPJSF","SAPABC"}
     if sap_username in sap_defaults:
@@ -1656,21 +1973,22 @@ def enroll():
 
     # Check approval status
     pending = db.execute(
-        "SELECT * FROM pending_registrations WHERE email=?", (email,)).fetchone()
+        "SELECT * FROM pending_registrations WHERE email=?", (logged_email,)).fetchone()
     if not pending:
         db.close()
-        return err("No access request found for this email. Please request access at /register first.")
+        return err("No access request found for your account. Please contact your instructor.")
     if pending["status"] == "pending":
         db.close()
-        return err("Your request is still pending admin approval. Check back soon or contact jonathan.stross@pathlock.com.")
+        return err("Your request is still pending admin approval. Check your profile for status.")
     if pending["status"] == "rejected":
         db.close()
         return err("Your access request was not approved. Contact jonathan.stross@pathlock.com.")
 
     # Already enrolled
-    if db.execute("SELECT 1 FROM participants WHERE email=?", (email,)).fetchone():
+    if db.execute("SELECT 1 FROM participants WHERE email=?", (logged_email,)).fetchone():
         db.close()
-        return err("This email is already enrolled. Your SAP credentials were provided when you enrolled.")
+        session["user_email"] = logged_email
+        return redirect("/profile")
     if db.execute("SELECT 1 FROM participants WHERE sap_username=?", (sap_username,)).fetchone():
         db.close()
         return err(f"SAP username '{sap_username}' is already taken — choose another.")
@@ -1704,7 +2022,7 @@ def enroll():
         sap_username=sap_username,
         first_name=name.split()[0] if name.split() else name,
         last_name=" ".join(name.split()[1:]) if len(name.split()) > 1 else "",
-        email=email,
+        email=logged_email,
         conn_params=slot_conn_params,
     )
     sap_warn = None
@@ -1724,18 +2042,18 @@ def enroll():
     try:
         db.execute(
             "INSERT INTO participants "
-            "(name, email, sap_username, company, class_id, sap_created, wg_ip, wg_conf, server, sap_client, waiver_accepted) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,1)",
-            (name, email, sap_username, pending["company"], cls["id"],
-             1 if sap_ok else 0, wg_ip, wg_conf, server_alias, slot_client))
+            "(name, email, sap_username, company, password_hash, class_id, sap_created, wg_ip, wg_conf, server, sap_client, waiver_accepted) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,1)",
+            (name, logged_email, sap_username, pending["company"], pending["password_hash"],
+             cls["id"], 1 if sap_ok else 0, wg_ip, wg_conf, server_alias, slot_client))
         db.commit()
     except sqlite3.IntegrityError as exc:
         db.close()
         return err(f"Enrollment failed: {exc}")
 
-    # Set access cookie so the user can access /levels immediately
-    resp = Response(render_template_string(ENROLL_TEMPLATE,
-        style=STYLE, topbar=_topbar("/enroll"),
+    db.close()
+    return render_template_string(ENROLL_TEMPLATE,
+        style=STYLE, topbar=_topbar("/enroll", authenticated=True),
         success=True,
         class_name=cls["name"],
         sap_username=sap_username,
@@ -1746,11 +2064,7 @@ def enroll():
         wg_conf=wg_conf,
         sap_warn=sap_warn,
         wg_warn=wg_warn,
-        sap_available=SAP_AVAILABLE))
-    resp.set_cookie(_ACCESS_COOKIE, _access_token(),
-        max_age=86400, httponly=True, samesite="Lax")
-    db.close()
-    return resp
+        sap_available=SAP_AVAILABLE)
 
 
 
