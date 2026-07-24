@@ -807,8 +807,7 @@ STYLE = """
 # ---------------------------------------------------------------------------
 # Shared topbar snippet — injected into every main page
 # ---------------------------------------------------------------------------
-def _topbar(active: str = "") -> str:
-    authenticated = _has_access_cookie()
+def _topbar(active: str = "", authenticated: bool = True) -> str:
     public_links = [
         ("/",         "&#127968;", "Academy"),   # always visible
         ("/register", "📝",        "Register"),  # always visible
@@ -872,7 +871,7 @@ HOME_TEMPLATE = """
   </style>
 </head>
 <body>
-  """ + _topbar("/") + """
+  {{ topbar | safe }}
 
   <div class="hero">
     <h1>Welcome to <span>Pathlock</span> Academy</h1>
@@ -1336,7 +1335,10 @@ ACCESS_CODE_TEMPLATE = """
 # ---------------------------------------------------------------------------
 @app.route("/")
 def index():
-    return render_template_string(HOME_TEMPLATE, authenticated=_has_access_cookie())
+    auth = _has_access_cookie()
+    return render_template_string(HOME_TEMPLATE,
+        authenticated=auth,
+        topbar=_topbar("/", authenticated=auth))
 
 
 @app.route("/leaderboard")
