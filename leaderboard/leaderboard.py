@@ -2314,7 +2314,7 @@ def admin_approvals():
                 f"style='background:#2a2a3e;color:#aaa;border:none;padding:1px 6px;border-radius:3px;"
                 f"cursor:pointer;font-size:0.78em;margin-left:6px'>Copy</button>"
             )
-            if p.get("assigned_class_id"):
+            if p["assigned_class_id"]:
                 class_name_for_tok = next((c["name"] for c in classes if c["id"] == p["assigned_class_id"]), "?")
                 token_cell += f"<br><span style='color:#888;font-size:0.75em'>{class_name_for_tok}</span>"
 
@@ -2346,7 +2346,7 @@ def admin_approvals():
         elif p["status"] == "approved" and p["enroll_token"]:
             # Re-generate token (e.g. if they lost it)
             if classes:
-                cur_class = p.get("assigned_class_id") or (classes[0]["id"] if classes else "")
+                cur_class = p["assigned_class_id"] or (classes[0]["id"] if classes else "")
                 opt_regen = "".join(
                     f"<option value='{c['id']}' {'selected' if c['id']==cur_class else ''}>{c['name']}</option>"
                     for c in classes
@@ -2491,7 +2491,6 @@ def admin_classes():
             f"<tr style='border-top:1px solid #333'>"
             f"<td {td}><strong style='color:#ffd700'>{c['name']}</strong></td>"
             f"<td {td} style='color:#aaa;font-size:0.85em'>{c['description'] or '—'}</td>"
-            f"<td {td}><code style='background:#1a1a2e;padding:2px 8px;border-radius:4px;color:#4f8ef7'>{c['enroll_code']}</code></td>"
             f"<td {td}>{status}</td>"
             f"<td {td} style='color:#aaa;font-size:0.8em'>{(c['created_at'] or '')[:16]}</td>"
             f"<td {td}>"
@@ -2506,11 +2505,10 @@ def admin_classes():
         f"<form method='POST' action='/admin/classes/create' style='margin-bottom:24px'>"
         f"<input name='name' placeholder='Class name' required style='background:#1a1a2e;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:4px;margin-right:8px'>"
         f"<input name='description' placeholder='Description (optional)' style='background:#1a1a2e;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:4px;margin-right:8px;width:220px'>"
-        f"<input name='enroll_code' placeholder='Enrollment code' required style='background:#1a1a2e;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:4px;margin-right:8px'>"
         f"<button type='submit' style='background:#c8102e;color:#fff;border:none;padding:6px 16px;border-radius:4px;cursor:pointer'>Create Class</button>"
         f"</form>"
         f"<table style='border-collapse:collapse;width:100%'>"
-        f"<tr><th {th}>Name</th><th {th}>Description</th><th {th}>Enroll Code</th>"
+        f"<tr><th {th}>Name</th><th {th}>Description</th>"
         f"<th {th}>Status</th><th {th}>Created</th><th {th}>Actions</th></tr>"
         f"{rows}</table></body></html>"
     )
@@ -2523,9 +2521,9 @@ def admin_class_create():
         return auth_err
     name        = _sanitize_text(request.form.get("name", ""), 80)
     description = _sanitize_text(request.form.get("description", ""), 200)
-    enroll_code = _sanitize_text(request.form.get("enroll_code", "").strip(), 80)
-    if not name or not enroll_code:
-        return "Name and enrollment code are required.", 400
+    if not name:
+        return "Class name is required.", 400
+    enroll_code = secrets.token_hex(8)  # auto-generated, not used for enrollment
     db = get_db()
     try:
         db.execute(
@@ -2534,7 +2532,7 @@ def admin_class_create():
         db.commit()
     except sqlite3.IntegrityError:
         db.close()
-        return "Enrollment code already exists — choose a unique code.", 400
+        return "Failed to create class (duplicate code), please try again.", 400
     db.close()
     return redirect("/admin/classes")
 
