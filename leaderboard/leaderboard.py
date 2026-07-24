@@ -2206,6 +2206,11 @@ def admin_approvals():
                 f"<form method='POST' action='/admin/approvals/{p['id']}/reject' style='display:inline'>"
                 f"<button style='background:#c0392b;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.85em'>✗ Reject</button></form>"
             )
+        actions += (
+            f"<form method='POST' action='/admin/approvals/{p['id']}/delete' style='display:inline'"
+            f" onsubmit=\"return confirm('Delete {p['name']} permanently?')\">"
+            f"<button style='background:#555;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;margin-left:4px'>🗑 Delete</button></form>"
+        )
         rows += (
             f"<tr style='border-top:1px solid #333'>"
             f"<td {td}>{p['name']}</td>"
@@ -2247,6 +2252,41 @@ def admin_reject(req_id):
     db = get_db()
     db.execute("UPDATE pending_registrations SET status='rejected' WHERE id=?", (req_id,))
     db.commit()
+    db.close()
+    return redirect("/admin/approvals")
+
+@app.route("/admin/approvals/<int:req_id>/delete", methods=["POST"])
+def admin_delete_request(req_id):
+    """Permanently delete an access request (and the participant record if enrolled)."""
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    db = get_db()
+    row = db.execute("SELECT email FROM pending_registrations WHERE id=?", (req_id,)).fetchone()
+    if row:
+        email = row["email"]
+        # Also remove participant row + submissions if they enrolled
+        p = db.execute("SELECT sap_username, wg_ip, server, sap_client FROM participants WHERE email=?", (email,)).fetchone()
+        if p:
+            uname = p["sap_username"]
+            # Free slot
+            db.execute("UPDATE slots SET assigned_to=NULL, assigned_at=NULL WHERE assigned_to=?", (uname,))
+            db.execute("DELETE FROM submissions WHERE participant=?", (uname,))
+            db.execute("DELETE FROM participants WHERE sap_username=?", (uname,))
+            # Best-effort SAP + WG cleanup (fire and forget)
+            try:
+                conn_params = None
+                if p["server"] and p["sap_client"] and p["server"] in SAP_SERVERS:
+                    conn_params = {"host": SAP_SERVERS[p["server"]]["host"],
+                                   "sysnr": SAP_SERVERS[p["server"]]["sysnr"],
+                                   "client": p["sap_client"]}
+                delete_sap_user(uname, conn_params=conn_params)
+                if p["wg_ip"]:
+                    remove_customer_peer(p["wg_ip"], server_alias=p["server"])
+            except Exception as e:
+                app.logger.warning("Cleanup error for %s: %s", uname, e)
+        db.execute("DELETE FROM pending_registrations WHERE id=?", (req_id,))
+        db.commit()
     db.close()
     return redirect("/admin/approvals")
 
