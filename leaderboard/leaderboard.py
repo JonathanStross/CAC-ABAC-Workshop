@@ -1912,7 +1912,7 @@ def profile():
             "JOIN participants p ON p.sap_username = s.participant "
             "WHERE p.email=? LIMIT 1", (pr_email,)).fetchone() is not None
         # Simpler fallback: check if pending_reg has an assigned_class_id (means they were invited before)
-        if not previously_enrolled and user.get("assigned_class_id"):
+        if not previously_enrolled and user["assigned_class_id"]:
             previously_enrolled = True
         db.close()
         return render_template_string(PROFILE_TEMPLATE,
