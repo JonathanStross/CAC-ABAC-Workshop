@@ -49,15 +49,15 @@ VIDEOS_DIR = os.path.join(os.path.dirname(__file__), "..", "videos")
 # Example:  REGISTER_CODE=meridian2026
 REGISTER_CODE    = os.environ.get("REGISTER_CODE", "").strip()
 
-# Shared cookie name and helper — used by /register and /levels/* gates
+# Shared cookie name and helper — set after successful class enrollment
 _ACCESS_COOKIE = "wb_access"
 
 def _access_token() -> str:
-    """HMAC token stored in the access cookie once the code is verified."""
-    return hashlib.sha256(REGISTER_CODE.encode()).hexdigest() if REGISTER_CODE else ""
+    """HMAC token stored in the access cookie once the user has enrolled in a class."""
+    return hashlib.sha256(REGISTER_CODE.encode()).hexdigest() if REGISTER_CODE else "enrolled"
 
 def _has_access_cookie() -> bool:
-    """Return True if the browser has a valid access cookie (or no code is configured)."""
+    """Return True if the browser has a valid access cookie (set at enrollment)."""
     if not REGISTER_CODE:
         return True
     token = request.cookies.get(_ACCESS_COOKIE, "")
@@ -417,7 +417,7 @@ function findPeers() {
 @app.route("/levels")
 def levels_index():
     if not _has_access_cookie():
-        return redirect("/register")
+        return redirect("/enroll")
     codes = load_codes()
     items = []
     for lvl_key, info in codes.items():
@@ -451,7 +451,7 @@ def levels_index():
 @app.route("/levels/<int:level_num>")
 def level_guide(level_num):
     if not _has_access_cookie():
-        return redirect("/register")
+        return redirect("/enroll")
     if level_num in LOCKED_LEVELS:
         return render_template_string("""<!DOCTYPE html>
 <html>
@@ -571,12 +571,34 @@ def get_db():
 def init_db():
     db = get_db()
     db.executescript("""
+        -- Pending registrations — email only, awaiting admin approval
+        CREATE TABLE IF NOT EXISTS pending_registrations (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            name          TEXT NOT NULL,
+            email         TEXT NOT NULL UNIQUE,
+            company       TEXT,
+            message       TEXT,
+            submitted_at  TEXT DEFAULT (datetime('now')),
+            status        TEXT DEFAULT 'pending'  -- pending | approved | rejected
+        );
+
+        -- Classes — each class has a unique enroll_code; participants enroll after approval
+        CREATE TABLE IF NOT EXISTS classes (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            name          TEXT NOT NULL,
+            description   TEXT,
+            enroll_code   TEXT NOT NULL UNIQUE,
+            active        INTEGER DEFAULT 1,
+            created_at    TEXT DEFAULT (datetime('now'))
+        );
+
         CREATE TABLE IF NOT EXISTS participants (
             id            INTEGER PRIMARY KEY AUTOINCREMENT,
             name          TEXT NOT NULL,
             email         TEXT NOT NULL UNIQUE,
             sap_username  TEXT NOT NULL UNIQUE,
             company       TEXT,
+            class_id      INTEGER REFERENCES classes(id),
             sap_created   INTEGER DEFAULT 0,
             wg_ip         TEXT,
             wg_conf       TEXT,
@@ -609,6 +631,7 @@ def init_db():
         ("server",          "TEXT"),
         ("sap_client",      "TEXT"),
         ("waiver_accepted", "INTEGER DEFAULT 0"),
+        ("class_id",        "INTEGER"),
     ]:
         if col not in existing:
             db.execute(f"ALTER TABLE participants ADD COLUMN {col} {typedef}")
@@ -1306,7 +1329,7 @@ def index():
 @app.route("/leaderboard")
 def leaderboard_page():
     if not _has_access_cookie():
-        return redirect("/register")
+        return redirect("/enroll")
     rows = get_leaderboard()
     codes = load_codes()
     return render_template_string(LEADERBOARD_TEMPLATE,
@@ -1359,126 +1382,296 @@ def api_server_peers():
         "peers": [dict(p) for p in peers],
     })
 
+# ---------------------------------------------------------------------------
+# Step 1 — Self-registration (email only, no code needed)
+# Creates a pending_registrations record; admin approves from admin panel.
+# ---------------------------------------------------------------------------
+
+REQUEST_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Request Access — Pathlock</title>
+{{ style | safe }}
+<style>
+  .reg-box{max-width:540px;margin:80px auto;padding:40px;background:#12121f;border-radius:12px;border:1px solid #1e1e35}
+  .reg-box h1{font-size:1.8rem;margin:0 0 8px;color:#fff}
+  .reg-box .sub{color:#aaa;margin:0 0 32px;font-size:0.95rem}
+  .field{margin-bottom:18px}
+  .field label{display:block;color:#bbb;font-size:0.85rem;margin-bottom:6px;letter-spacing:.04em}
+  .field input,.field textarea{width:100%;background:#0f0f1a;border:1px solid #2a2a45;border-radius:6px;
+    padding:10px 14px;color:#fff;font-size:1rem;box-sizing:border-box}
+  .field textarea{height:80px;resize:vertical}
+  .field input:focus,.field textarea:focus{outline:none;border-color:#4f8ef7}
+  .msg-err{background:#3a1a1a;border:1px solid #c0392b;color:#e74c3c;padding:12px 16px;border-radius:6px;margin-bottom:20px;font-size:0.9rem}
+  .msg-ok{background:#0f2a1a;border:1px solid #27ae60;color:#2ecc71;padding:12px 16px;border-radius:6px;margin-bottom:20px;font-size:0.9rem}
+  .submit-btn{width:100%;padding:12px;background:#c8102e;color:#fff;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:8px}
+  .submit-btn:hover{background:#a00d24}
+  .pending-box{text-align:center;padding:40px 20px}
+  .pending-box .icon{font-size:4rem;margin-bottom:16px}
+  .pending-box h2{color:#fff;margin:0 0 12px}
+  .pending-box p{color:#aaa;max-width:420px;margin:0 auto}
+</style>
+</head>
+<body>
+{{ topbar | safe }}
+<div class="reg-box">
+  {% if submitted %}
+    <div class="pending-box">
+      <div class="icon">📬</div>
+      <h2>Request received</h2>
+      <p>Thanks <strong>{{ name }}</strong>. We've received your request and will review it shortly.<br><br>
+         Once approved, you'll be able to enroll in a class at <strong>/enroll</strong> using the class code your instructor provides.</p>
+    </div>
+  {% else %}
+    <h1>Request Access</h1>
+    <p class="sub">Enter your details and we'll review your request. Once approved, you'll receive a class code to enroll.</p>
+    {% if msg %}<div class="msg-{{ msg_type }}">{{ msg }}</div>{% endif %}
+    <form method="POST">
+      <div class="field"><label>Full name *</label>
+        <input name="name" value="{{ form_name }}" required placeholder="Jane Smith"></div>
+      <div class="field"><label>Work email *</label>
+        <input name="email" type="email" value="{{ form_email }}" required placeholder="jane@company.com"></div>
+      <div class="field"><label>Company</label>
+        <input name="company" value="{{ form_company }}" placeholder="ACME Corp"></div>
+      <div class="field"><label>Why do you want access? (optional)</label>
+        <textarea name="message" placeholder="e.g. attending the SAP security workshop on July 30th">{{ form_message }}</textarea></div>
+      <button class="submit-btn" type="submit">Request Access →</button>
+    </form>
+  {% endif %}
+</div>
+</body></html>
+"""
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    """Step 1: email-only request. Admin approves; user then enrolls with class code."""
     ip = request.remote_addr or "unknown"
 
-    # ---- Step 1: access code gate ------------------------------------------
-    # If REGISTER_CODE is set, the user must first POST the correct code.
-    # We store a simple session token in a cookie once the code is verified.
-    # Reuses the module-level _has_access_cookie() / _access_token() helpers.
-
-    # POST with only access_code field → validate the gate
-    if request.method == "POST" and "access_code" in request.form and "name" not in request.form:
-        entered = request.form.get("access_code", "").strip()
-        if REGISTER_CODE and hmac.compare_digest(
-                hashlib.sha256(entered.encode()).hexdigest(),
-                _access_token()):
-            # Correct — set cookie and show the registration form
-            resp = Response(render_template_string(REGISTER_TEMPLATE,
-                success=False, msg=None, msg_type="ok", sap_available=SAP_AVAILABLE,
-                form_name="", form_email="", form_sap="", form_company=""))
-            resp.set_cookie(_ACCESS_COOKIE, _access_token(),
-                max_age=86400, httponly=True, samesite="Lax")
-            return resp
-        return render_template_string(ACCESS_CODE_TEMPLATE,
-            error="Incorrect access code. Check with your instructor.")
-
-    # GET or unauthed → show gate or form depending on cookie
     if request.method == "GET":
-        if not _has_access_cookie():
-            return render_template_string(ACCESS_CODE_TEMPLATE, error=None)
-        return render_template_string(REGISTER_TEMPLATE,
-            success=False, msg=None, msg_type="ok", sap_available=SAP_AVAILABLE,
-            form_name="", form_email="", form_sap="", form_company="")
+        return render_template_string(REQUEST_TEMPLATE,
+            style=STYLE, topbar=_topbar("/register"),
+            submitted=False, msg=None, msg_type="ok",
+            form_name="", form_email="", form_company="", form_message="")
 
-    # ---- Step 2: actual registration POST ----------------------------------
-    if not _has_access_cookie():
-        return render_template_string(ACCESS_CODE_TEMPLATE,
-            error="Session expired — please enter the access code again.")
-
-    # Rate limiting
+    # POST — rate limit first
     if not _check_rate_limit(ip):
-        return render_template_string(REGISTER_TEMPLATE,
-            success=False,
-            msg="Too many registration attempts from your IP. Please wait a while.",
-            msg_type="err", sap_available=SAP_AVAILABLE,
-            form_name="", form_email="", form_sap="", form_company="")
+        return render_template_string(REQUEST_TEMPLATE,
+            style=STYLE, topbar=_topbar("/register"),
+            submitted=False, msg="Too many requests. Please wait a moment.", msg_type="err",
+            form_name="", form_email="", form_company="", form_message="")
 
-    # ---- Sanitize inputs ---------------------------------------------------
-    raw_fields = {
-        "name":         request.form.get("name", ""),
-        "email":        request.form.get("email", ""),
-        "sap_username": request.form.get("sap_username", ""),
-        "company":      request.form.get("company", ""),
-    }
-    name         = _sanitize_text(raw_fields["name"], 80)
-    email        = _sanitize_text(raw_fields["email"].lower(), 120)
-    sap_username = _sanitize_text(raw_fields["sap_username"].upper(), 12)
-    company      = _sanitize_text(raw_fields["company"], 80)
+    name    = _sanitize_text(request.form.get("name", ""), 80)
+    email   = _sanitize_text(request.form.get("email", "").lower(), 120)
+    company = _sanitize_text(request.form.get("company", ""), 80)
+    message = _sanitize_text(request.form.get("message", ""), 400)
 
-    # ---- Shenanigans check — runs on raw input before sanitization ---------
-    funny = _detect_shenanigans(raw_fields)
-    if funny:
-        app.logger.warning("Shenanigans detected from %s: %s", ip, raw_fields)
-        # Count SAP-default-user attempts via cookie — flip the screen on 2nd try
-        sap_default_cookie = "sap_naughty"
-        prior_attempts = int(request.cookies.get(sap_default_cookie, "0"))
-        sap_defaults = {"SAP*","DDIC","DEVELOPER","SAPCPIC","TMSADM","EARLYWATCH",
-                        "RFCUSER","SOLMAN_BTC","SM_INTERN","SAPSYS","SAPJSF","SAPABC"}
-        is_sap_default = raw_fields.get("sap_username","").strip().upper() in sap_defaults
-        if is_sap_default and prior_attempts >= 1:
-            resp = Response(render_template_string(FLIP_TEMPLATE,
-                username=raw_fields.get("sap_username","").strip().upper()))
-            resp.set_cookie(sap_default_cookie, "0", max_age=3600, httponly=True)
-            return resp
-        resp = Response(render_template_string(REGISTER_TEMPLATE,
-            success=False, msg=funny, msg_type="err", sap_available=SAP_AVAILABLE,
-            form_name="", form_email="", form_sap="", form_company=""))
-        if is_sap_default:
-            resp.set_cookie(sap_default_cookie, str(prior_attempts + 1), max_age=3600, httponly=True)
-        return resp
-
-    # ---- Validation --------------------------------------------------------
     def err(msg):
-        return render_template_string(REGISTER_TEMPLATE,
-            success=False, msg=msg, msg_type="err", sap_available=SAP_AVAILABLE,
-            form_name=name, form_email=email, form_sap=sap_username, form_company=company)
+        return render_template_string(REQUEST_TEMPLATE,
+            style=STYLE, topbar=_topbar("/register"),
+            submitted=False, msg=msg, msg_type="err",
+            form_name=name, form_email=email, form_company=company, form_message=message)
 
     if not name:
         return err("Full name is required.")
     if not email or "@" not in email or "." not in email.split("@")[-1]:
-        return err("A valid email address is required.")
-    if not sap_username:
-        return err("SAP username is required.")
-    if len(sap_username) < 3:
-        return err("SAP username must be at least 3 characters.")
-    if len(sap_username) > 12:
-        return err("SAP username must be at most 12 characters.")
-    if not re.match(r'^[A-Z0-9_]+$', sap_username):
-        return err("SAP username may only contain letters, digits and underscore.")
+        return err("A valid work email is required.")
 
-    # ---- Waiver check ------------------------------------------------------
-    if not request.form.get("w_agree"):
-        return err("You must accept the Participant Agreement to register.")
-
-    # ---- Check duplicates --------------------------------------------------
     db = get_db()
+    # Already fully registered
     if db.execute("SELECT 1 FROM participants WHERE email=?", (email,)).fetchone():
         db.close()
-        return err("That email address is already registered.")
+        return err("That email is already registered. Go to /enroll to join a class.")
+    # Already has a pending request
+    existing = db.execute(
+        "SELECT status FROM pending_registrations WHERE email=?", (email,)).fetchone()
+    if existing:
+        db.close()
+        if existing["status"] == "pending":
+            return render_template_string(REQUEST_TEMPLATE,
+                style=STYLE, topbar=_topbar("/register"),
+                submitted=True, name=name)
+        if existing["status"] == "approved":
+            return err("Your request is already approved — go to /enroll and enter your class code.")
+        return err("Your previous request was not approved. Contact jonathan.stross@pathlock.com for help.")
+
+    db.execute(
+        "INSERT INTO pending_registrations (name, email, company, message) VALUES (?,?,?,?)",
+        (name, email, company, message))
+    db.commit()
+    db.close()
+    app.logger.info("New access request from %s <%s>", name, email)
+
+    return render_template_string(REQUEST_TEMPLATE,
+        style=STYLE, topbar=_topbar("/register"),
+        submitted=True, name=name)
+
+
+# ---------------------------------------------------------------------------
+# Step 2 — Class enrollment (requires admin approval + class code)
+# ---------------------------------------------------------------------------
+
+ENROLL_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Enroll in a Class — Pathlock</title>
+{{ style | safe }}
+<style>
+  .reg-box{max-width:540px;margin:80px auto;padding:40px;background:#12121f;border-radius:12px;border:1px solid #1e1e35}
+  .reg-box h1{font-size:1.8rem;margin:0 0 8px;color:#fff}
+  .reg-box .sub{color:#aaa;margin:0 0 32px;font-size:0.95rem}
+  .field{margin-bottom:18px}
+  .field label{display:block;color:#bbb;font-size:0.85rem;margin-bottom:6px;letter-spacing:.04em}
+  .field input{width:100%;background:#0f0f1a;border:1px solid #2a2a45;border-radius:6px;
+    padding:10px 14px;color:#fff;font-size:1rem;box-sizing:border-box}
+  .field input:focus{outline:none;border-color:#4f8ef7}
+  .field .hint{font-size:0.78rem;color:#666;margin-top:5px}
+  .msg-err{background:#3a1a1a;border:1px solid #c0392b;color:#e74c3c;padding:12px 16px;border-radius:6px;margin-bottom:20px;font-size:0.9rem}
+  .msg-ok{background:#0f2a1a;border:1px solid #27ae60;color:#2ecc71;padding:12px 16px;border-radius:6px;margin-bottom:20px;font-size:0.9rem}
+  .submit-btn{width:100%;padding:12px;background:#c8102e;color:#fff;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:8px}
+  .submit-btn:hover{background:#a00d24}
+  .waiver{font-size:0.8rem;color:#666;margin-top:16px;line-height:1.5}
+  .waiver a{color:#888}
+  .success-box{text-align:center;padding:20px 0}
+  .success-box .icon{font-size:3rem;margin-bottom:12px}
+  .cred-block{background:#0f0f1a;border:1px solid #2a2a45;border-radius:8px;padding:16px;margin:16px 0;font-family:monospace;font-size:0.9rem;line-height:1.8}
+  .cred-block .label{color:#aaa;font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em}
+  .cred-block .val{color:#ffd700;font-weight:bold}
+</style>
+</head>
+<body>
+{{ topbar | safe }}
+<div class="reg-box">
+  {% if success %}
+    <div class="success-box">
+      <div class="icon">🎉</div>
+      <h1>You're in!</h1>
+      <p style="color:#aaa;margin:0 0 20px">Enrolled in <strong style="color:#fff">{{ class_name }}</strong>.<br>
+      Your SAP credentials and VPN config are below.</p>
+      <div class="cred-block">
+        <div class="label">SAP Username</div><div class="val">{{ sap_username }}</div>
+        <div class="label">Temporary Password</div><div class="val">{{ temp_password }}</div>
+        <div class="label">SAP Host</div><div class="val">{{ sap_host }}</div>
+        <div class="label">System Nr</div><div class="val">{{ sap_sysnr }}</div>
+        <div class="label">Client</div><div class="val">{{ sap_client }}</div>
+      </div>
+      {% if wg_conf %}
+        <a href="/download/{{ sap_username }}" class="submit-btn" style="display:block;text-align:center;text-decoration:none;padding:12px;margin-top:8px">
+          ⬇ Download WireGuard Config
+        </a>
+      {% endif %}
+      {% if sap_warn %}<p style="color:#f39c12;font-size:0.85rem;margin-top:12px">⚠ {{ sap_warn }}</p>{% endif %}
+      {% if wg_warn %}<p style="color:#f39c12;font-size:0.85rem">⚠ {{ wg_warn }}</p>{% endif %}
+      <p style="color:#666;font-size:0.8rem;margin-top:16px">
+        Access will be revoked after this session and data will be deleted immediately.<br>
+        Contact <a href="mailto:jonathan.stross@pathlock.com" style="color:#888">jonathan.stross@pathlock.com</a> for prolonged access.
+      </p>
+    </div>
+  {% else %}
+    <h1>Enroll in a Class</h1>
+    <p class="sub">Your request must be approved before you can enroll. Enter your email, SAP username, and the class code your instructor provided.</p>
+    {% if msg %}<div class="msg-{{ msg_type }}">{{ msg }}</div>{% endif %}
+    <form method="POST">
+      <div class="field"><label>Your email *</label>
+        <input name="email" type="email" value="{{ form_email }}" required placeholder="jane@company.com">
+        <div class="hint">Must match the email you used to request access.</div></div>
+      <div class="field"><label>Choose your SAP username *</label>
+        <input name="sap_username" value="{{ form_sap }}" required placeholder="JSMITH" maxlength="12"
+               style="text-transform:uppercase">
+        <div class="hint">3–12 characters, letters/digits/underscore only. This becomes your login on the SAP system.</div></div>
+      <div class="field"><label>Class enrollment code *</label>
+        <input name="enroll_code" value="{{ form_code }}" required placeholder="provided by your instructor">
+        <div class="hint">Each class has a unique code — ask your instructor if you don't have one.</div></div>
+      <div style="margin-top:20px">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;color:#aaa;font-size:0.85rem">
+          <input type="checkbox" name="w_agree" style="margin-top:2px;width:auto">
+          I accept that this system is for training purposes only, my activity may be monitored, and access will be revoked after the session.
+        </label>
+      </div>
+      <button class="submit-btn" type="submit">Enroll →</button>
+    </form>
+  {% endif %}
+</div>
+</body></html>
+"""
+
+@app.route("/enroll", methods=["GET", "POST"])
+def enroll():
+    """Step 2: approved users enroll in a specific class using the class code."""
+    ip = request.remote_addr or "unknown"
+
+    if request.method == "GET":
+        return render_template_string(ENROLL_TEMPLATE,
+            style=STYLE, topbar=_topbar("/enroll"),
+            success=False, msg=None, msg_type="ok",
+            form_email="", form_sap="", form_code="")
+
+    if not _check_rate_limit(ip):
+        return render_template_string(ENROLL_TEMPLATE,
+            style=STYLE, topbar=_topbar("/enroll"),
+            success=False, msg="Too many attempts. Please wait.", msg_type="err",
+            form_email="", form_sap="", form_code="")
+
+    email        = _sanitize_text(request.form.get("email", "").lower(), 120)
+    sap_username = _sanitize_text(request.form.get("sap_username", "").upper(), 12)
+    enroll_code  = _sanitize_text(request.form.get("enroll_code", "").strip(), 80)
+
+    def err(msg):
+        return render_template_string(ENROLL_TEMPLATE,
+            style=STYLE, topbar=_topbar("/enroll"),
+            success=False, msg=msg, msg_type="err",
+            form_email=email, form_sap=sap_username, form_code=enroll_code)
+
+    if not email or "@" not in email:
+        return err("A valid email is required.")
+    if not sap_username or len(sap_username) < 3 or len(sap_username) > 12:
+        return err("SAP username must be 3–12 characters.")
+    if not re.match(r'^[A-Z0-9_]+$', sap_username):
+        return err("SAP username may only contain letters, digits and underscore.")
+    if not enroll_code:
+        return err("Enrollment code is required.")
+    if not request.form.get("w_agree"):
+        return err("You must accept the participant agreement to enroll.")
+
+    # SAP default user check
+    sap_defaults = {"SAP*","DDIC","DEVELOPER","SAPCPIC","TMSADM","EARLYWATCH",
+                    "RFCUSER","SOLMAN_BTC","SM_INTERN","SAPSYS","SAPJSF","SAPABC"}
+    if sap_username in sap_defaults:
+        return err("That SAP username is a system default and cannot be used.")
+
+    db = get_db()
+
+    # Check approval status
+    pending = db.execute(
+        "SELECT * FROM pending_registrations WHERE email=?", (email,)).fetchone()
+    if not pending:
+        db.close()
+        return err("No access request found for this email. Please request access at /register first.")
+    if pending["status"] == "pending":
+        db.close()
+        return err("Your request is still pending admin approval. Check back soon or contact jonathan.stross@pathlock.com.")
+    if pending["status"] == "rejected":
+        db.close()
+        return err("Your access request was not approved. Contact jonathan.stross@pathlock.com.")
+
+    # Already enrolled
+    if db.execute("SELECT 1 FROM participants WHERE email=?", (email,)).fetchone():
+        db.close()
+        return err("This email is already enrolled. Your SAP credentials were provided when you enrolled.")
     if db.execute("SELECT 1 FROM participants WHERE sap_username=?", (sap_username,)).fetchone():
         db.close()
         return err(f"SAP username '{sap_username}' is already taken — choose another.")
 
-    # ---- Assign a slot (server + SAP client) --------------------------------
-    # Must happen before SAP/WG creation so we know which server to target.
+    # Validate class code
+    cls = db.execute(
+        "SELECT * FROM classes WHERE enroll_code=? AND active=1", (enroll_code,)).fetchone()
+    if not cls:
+        db.close()
+        return err("Invalid or inactive enrollment code. Check with your instructor.")
+
+    # Assign slot
     server_alias, slot_client = _assign_slot(sap_username)
     if server_alias is None:
         db.close()
-        return err("The workshop is fully booked — no slots remaining. Contact your instructor.")
+        return err("The workshop is fully booked. Contact your instructor.")
 
-    # Build per-slot SAP RFC connection params
     srv_info = SAP_SERVERS.get(server_alias, {})
     slot_conn_params = {
         "host":   srv_info.get("host",  SAP_HOST),
@@ -1486,12 +1679,11 @@ def register():
         "client": slot_client,
     }
 
-    # ---- Check SAP live (on the assigned slot) ------------------------------
     if SAP_AVAILABLE and user_exists(sap_username, conn_params=slot_conn_params):
         db.close()
-        return err(f"SAP user '{sap_username}' already exists on the system — choose another username.")
+        return err(f"SAP user '{sap_username}' already exists — choose a different username.")
 
-    # ---- Create SAP user (on the assigned server + client) -----------------
+    name = pending["name"]
     sap_ok, temp_password, sap_error = create_workshop_user(
         sap_username=sap_username,
         first_name=name.split()[0] if name.split() else name,
@@ -1499,56 +1691,58 @@ def register():
         email=email,
         conn_params=slot_conn_params,
     )
-
     sap_warn = None
     if not sap_ok:
         sap_warn = f"SAP user could not be created automatically: {sap_error}. Your instructor will create it manually."
         temp_password = "(see instructor)"
 
-    # ---- Create WireGuard peer (on the assigned server) --------------------
     wg_ok, wg_ip, wg_conf, wg_error = create_customer_peer(
         display_name=name,
         server_alias=server_alias,
     )
-
     wg_warn = None
     if not wg_ok:
-        wg_warn = f"VPN config could not be created automatically: {wg_error}. Your instructor will provide your WireGuard config."
-        wg_ip = None
-        wg_conf = None
+        wg_warn = f"VPN config could not be created: {wg_error}. Your instructor will provide your WireGuard config."
+        wg_ip = wg_conf = None
 
-    # ---- Save to DB --------------------------------------------------------
     try:
         db.execute(
             "INSERT INTO participants "
-            "(name, email, sap_username, company, sap_created, wg_ip, wg_conf, server, sap_client, waiver_accepted) "
-            "VALUES (?,?,?,?,?,?,?,?,?,1)",
-            (name, email, sap_username, company, 1 if sap_ok else 0,
-             wg_ip, wg_conf, server_alias, slot_client))
+            "(name, email, sap_username, company, class_id, sap_created, wg_ip, wg_conf, server, sap_client, waiver_accepted) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,1)",
+            (name, email, sap_username, pending["company"], cls["id"],
+             1 if sap_ok else 0, wg_ip, wg_conf, server_alias, slot_client))
         db.commit()
     except sqlite3.IntegrityError as exc:
         db.close()
-        return err(f"Registration failed: {exc}")
-    db.close()
+        return err(f"Enrollment failed: {exc}")
 
-    return render_template_string(REGISTER_TEMPLATE,
+    # Set access cookie so the user can access /levels immediately
+    resp = Response(render_template_string(ENROLL_TEMPLATE,
+        style=STYLE, topbar=_topbar("/enroll"),
         success=True,
+        class_name=cls["name"],
         sap_username=sap_username,
         temp_password=temp_password,
-        sap_warn=sap_warn,
         sap_host=SAP_HOST,
         sap_sysnr=SAP_SYSNR,
         sap_client=slot_client,
-        wg_ip=wg_ip,
         wg_conf=wg_conf,
+        sap_warn=sap_warn,
         wg_warn=wg_warn,
-        sap_available=SAP_AVAILABLE)
+        sap_available=SAP_AVAILABLE))
+    resp.set_cookie(_ACCESS_COOKIE, _access_token(),
+        max_age=86400, httponly=True, samesite="Lax")
+    db.close()
+    return resp
+
+
 
 @app.route("/download/<sap_username>")
 def download_wg_conf(sap_username):
     """Serve the WireGuard .conf for a registered participant."""
     if not _has_access_cookie():
-        return redirect("/register")
+        return redirect("/enroll")
     db = get_db()
     row = db.execute(
         "SELECT wg_conf, name FROM participants WHERE sap_username=?",
@@ -1566,7 +1760,7 @@ def download_wg_conf(sap_username):
 @app.route("/submit", methods=["GET", "POST"])
 def submit():
     if not _has_access_cookie():
-        return redirect("/register")
+        return redirect("/enroll")
     msg, msg_type = None, "ok"
     codes = load_codes()
     if request.method == "POST":
@@ -1643,6 +1837,158 @@ def submit():
 
     return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes, locked_levels=LOCKED_LEVELS)
 
+# ---------------------------------------------------------------------------
+# Admin — pending approvals
+# ---------------------------------------------------------------------------
+
+@app.route("/admin/approvals")
+def admin_approvals():
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    db = get_db()
+    pending = db.execute(
+        "SELECT * FROM pending_registrations ORDER BY submitted_at DESC").fetchall()
+    db.close()
+    td = "style='padding:6px 12px;vertical-align:middle'"
+    th = "style='text-align:left;padding:6px 12px;color:#aaa;white-space:nowrap'"
+    rows = ""
+    for p in pending:
+        badge_color = {"pending": "#f39c12", "approved": "#2ecc71", "rejected": "#e74c3c"}.get(p["status"], "#aaa")
+        badge = f"<span style='color:{badge_color};font-weight:bold'>{p['status'].upper()}</span>"
+        actions = ""
+        if p["status"] == "pending":
+            actions = (
+                f"<form method='POST' action='/admin/approvals/{p['id']}/approve' style='display:inline'>"
+                f"<button style='background:#27ae60;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:4px'>✓ Approve</button></form>"
+                f"<form method='POST' action='/admin/approvals/{p['id']}/reject' style='display:inline'>"
+                f"<button style='background:#c0392b;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.85em'>✗ Reject</button></form>"
+            )
+        rows += (
+            f"<tr style='border-top:1px solid #333'>"
+            f"<td {td}>{p['name']}</td>"
+            f"<td {td} style='color:#aaa;font-size:0.85em'>{p['email']}</td>"
+            f"<td {td} style='color:#aaa;font-size:0.85em'>{p['company'] or '—'}</td>"
+            f"<td {td} style='color:#aaa;font-size:0.8em;max-width:240px'>{p['message'] or '—'}</td>"
+            f"<td {td}>{badge}</td>"
+            f"<td {td} style='color:#aaa;font-size:0.8em'>{(p['submitted_at'] or '')[:16]}</td>"
+            f"<td {td}>{actions}</td>"
+            f"</tr>"
+        )
+    html = (
+        f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>"
+        f"<p><a href='/admin' style='color:#4f8ef7'>← Back to Admin</a></p>"
+        f"<h2>Access Requests ({len(pending)})</h2>"
+        f"<table style='border-collapse:collapse;width:100%'>"
+        f"<tr><th {th}>Name</th><th {th}>Email</th><th {th}>Company</th>"
+        f"<th {th}>Message</th><th {th}>Status</th><th {th}>Submitted</th><th {th}>Actions</th></tr>"
+        f"{rows}</table></body></html>"
+    )
+    return html
+
+@app.route("/admin/approvals/<int:req_id>/approve", methods=["POST"])
+def admin_approve(req_id):
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    db = get_db()
+    db.execute("UPDATE pending_registrations SET status='approved' WHERE id=?", (req_id,))
+    db.commit()
+    db.close()
+    return redirect("/admin/approvals")
+
+@app.route("/admin/approvals/<int:req_id>/reject", methods=["POST"])
+def admin_reject(req_id):
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    db = get_db()
+    db.execute("UPDATE pending_registrations SET status='rejected' WHERE id=?", (req_id,))
+    db.commit()
+    db.close()
+    return redirect("/admin/approvals")
+
+# ---------------------------------------------------------------------------
+# Admin — class management
+# ---------------------------------------------------------------------------
+
+@app.route("/admin/classes")
+def admin_classes():
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    db = get_db()
+    classes = db.execute("SELECT * FROM classes ORDER BY created_at DESC").fetchall()
+    db.close()
+    td = "style='padding:6px 12px;vertical-align:middle'"
+    th = "style='text-align:left;padding:6px 12px;color:#aaa;white-space:nowrap'"
+    rows = ""
+    for c in classes:
+        status = "<span style='color:#2ecc71'>active</span>" if c["active"] else "<span style='color:#555'>inactive</span>"
+        toggle_label = "Deactivate" if c["active"] else "Activate"
+        toggle_color = "#e67e22" if c["active"] else "#27ae60"
+        rows += (
+            f"<tr style='border-top:1px solid #333'>"
+            f"<td {td}><strong style='color:#ffd700'>{c['name']}</strong></td>"
+            f"<td {td} style='color:#aaa;font-size:0.85em'>{c['description'] or '—'}</td>"
+            f"<td {td}><code style='background:#1a1a2e;padding:2px 8px;border-radius:4px;color:#4f8ef7'>{c['enroll_code']}</code></td>"
+            f"<td {td}>{status}</td>"
+            f"<td {td} style='color:#aaa;font-size:0.8em'>{(c['created_at'] or '')[:16]}</td>"
+            f"<td {td}>"
+            f"<form method='POST' action='/admin/classes/{c['id']}/toggle' style='display:inline'>"
+            f"<button style='background:{toggle_color};color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.85em'>{toggle_label}</button></form>"
+            f"</td></tr>"
+        )
+    html = (
+        f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>"
+        f"<p><a href='/admin' style='color:#4f8ef7'>← Back to Admin</a></p>"
+        f"<h2>Classes</h2>"
+        f"<form method='POST' action='/admin/classes/create' style='margin-bottom:24px'>"
+        f"<input name='name' placeholder='Class name' required style='background:#1a1a2e;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:4px;margin-right:8px'>"
+        f"<input name='description' placeholder='Description (optional)' style='background:#1a1a2e;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:4px;margin-right:8px;width:220px'>"
+        f"<input name='enroll_code' placeholder='Enrollment code' required style='background:#1a1a2e;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:4px;margin-right:8px'>"
+        f"<button type='submit' style='background:#c8102e;color:#fff;border:none;padding:6px 16px;border-radius:4px;cursor:pointer'>Create Class</button>"
+        f"</form>"
+        f"<table style='border-collapse:collapse;width:100%'>"
+        f"<tr><th {th}>Name</th><th {th}>Description</th><th {th}>Enroll Code</th>"
+        f"<th {th}>Status</th><th {th}>Created</th><th {th}>Actions</th></tr>"
+        f"{rows}</table></body></html>"
+    )
+    return html
+
+@app.route("/admin/classes/create", methods=["POST"])
+def admin_class_create():
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    name        = _sanitize_text(request.form.get("name", ""), 80)
+    description = _sanitize_text(request.form.get("description", ""), 200)
+    enroll_code = _sanitize_text(request.form.get("enroll_code", "").strip(), 80)
+    if not name or not enroll_code:
+        return "Name and enrollment code are required.", 400
+    db = get_db()
+    try:
+        db.execute(
+            "INSERT INTO classes (name, description, enroll_code) VALUES (?,?,?)",
+            (name, description, enroll_code))
+        db.commit()
+    except sqlite3.IntegrityError:
+        db.close()
+        return "Enrollment code already exists — choose a unique code.", 400
+    db.close()
+    return redirect("/admin/classes")
+
+@app.route("/admin/classes/<int:class_id>/toggle", methods=["POST"])
+def admin_class_toggle(class_id):
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    db = get_db()
+    db.execute("UPDATE classes SET active = 1 - active WHERE id=?", (class_id,))
+    db.commit()
+    db.close()
+    return redirect("/admin/classes")
+
 @app.route("/admin")
 def admin():
     auth_err = _require_admin_auth()
@@ -1652,6 +1998,8 @@ def admin():
     subs = db.execute("SELECT * FROM submissions ORDER BY submitted_at DESC LIMIT 100").fetchall()
     parts = db.execute("SELECT * FROM participants ORDER BY registered_at DESC").fetchall()
     slots = db.execute("SELECT * FROM slots ORDER BY id").fetchall()
+    pending_count = db.execute(
+        "SELECT COUNT(*) FROM pending_registrations WHERE status='pending'").fetchone()[0]
     db.close()
     codes = load_codes()
     td = "style='padding:4px 10px;vertical-align:middle'"
@@ -1751,6 +2099,9 @@ def admin():
         out += f"{lvl}: {info['code']} ({info['points']} pts)\n"
     out += "</pre><br><form method='POST' action='/admin/reset' onsubmit=\"return confirm('Reset ALL data? This also removes all WireGuard peers and frees all slots.');\" ><button style='background:#c0392b;color:#fff;border:none;padding:8px 20px;border-radius:4px;cursor:pointer;font-size:1em'>Reset Everything</button></form>"
     out += "<br><a href='/admin/create' style='display:inline-block;margin-top:10px;background:#2980b9;color:#fff;padding:8px 20px;border-radius:4px;text-decoration:none;font-size:1em'>➕ Manually create participant</a>"
+    pending_badge = f" <span style='background:#c8102e;color:#fff;border-radius:10px;padding:1px 7px;font-size:0.85em'>{pending_count}</span>" if pending_count else ""
+    out += f"<br><a href='/admin/approvals' style='display:inline-block;margin-top:10px;background:#e67e22;color:#fff;padding:8px 20px;border-radius:4px;text-decoration:none;font-size:1em'>📬 Access Requests{pending_badge}</a>"
+    out += "<br><a href='/admin/classes' style='display:inline-block;margin-top:10px;background:#27ae60;color:#fff;padding:8px 20px;border-radius:4px;text-decoration:none;font-size:1em'>🎓 Manage Classes</a>"
     return f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>{out}</body></html>"
 
 @app.route("/admin/create", methods=["GET", "POST"])
