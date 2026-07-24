@@ -1827,10 +1827,19 @@ PROFILE_TEMPLATE = """<!DOCTYPE html>
   </div>
 
   {% elif approval_status == 'approved' %}
+  {% if previously_enrolled %}
+  <div class="info-msg" style="border-color:#2980b9">
+    ✅ Your previous session has ended. Your account is still active and approved.<br><br>
+    Ask your instructor for a new invite token and you can jump straight into the next class —
+    your login stays the same.<br><br>
+    <a href="/enroll" class="btn" style="display:inline-block;margin-top:4px">Enroll in a new class →</a>
+  </div>
+  {% else %}
   <div class="info-msg">
-    ✅ Your access has been approved! Enter the class enrollment code your instructor gave you to get started.
+    ✅ Your access has been approved! Enter the personal invite token your instructor sent you to get started.
     <br><br><a href="/enroll" class="btn" style="display:inline-block;margin-top:4px">Enroll in a class →</a>
   </div>
+  {% endif %}
   {% else %}
   <div class="info-msg">
     ⏳ Your request is being reviewed by the Pathlock team. You'll be able to enroll once approved.<br>
@@ -1887,7 +1896,7 @@ def profile():
         return render_template_string(PROFILE_TEMPLATE,
             style=STYLE, topbar=_topbar("/profile", authenticated=True),
             name=user["name"], email=user["email"], company=user["company"] or "",
-            enrolled=True, approval_status="approved",
+            enrolled=True, approval_status="approved", previously_enrolled=False,
             sap_username=sap_username, sap_client=sap_client, class_name=class_name,
             temp_password=user["temp_password"] or "(see instructor)",
             sap_host=SAP_HOST, sap_sysnr=SAP_SYSNR,
@@ -1896,11 +1905,20 @@ def profile():
             days_left=days_left, hours_left=hours_left, expired=expired,
             levels_done=levels_done, total_levels=total_levels, total_score=total_score)
     else:
+        # Check if they've been enrolled before (have past submissions)
+        pr_email = user["email"]
+        previously_enrolled = db.execute(
+            "SELECT 1 FROM submissions s "
+            "JOIN participants p ON p.sap_username = s.participant "
+            "WHERE p.email=? LIMIT 1", (pr_email,)).fetchone() is not None
+        # Simpler fallback: check if pending_reg has an assigned_class_id (means they were invited before)
+        if not previously_enrolled and user.get("assigned_class_id"):
+            previously_enrolled = True
         db.close()
         return render_template_string(PROFILE_TEMPLATE,
             style=STYLE, topbar=_topbar("/profile", authenticated=False),
             name=user["name"], email=user["email"], company=user["company"] or "",
-            enrolled=False, approval_status=status,
+            enrolled=False, approval_status=status, previously_enrolled=previously_enrolled,
             sap_username="", sap_client="", class_name="",
             temp_password="", sap_host="", sap_sysnr="", wg_conf=None,
             expires_at="", days_left=None, hours_left=None, expired=False,
@@ -3035,10 +3053,10 @@ def _sweep_expired_participants():
                     remove_customer_peer(p["wg_ip"], server_alias=p["server"])
                 except Exception as e:
                     app.logger.warning("WG deprovision failed for %s: %s", uname, e)
-            # DB — mark locked=99 (deprovisioned) and clear conf so profile shows expired
-            db.execute(
-                "UPDATE participants SET locked=99, wg_conf=NULL, temp_password=NULL WHERE sap_username=?",
-                (uname,))
+            # DB — fully remove participant so they return to "approved" state
+            # and can be re-invited to the next class by admin
+            db.execute("DELETE FROM submissions WHERE participant=?", (uname,))
+            db.execute("DELETE FROM participants WHERE sap_username=?", (uname,))
             db.execute("UPDATE slots SET assigned_to=NULL, assigned_at=NULL WHERE assigned_to=?", (uname,))
         if expired:
             db.commit()
