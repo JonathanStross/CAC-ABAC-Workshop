@@ -664,6 +664,8 @@ def init_db():
         ("waiver_accepted", "INTEGER DEFAULT 0"),
         ("class_id",        "INTEGER"),
         ("password_hash",   "TEXT"),
+        ("temp_password",   "TEXT"),
+        ("expires_at",      "TEXT"),
     ]:
         if col not in existing:
             db.execute(f"ALTER TABLE participants ADD COLUMN {col} {typedef}")
@@ -1692,50 +1694,62 @@ PROFILE_TEMPLATE = """<!DOCTYPE html>
 <head><meta charset="utf-8"><title>My Profile — Pathlock Academy</title>
 {{ style | safe }}
 <style>
-  .profile-box{max-width:640px;margin:50px auto;padding:0 24px 60px}
-  .profile-header{background:#12121f;border:1px solid #1e1e35;border-radius:12px;padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;gap:20px}
+  .profile-box{max-width:680px;margin:50px auto;padding:0 24px 60px}
+  .profile-header{background:#12121f;border:1px solid #1e1e35;border-radius:12px;padding:28px 32px;margin-bottom:20px;display:flex;align-items:center;gap:20px}
   .profile-avatar{width:64px;height:64px;background:#c8102e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;color:#fff;flex-shrink:0}
   .profile-name{font-size:1.4rem;font-weight:700;color:#fff;margin:0 0 4px}
   .profile-email{color:#888;font-size:0.9rem;margin:0}
-  .status-card{background:#12121f;border:1px solid #1e1e35;border-radius:10px;padding:22px 28px;margin-bottom:16px}
-  .status-card h3{font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;margin:0 0 14px}
-  .status-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
-  .status-row:last-child{margin-bottom:0}
-  .status-label{color:#888;font-size:0.88rem;min-width:130px}
-  .status-value{color:#fff;font-size:0.88rem;font-weight:600}
+  .card{background:#12121f;border:1px solid #1e1e35;border-radius:10px;padding:22px 28px;margin-bottom:16px}
+  .card h3{font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;margin:0 0 16px}
+  .row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .row:last-child{margin-bottom:0}
+  .lbl{color:#888;font-size:0.88rem;min-width:140px;flex-shrink:0}
+  .val{color:#fff;font-size:0.88rem;font-weight:600}
+  .mono{font-family:monospace;color:#ffd700}
   .badge-pending{background:#2a2210;border:1px solid #f39c12;color:#f39c12;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700}
   .badge-approved{background:#0f2a1a;border:1px solid #27ae60;color:#2ecc71;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700}
   .badge-rejected{background:#3a1a1a;border:1px solid #c0392b;color:#e74c3c;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700}
   .badge-enrolled{background:#0a1e2a;border:1px solid #2980b9;color:#3498db;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700}
+  .badge-expired{background:#3a1a1a;border:1px solid #e74c3c;color:#e74c3c;padding:3px 10px;border-radius:4px;font-size:0.78rem;font-weight:700}
   .progress-bar-bg{background:#1a1a2e;border-radius:4px;height:10px;flex:1;overflow:hidden}
   .progress-bar-fill{background:#c8102e;height:100%;border-radius:4px;transition:width .4s}
-  .action-btn{display:inline-block;background:#c8102e;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-size:0.9rem;font-weight:600;margin-top:8px}
-  .action-btn:hover{background:#a00d24}
-  .action-btn.secondary{background:#1e1e35;color:#aaa}
-  .action-btn.secondary:hover{background:#2a2a45;color:#fff}
-  .info-msg{background:#1a1a2e;border:1px solid #2a2a45;border-radius:8px;padding:14px 18px;color:#aaa;font-size:0.88rem;line-height:1.6}
-  .cred-block{background:#0f0f1a;border:1px solid #2a2a45;border-radius:8px;padding:16px;font-family:monospace;font-size:0.88rem;line-height:2}
-  .cred-block .lbl{color:#666;font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em}
-  .cred-block .val{color:#ffd700}
+  .cred-grid{display:grid;grid-template-columns:140px 1fr;gap:6px 16px;font-size:0.88rem;margin-top:4px}
+  .cred-lbl{color:#666;font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;align-self:center}
+  .cred-val{font-family:monospace;color:#ffd700;font-weight:600}
+  .cred-val.plain{color:#e0e0e0;font-family:inherit}
+  .btn{display:inline-block;background:#c8102e;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-size:0.9rem;font-weight:600;margin-top:8px}
+  .btn:hover{background:#a00d24}
+  .btn.sec{background:#1e1e35;color:#aaa}
+  .btn.sec:hover{background:#2a2a45;color:#fff}
+  .btn.grn{background:#1a6632;color:#2ecc71}
+  .btn.grn:hover{background:#145228}
+  .info-msg{background:#1a1a2e;border:1px solid #2a2a45;border-radius:8px;padding:16px 20px;color:#aaa;font-size:0.88rem;line-height:1.7}
+  .countdown{display:flex;gap:12px;margin-top:4px}
+  .countdown-unit{background:#1a1a2e;border:1px solid #2a2a45;border-radius:8px;padding:10px 16px;text-align:center;min-width:60px}
+  .countdown-num{font-size:1.6rem;font-weight:700;color:#fff;display:block;line-height:1}
+  .countdown-label{font-size:0.7rem;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+  .expired-warn{background:#2a0a0a;border:1px solid #e74c3c;border-radius:8px;padding:14px 18px;color:#e74c3c;font-size:0.88rem;margin-top:8px}
 </style>
 </head>
 <body>
 {{ topbar | safe }}
 <div class="profile-box">
   <div class="profile-header">
-    <div class="profile-avatar">{{ name[0].upper() }}</div>
+    <div class="profile-avatar">{{ name[0].upper() if name else '?' }}</div>
     <div>
       <div class="profile-name">{{ name }}</div>
       <div class="profile-email">{{ email }}{% if company %} &nbsp;·&nbsp; {{ company }}{% endif %}</div>
     </div>
   </div>
 
-  <div class="status-card">
+  <!-- Access / Status card -->
+  <div class="card">
     <h3>Access Status</h3>
-    <div class="status-row">
-      <span class="status-label">Pathlock Approval</span>
+    <div class="row">
+      <span class="lbl">Pathlock Approval</span>
       {% if enrolled %}
-        <span class="badge-enrolled">✓ Enrolled</span>
+        {% if expired %}<span class="badge-expired">⏰ Access Expired</span>
+        {% else %}<span class="badge-enrolled">✓ Enrolled</span>{% endif %}
       {% elif approval_status == 'approved' %}
         <span class="badge-approved">✓ Approved — ready to enroll</span>
       {% elif approval_status == 'pending' %}
@@ -1745,50 +1759,72 @@ PROFILE_TEMPLATE = """<!DOCTYPE html>
       {% endif %}
     </div>
     {% if enrolled %}
-    <div class="status-row">
-      <span class="status-label">Class</span>
-      <span class="status-value">{{ class_name or '—' }}</span>
-    </div>
-    <div class="status-row">
-      <span class="status-label">SAP Username</span>
-      <span class="status-value" style="font-family:monospace;color:#ffd700">{{ sap_username }}</span>
-    </div>
-    <div class="status-row">
-      <span class="status-label">SAP Client</span>
-      <span class="status-value" style="font-family:monospace">{{ sap_client }}</span>
-    </div>
+    <div class="row"><span class="lbl">Class</span><span class="val">{{ class_name or '—' }}</span></div>
+    <div class="row"><span class="lbl">SAP Username</span><span class="val mono">{{ sap_username }}</span></div>
+    <div class="row"><span class="lbl">SAP Client</span><span class="val mono">{{ sap_client }}</span></div>
+    <div class="row"><span class="lbl">SAP Host</span><span class="val mono">{{ sap_host }}:32{{ sap_sysnr.zfill(2) }}</span></div>
     {% endif %}
   </div>
 
   {% if enrolled %}
-  <div class="status-card">
-    <h3>Progress</h3>
-    <div class="status-row">
-      <span class="status-label">Levels completed</span>
-      <span class="status-value">{{ levels_done }} / {{ total_levels }}</span>
+  <!-- Credentials card -->
+  <div class="card">
+    <h3>SAP Credentials &amp; VPN</h3>
+    <div class="cred-grid">
+      <span class="cred-lbl">SAP Username</span><span class="cred-val">{{ sap_username }}</span>
+      <span class="cred-lbl">Initial Password</span><span class="cred-val">{{ temp_password }}</span>
+      <span class="cred-lbl">System Nr</span><span class="cred-val">{{ sap_sysnr }}</span>
+      <span class="cred-lbl">Client</span><span class="cred-val">{{ sap_client }}</span>
+      <span class="cred-lbl">Host</span><span class="cred-val plain">{{ sap_host }}</span>
     </div>
-    <div class="status-row" style="align-items:center">
-      <span class="status-label">Score</span>
-      <span class="status-value">{{ total_score }} pts</span>
+    {% if wg_conf %}
+    <div style="margin-top:18px">
+      <a href="/download/{{ sap_username }}" class="btn grn">⬇ Download WireGuard Config</a>
+      <span style="color:#666;font-size:0.8rem;margin-left:12px">Import this file into the WireGuard app to connect to the lab VPN.</span>
     </div>
-    {% if total_levels > 0 %}
-    <div class="status-row" style="gap:16px;margin-top:4px">
-      <span class="status-label">Overall</span>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" style="width:{{ (levels_done / total_levels * 100)|int }}%"></div>
+    {% else %}
+    <p style="color:#f39c12;font-size:0.85rem;margin-top:12px">⚠ VPN config not available — contact your instructor.</p>
+    {% endif %}
+  </div>
+
+  <!-- Expiry / countdown card -->
+  <div class="card">
+    <h3>Access Expiry</h3>
+    {% if expired %}
+      <div class="expired-warn">⏰ Your access expired on {{ expires_at }} UTC. Contact your instructor to extend.</div>
+    {% elif days_left is not none %}
+      <p style="color:#aaa;font-size:0.85rem;margin:0 0 14px">Your SAP user and VPN will be automatically deprovisioned on <strong style="color:#fff">{{ expires_at }} UTC</strong></p>
+      <div class="countdown">
+        <div class="countdown-unit"><span class="countdown-num">{{ days_left }}</span><div class="countdown-label">days</div></div>
+        <div class="countdown-unit"><span class="countdown-num">{{ hours_left }}</span><div class="countdown-label">hours</div></div>
       </div>
+    {% else %}
+      <p style="color:#666;font-size:0.85rem;margin:0">No expiry set — contact your instructor.</p>
+    {% endif %}
+  </div>
+
+  <!-- Progress card -->
+  <div class="card">
+    <h3>Progress</h3>
+    <div class="row"><span class="lbl">Levels completed</span><span class="val">{{ levels_done }} / {{ total_levels }}</span></div>
+    <div class="row"><span class="lbl">Score</span><span class="val">{{ total_score }} pts</span></div>
+    {% if total_levels > 0 %}
+    <div class="row" style="gap:16px;margin-top:4px">
+      <span class="lbl">Overall</span>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:{{ (levels_done / total_levels * 100)|int }}%"></div></div>
       <span style="color:#888;font-size:0.8rem;min-width:36px">{{ (levels_done / total_levels * 100)|int }}%</span>
     </div>
     {% endif %}
     <div style="margin-top:16px">
-      <a href="/levels" class="action-btn">📖 Open Levels</a>
-      <a href="/leaderboard" class="action-btn secondary" style="margin-left:8px">🏆 Leaderboard</a>
+      <a href="/levels" class="btn">📖 Open Levels</a>
+      <a href="/leaderboard" class="btn sec" style="margin-left:8px">🏆 Leaderboard</a>
     </div>
   </div>
+
   {% elif approval_status == 'approved' %}
   <div class="info-msg">
     ✅ Your access has been approved! Enter the class enrollment code your instructor gave you to get started.
-    <br><br><a href="/enroll" class="action-btn" style="display:inline-block;margin-top:4px">Enroll in a class →</a>
+    <br><br><a href="/enroll" class="btn" style="display:inline-block;margin-top:4px">Enroll in a class →</a>
   </div>
   {% else %}
   <div class="info-msg">
@@ -1814,11 +1850,9 @@ def profile():
 
     if status == "enrolled":
         sap_username = user["sap_username"]
-        sap_client   = user.get("sap_client", "")
-        # Get class name
+        sap_client   = user["sap_client"] or ""
         cls_row = db.execute("SELECT name FROM classes WHERE id=?", (user["class_id"],)).fetchone() if user["class_id"] else None
         class_name = cls_row["name"] if cls_row else ""
-        # Progress
         levels_done = db.execute(
             "SELECT COUNT(DISTINCT level) FROM submissions WHERE participant=? AND correct=1",
             (sap_username,)).fetchone()[0]
@@ -1826,11 +1860,35 @@ def profile():
             "SELECT COALESCE(SUM(points),0) FROM submissions WHERE participant=? AND correct=1",
             (sap_username,)).fetchone()[0]
         db.close()
+
+        # Expiry countdown
+        expires_at = user["expires_at"] or ""
+        days_left = None
+        hours_left = None
+        expired = False
+        if expires_at:
+            try:
+                exp_dt = datetime.fromisoformat(expires_at)
+                delta = exp_dt - datetime.utcnow()
+                if delta.total_seconds() <= 0:
+                    expired = True
+                    days_left, hours_left = 0, 0
+                else:
+                    days_left  = delta.days
+                    hours_left = delta.seconds // 3600
+            except Exception:
+                pass
+
         return render_template_string(PROFILE_TEMPLATE,
             style=STYLE, topbar=_topbar("/profile", authenticated=True),
             name=user["name"], email=user["email"], company=user["company"] or "",
             enrolled=True, approval_status="approved",
             sap_username=sap_username, sap_client=sap_client, class_name=class_name,
+            temp_password=user["temp_password"] or "(see instructor)",
+            sap_host=SAP_HOST, sap_sysnr=SAP_SYSNR,
+            wg_conf=user["wg_conf"],
+            expires_at=expires_at[:16].replace("T", " ") if expires_at else "",
+            days_left=days_left, hours_left=hours_left, expired=expired,
             levels_done=levels_done, total_levels=total_levels, total_score=total_score)
     else:
         db.close()
@@ -1839,6 +1897,8 @@ def profile():
             name=user["name"], email=user["email"], company=user["company"] or "",
             enrolled=False, approval_status=status,
             sap_username="", sap_client="", class_name="",
+            temp_password="", sap_host="", sap_sysnr="", wg_conf=None,
+            expires_at="", days_left=None, hours_left=None, expired=False,
             levels_done=0, total_levels=total_levels, total_score=0)
 
 
@@ -2051,13 +2111,17 @@ def enroll():
         wg_warn = f"VPN config could not be created: {wg_error}. Your instructor will provide your WireGuard config."
         wg_ip = wg_conf = None
 
+    from datetime import timedelta
+    expires_at = (datetime.utcnow() + timedelta(days=7)).isoformat(timespec="seconds")
+
     try:
         db.execute(
             "INSERT INTO participants "
-            "(name, email, sap_username, company, password_hash, class_id, sap_created, wg_ip, wg_conf, server, sap_client, waiver_accepted) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,1)",
+            "(name, email, sap_username, company, password_hash, class_id, sap_created, wg_ip, wg_conf, server, sap_client, waiver_accepted, temp_password, expires_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?)",
             (name, logged_email, sap_username, pending["company"], pending["password_hash"],
-             cls["id"], 1 if sap_ok else 0, wg_ip, wg_conf, server_alias, slot_client))
+             cls["id"], 1 if sap_ok else 0, wg_ip, wg_conf, server_alias, slot_client,
+             temp_password, expires_at))
         db.commit()
     except sqlite3.IntegrityError as exc:
         db.close()
@@ -2760,6 +2824,56 @@ def reset():
     db.commit()
     db.close()
     return redirect("/admin")
+
+# ---------------------------------------------------------------------------
+# Auto-deprovision — sweep expired participants
+# Runs at most once every 10 minutes (throttled via a simple timestamp file)
+# ---------------------------------------------------------------------------
+_last_expiry_sweep: float = 0.0
+
+@app.before_request
+def _sweep_expired_participants():
+    global _last_expiry_sweep
+    now = time.time()
+    if now - _last_expiry_sweep < 600:   # max once per 10 min
+        return
+    _last_expiry_sweep = now
+    try:
+        db = get_db()
+        expired = db.execute(
+            "SELECT sap_username, wg_ip, server, sap_client FROM participants "
+            "WHERE expires_at IS NOT NULL AND expires_at < datetime('now') AND locked != 99"
+        ).fetchall()
+        for p in expired:
+            uname = p["sap_username"]
+            app.logger.info("Auto-deprovisioning expired user %s", uname)
+            # SAP
+            conn_params = None
+            if p["server"] and p["sap_client"] and p["server"] in SAP_SERVERS:
+                conn_params = {"host": SAP_SERVERS[p["server"]]["host"],
+                               "sysnr": SAP_SERVERS[p["server"]]["sysnr"],
+                               "client": p["sap_client"]}
+            try:
+                delete_sap_user(uname, conn_params=conn_params)
+            except Exception as e:
+                app.logger.warning("SAP deprovision failed for %s: %s", uname, e)
+            # WireGuard
+            if p["wg_ip"]:
+                try:
+                    remove_customer_peer(p["wg_ip"], server_alias=p["server"])
+                except Exception as e:
+                    app.logger.warning("WG deprovision failed for %s: %s", uname, e)
+            # DB — mark locked=99 (deprovisioned) and clear conf so profile shows expired
+            db.execute(
+                "UPDATE participants SET locked=99, wg_conf=NULL, temp_password=NULL WHERE sap_username=?",
+                (uname,))
+            db.execute("UPDATE slots SET assigned_to=NULL, assigned_at=NULL WHERE assigned_to=?", (uname,))
+        if expired:
+            db.commit()
+        db.close()
+    except Exception as e:
+        app.logger.error("Expiry sweep error: %s", e)
+
 
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
