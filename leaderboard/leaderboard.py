@@ -808,13 +808,17 @@ STYLE = """
 # Shared topbar snippet — injected into every main page
 # ---------------------------------------------------------------------------
 def _topbar(active: str = "") -> str:
-    links = [
-        ("/",            "&#127968;",  "Academy"),      # 🏠
-        ("/leaderboard", "&#127942;",  "Leaderboard"),  # 🏆
-        ("/levels",      "📖",  "Levels"),
-        ("/register",    "📝",  "Register"),
-        ("/submit",      "🔑",  "Submit"),
+    authenticated = _has_access_cookie()
+    public_links = [
+        ("/",         "&#127968;", "Academy"),   # always visible
+        ("/register", "📝",        "Register"),  # always visible
     ]
+    auth_links = [
+        ("/leaderboard", "&#127942;", "Leaderboard"),
+        ("/levels",      "📖",        "Levels"),
+        ("/submit",      "🔑",        "Submit"),
+    ]
+    links = public_links + (auth_links if authenticated else [])
     items = ""
     for href, icon, label in links:
         cls = ' class="active"' if active == href else ""
@@ -883,12 +887,21 @@ HOME_TEMPLATE = """
     <div class="catalog-section">
       <h2>DAC <span>Dynamic Access Control</span></h2>
       <div class="course-row">
+        {% if authenticated %}
         <a class="course-card" href="/levels">
           <span class="cbadge blive">Live now</span>
           <div class="ct">DAC</div>
           <div class="cn">Practitioner</div>
           <div class="cs">Masking · TCode blocking · Audit feed · Export control · Fiori/OData</div>
         </a>
+        {% else %}
+        <div class="course-card locked">
+          <span class="cbadge bsoon">Enroll to access</span>
+          <div class="ct">DAC</div>
+          <div class="cn">Practitioner</div>
+          <div class="cs">Masking · TCode blocking · Audit feed · Export control · Fiori/OData</div>
+        </div>
+        {% endif %}
         <div class="course-card locked">
           <span class="cbadge bsoon">Coming soon</span>
           <div class="ct">DAC</div>
@@ -1323,7 +1336,7 @@ ACCESS_CODE_TEMPLATE = """
 # ---------------------------------------------------------------------------
 @app.route("/")
 def index():
-    return render_template_string(HOME_TEMPLATE)
+    return render_template_string(HOME_TEMPLATE, authenticated=_has_access_cookie())
 
 
 @app.route("/leaderboard")
