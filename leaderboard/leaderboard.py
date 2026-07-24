@@ -1828,7 +1828,7 @@ def profile():
         db.close()
         return render_template_string(PROFILE_TEMPLATE,
             style=STYLE, topbar=_topbar("/profile", authenticated=True),
-            name=user["name"], email=user["email"], company=user.get("company",""),
+            name=user["name"], email=user["email"], company=user["company"] or "",
             enrolled=True, approval_status="approved",
             sap_username=sap_username, sap_client=sap_client, class_name=class_name,
             levels_done=levels_done, total_levels=total_levels, total_score=total_score)
@@ -1836,7 +1836,7 @@ def profile():
         db.close()
         return render_template_string(PROFILE_TEMPLATE,
             style=STYLE, topbar=_topbar("/profile", authenticated=False),
-            name=user["name"], email=user["email"], company=user.get("company",""),
+            name=user["name"], email=user["email"], company=user["company"] or "",
             enrolled=False, approval_status=status,
             sap_username="", sap_client="", class_name="",
             levels_done=0, total_levels=total_levels, total_score=0)
@@ -1931,6 +1931,18 @@ def enroll():
     """Step 2: approved users enroll in a specific class using the class code."""
     if not _is_logged_in():
         return redirect("/login")
+    # If already enrolled, go straight to profile
+    if _is_enrolled():
+        return redirect("/profile")
+    # If not yet approved, send to profile so they can see their status
+    logged_email = session["user_email"]
+    db_check = get_db()
+    pr_check = db_check.execute(
+        "SELECT status FROM pending_registrations WHERE email=?", (logged_email,)).fetchone()
+    db_check.close()
+    if not pr_check or pr_check["status"] != "approved":
+        return redirect("/profile")
+
     ip = request.remote_addr or "unknown"
     logged_email = session["user_email"]
 
