@@ -17,7 +17,7 @@ Or via Docker:
 """
 
 from flask import Flask, request, redirect, render_template_string, jsonify, Response, send_file, send_from_directory, abort, session
-import sqlite3, hashlib, json, os, re, time, hmac, base64, secrets
+import sqlite3, hashlib, json, os, re, time, hmac, base64, secrets, threading
 from datetime import datetime
 try:
     import markdown as _markdown_lib
@@ -666,6 +666,8 @@ def init_db():
         ("password_hash",     "TEXT"),
         ("temp_password",     "TEXT"),
         ("expires_at",        "TEXT"),
+        ("provisioning_status", "TEXT DEFAULT 'done'"),
+        ("provision_log",       "TEXT DEFAULT ''"),
     ]:
         if col not in existing:
             db.execute(f"ALTER TABLE participants ADD COLUMN {col} {typedef}")
@@ -731,6 +733,71 @@ def _assign_slot(sap_username: str) -> tuple[str | None, str | None]:
         raise
     finally:
         conn.close()
+
+
+def _provision_async(sap_username, name, email, slot_conn_params, server_alias):
+    """Background thread: create SAP user + WireGuard peer, then update the DB."""
+
+    def _log(msg):
+        try:
+            db2 = get_db()
+            db2.execute(
+                "UPDATE participants SET provision_log = provision_log || ? WHERE sap_username=?",
+                (msg + "\n", sap_username))
+            db2.commit()
+            db2.close()
+        except Exception:
+            pass
+
+    try:
+        _log("⚙️ Creating SAP user account...")
+        sap_ok, temp_password, sap_error = create_workshop_user(
+            sap_username=sap_username,
+            first_name=name.split()[0] if name.split() else name,
+            last_name=" ".join(name.split()[1:]) if len(name.split()) > 1 else "",
+            email=email,
+            conn_params=slot_conn_params,
+        )
+        if sap_ok:
+            _log("✅ SAP user created successfully")
+        else:
+            _log(f"⚠️ SAP account will be created manually: {sap_error}")
+            temp_password = "(see instructor)"
+
+        _log("🔒 Generating VPN configuration...")
+        wg_ok, wg_ip, wg_conf, wg_error = create_customer_peer(
+            display_name=name,
+            server_alias=server_alias,
+        )
+        if wg_ok:
+            _log("✅ VPN configuration ready")
+        else:
+            _log(f"⚠️ VPN config will be provided manually: {wg_error}")
+            wg_ip = wg_conf = None
+
+        _log("💾 Saving your credentials...")
+        db2 = get_db()
+        db2.execute(
+            "UPDATE participants SET temp_password=?, wg_ip=?, wg_conf=?, sap_created=?, "
+            "provisioning_status='done', provision_log=provision_log||? "
+            "WHERE sap_username=?",
+            (temp_password, wg_ip, wg_conf, 1 if sap_ok else 0,
+             "✅ All done! Your access is ready.\n", sap_username))
+        db2.commit()
+        db2.close()
+
+    except Exception as exc:
+        try:
+            db2 = get_db()
+            db2.execute(
+                "UPDATE participants SET provisioning_status='error', "
+                "provision_log=provision_log||? WHERE sap_username=?",
+                (f"❌ Unexpected error: {exc}\n", sap_username))
+            db2.commit()
+            db2.close()
+        except Exception:
+            pass
+
 
 def load_codes():
     if os.path.exists(CONFIG_FILE):
@@ -1734,6 +1801,17 @@ PROFILE_TEMPLATE = """<!DOCTYPE html>
   .countdown-num{font-size:1.6rem;font-weight:700;color:#fff;display:block;line-height:1}
   .countdown-label{font-size:0.7rem;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
   .expired-warn{background:#2a0a0a;border:1px solid #e74c3c;border-radius:8px;padding:14px 18px;color:#e74c3c;font-size:0.88rem;margin-top:8px}
+  /* Provisioning progress */
+  .prov-card{background:#0d1a0d;border:1px solid #1a3a1a;border-radius:10px;padding:24px 28px;margin-bottom:16px}
+  .prov-card h3{font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#2ecc71;margin:0 0 16px}
+  .prov-bar-bg{background:#1a2a1a;border-radius:6px;height:14px;width:100%;overflow:hidden;margin:12px 0 20px}
+  .prov-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#1a6632,#2ecc71);transition:width .5s ease;width:0%}
+  .prov-steps{list-style:none;padding:0;margin:0;font-size:0.85rem;color:#aaa}
+  .prov-steps li{padding:4px 0;border-bottom:1px solid #1a2a1a}
+  .prov-steps li:last-child{border-bottom:none;color:#2ecc71}
+  .prov-spinner{display:inline-block;width:14px;height:14px;border:2px solid #1a3a1a;border-top-color:#2ecc71;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .prov-error{background:#2a0a0a;border:1px solid #e74c3c;border-radius:8px;padding:14px 18px;color:#e74c3c;font-size:0.88rem;margin-top:8px}
 </style>
 </head>
 <body>
@@ -1772,6 +1850,50 @@ PROFILE_TEMPLATE = """<!DOCTYPE html>
   </div>
 
   {% if enrolled %}
+  {% if provisioning_status == 'pending' or provisioning_status == 'error' %}
+  <!-- Provisioning in progress card -->
+  <div class="prov-card" id="prov-card">
+    <h3>{% if provisioning_status == 'error' %}⚠ Provisioning Issue{% else %}<span class="prov-spinner"></span>Setting Up Your Access…{% endif %}</h3>
+    <p style="color:#aaa;font-size:0.87rem;margin:0 0 4px">
+      {% if provisioning_status == 'error' %}
+        Something went wrong during provisioning. Contact your instructor with your SAP username: <strong style="color:#ffd700">{{ sap_username }}</strong>
+      {% else %}
+        Your SAP account and VPN are being provisioned. This usually takes under 30 seconds.
+        The page will update automatically when ready.
+      {% endif %}
+    </p>
+    <div class="prov-bar-bg"><div class="prov-bar-fill" id="prov-fill" style="width:5%"></div></div>
+    <ul class="prov-steps" id="prov-steps">
+      <li>⏳ Initialising provisioning…</li>
+    </ul>
+  </div>
+  <script>
+  (function() {
+    var poll = setInterval(function() {
+      fetch('/api/provision-status').then(function(r){ return r.json(); }).then(function(d) {
+        // Update progress bar
+        document.getElementById('prov-fill').style.width = d.percent + '%';
+        // Update steps list
+        if (d.steps && d.steps.length) {
+          var ul = document.getElementById('prov-steps');
+          ul.innerHTML = d.steps.map(function(s){ return '<li>' + s + '</li>'; }).join('');
+        }
+        // Done — reload page to show credentials
+        if (d.status === 'done') {
+          clearInterval(poll);
+          document.getElementById('prov-fill').style.width = '100%';
+          setTimeout(function(){ window.location.reload(); }, 800);
+        } else if (d.status === 'error') {
+          clearInterval(poll);
+          document.getElementById('prov-fill').style.background = '#e74c3c';
+          document.getElementById('prov-fill').style.width = '100%';
+        }
+      }).catch(function(){});
+    }, 2000);
+  })();
+  </script>
+
+  {% else %}
   <!-- Credentials card -->
   <div class="card">
     <h3>SAP Credentials &amp; VPN</h3>
@@ -1791,6 +1913,7 @@ PROFILE_TEMPLATE = """<!DOCTYPE html>
     <p style="color:#f39c12;font-size:0.85rem;margin-top:12px">⚠ VPN config not available — contact your instructor.</p>
     {% endif %}
   </div>
+  {% endif %}
 
   <!-- Expiry / countdown card -->
   <div class="card">
@@ -1897,6 +2020,7 @@ def profile():
             style=STYLE, topbar=_topbar("/profile", authenticated=True),
             name=user["name"], email=user["email"], company=user["company"] or "",
             enrolled=True, approval_status="approved", previously_enrolled=False,
+            provisioning_status=user["provisioning_status"] or "done",
             sap_username=sap_username, sap_client=sap_client, class_name=class_name,
             temp_password=user["temp_password"] or "(see instructor)",
             sap_host=SAP_HOST, sap_sysnr=SAP_SYSNR,
@@ -1919,6 +2043,7 @@ def profile():
             style=STYLE, topbar=_topbar("/profile", authenticated=False),
             name=user["name"], email=user["email"], company=user["company"] or "",
             enrolled=False, approval_status=status, previously_enrolled=previously_enrolled,
+            provisioning_status="done",
             sap_username="", sap_client="", class_name="",
             temp_password="", sap_host="", sap_sysnr="", wg_conf=None,
             expires_at="", days_left=None, hours_left=None, expired=False,
@@ -2117,38 +2242,18 @@ def enroll():
         return err(f"SAP user '{sap_username}' already exists — choose a different username.")
 
     name = pending["name"]
-    sap_ok, temp_password, sap_error = create_workshop_user(
-        sap_username=sap_username,
-        first_name=name.split()[0] if name.split() else name,
-        last_name=" ".join(name.split()[1:]) if len(name.split()) > 1 else "",
-        email=logged_email,
-        conn_params=slot_conn_params,
-    )
-    sap_warn = None
-    if not sap_ok:
-        sap_warn = f"SAP user could not be created automatically: {sap_error}. Your instructor will create it manually."
-        temp_password = "(see instructor)"
-
-    wg_ok, wg_ip, wg_conf, wg_error = create_customer_peer(
-        display_name=name,
-        server_alias=server_alias,
-    )
-    wg_warn = None
-    if not wg_ok:
-        wg_warn = f"VPN config could not be created: {wg_error}. Your instructor will provide your WireGuard config."
-        wg_ip = wg_conf = None
-
     from datetime import timedelta
     expires_at = (datetime.utcnow() + timedelta(days=7)).isoformat(timespec="seconds")
 
     try:
         db.execute(
             "INSERT INTO participants "
-            "(name, email, sap_username, company, password_hash, class_id, sap_created, wg_ip, wg_conf, server, sap_client, waiver_accepted, temp_password, expires_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?)",
+            "(name, email, sap_username, company, password_hash, class_id, sap_created, "
+            "wg_ip, wg_conf, server, sap_client, waiver_accepted, temp_password, expires_at, "
+            "provisioning_status, provision_log) "
+            "VALUES (?,?,?,?,?,?,0,NULL,NULL,?,?,1,NULL,?,'pending','')",
             (name, logged_email, sap_username, pending["company"], pending["password_hash"],
-             cls["id"], 1 if sap_ok else 0, wg_ip, wg_conf, server_alias, slot_client,
-             temp_password, expires_at))
+             cls["id"], server_alias, slot_client, expires_at))
         # Burn the token — it's single-use
         db.execute(
             "UPDATE pending_registrations SET enroll_token=NULL WHERE email=?",
@@ -2159,24 +2264,68 @@ def enroll():
         return err(f"Enrollment failed: {exc}")
 
     db.close()
-    return render_template_string(ENROLL_TEMPLATE,
-        style=STYLE, topbar=_topbar("/enroll", authenticated=True),
-        success=True,
-        class_name=cls["name"],
-        sap_username=sap_username,
-        temp_password=temp_password,
-        sap_host=SAP_HOST,
-        sap_sysnr=SAP_SYSNR,
-        sap_client=slot_client,
-        wg_conf=wg_conf,
-        sap_warn=sap_warn,
-        wg_warn=wg_warn,
-        sap_available=SAP_AVAILABLE)
+
+    # Kick off provisioning in the background — user lands on /profile to watch progress
+    threading.Thread(
+        target=_provision_async,
+        args=(sap_username, name, logged_email, slot_conn_params, server_alias),
+        daemon=True,
+    ).start()
+
+    return redirect("/profile")
 
 
 
 @app.route("/download/<sap_username>")
 def download_wg_conf(sap_username):
+    """Serve the WireGuard .conf for a registered participant."""
+    if not _has_access_cookie():
+        return redirect("/register")
+    db = get_db()
+    row = db.execute(
+        "SELECT wg_conf, name FROM participants WHERE sap_username=?",
+        (sap_username.upper(),)).fetchone()
+    db.close()
+    if not row or not row["wg_conf"]:
+        return "No WireGuard config found for this user.", 404
+    filename = f"{sap_username.upper()}_vpn.conf"
+    return Response(
+        row["wg_conf"],
+        mimetype="text/plain",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@app.route("/api/provision-status")
+def api_provision_status():
+    """Polling endpoint — returns provisioning progress for the logged-in user."""
+    if not _is_logged_in():
+        return jsonify({"error": "not logged in"}), 401
+    db = get_db()
+    row = db.execute(
+        "SELECT sap_username, provisioning_status, provision_log "
+        "FROM participants WHERE email=?",
+        (session["user_email"],)).fetchone()
+    db.close()
+    if not row:
+        return jsonify({"status": "not_found"}), 404
+    status = row["provisioning_status"] or "pending"
+    steps  = [s for s in (row["provision_log"] or "").split("\n") if s.strip()]
+    # Estimate progress percentage
+    if status == "done":
+        percent = 100
+    elif status == "error":
+        percent = 100
+    else:
+        percent = min(85, max(5, len(steps) * 22))
+    return jsonify({
+        "status":       status,
+        "steps":        steps,
+        "percent":      percent,
+        "sap_username": row["sap_username"],
+    })
+
+
+
     """Serve the WireGuard .conf for a registered participant."""
     if not _has_access_cookie():
         return redirect("/register")
