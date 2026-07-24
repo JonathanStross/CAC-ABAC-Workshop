@@ -2461,8 +2461,10 @@ def admin():
         f"<th {th}>Email</th>"
         f"<th {th}>VPN IP</th>"
         f"<th {th}>Status</th>"
+        f"<th {th}>Expires</th>"
         f"<th {th}>Registered</th>"
         f"<th {th}>Actions</th>"
+        f"<th {th}>Expiry</th>"
         f"</tr>"
     )
     for p in parts:
@@ -2490,6 +2492,33 @@ def admin():
             f"<button style='background:#e67e22;color:#fff;border:none;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:0.8em;margin-right:2px'>Lock</button></form>"
         )
 
+        expires_str = (p["expires_at"] or "")[:10]  # YYYY-MM-DD
+        expire_color = ""
+        if p["expires_at"]:
+            try:
+                from datetime import timedelta as _td
+                exp_dt = datetime.fromisoformat(p["expires_at"])
+                delta = exp_dt - datetime.utcnow()
+                if delta.total_seconds() <= 0:
+                    expire_color = "color:#e74c3c"
+                elif delta.days <= 1:
+                    expire_color = "color:#f39c12"
+                else:
+                    expire_color = "color:#2ecc71"
+            except Exception:
+                pass
+
+        extend_form = (
+            f"<form method='POST' action='/admin/extend/{uname}' style='display:inline;white-space:nowrap'>"
+            f"<input type='date' name='expires_at' value='{expires_str}' "
+            f"style='background:#1a1a2e;border:1px solid #333;color:#fff;padding:1px 4px;border-radius:3px;font-size:0.78em;width:108px'>"
+            f"<button type='submit' name='mode' value='date' "
+            f"style='background:#2980b9;color:#fff;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:0.78em;margin-left:2px'>Set</button>"
+            f"<button type='submit' name='mode' value='plus7' "
+            f"style='background:#16a085;color:#fff;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:0.78em;margin-left:2px'>+7d</button>"
+            f"</form>"
+        )
+
         out += (
             f"<tr style='{row_style}'>"
             f"<td {td}><strong style='color:#ffd700;letter-spacing:1px'>{uname}</strong></td>"
@@ -2499,6 +2528,7 @@ def admin():
             f"<td {td} style='color:#aaa;font-size:0.85em'>{p['email']}</td>"
             f"<td {td} style='color:#2ecc71;font-size:0.85em'>{wg_ip}</td>"
             f"<td {td}>{status_badge}</td>"
+            f"<td {td} style='{expire_color};font-size:0.8em;white-space:nowrap'>{expires_str or '—'}</td>"
             f"<td {td} style='color:#aaa;font-size:0.8em;white-space:nowrap'>{(p['registered_at'] or '')[:16]}</td>"
             f"<td {td} style='white-space:nowrap'>"
             f"{lock_btn}"
@@ -2509,7 +2539,9 @@ def admin():
             f"<form method='POST' action='/admin/delete/{uname}' style='display:inline'>"
             f"<button onclick=\"return confirm('Delete {uname}? Cannot be undone.');\" "
             f"style='background:#c0392b;color:#fff;border:none;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:0.8em'>Delete</button>"
-            f"</form></td></tr>"
+            f"</form></td>"
+            f"<td {td}>{extend_form}</td>"
+            f"</tr>"
         )
     out += "</table>"
 
@@ -2726,6 +2758,50 @@ def admin_delete_user(sap_username):
     app.logger.warning("Admin deleted user %s (SAP:%s WG:%s)",
                        uname, "ok" if sap_ok else sap_err,
                        "ok" if wg_ok else (wg_err if row and row["wg_ip"] else "no-peer"))
+    return redirect("/admin")
+
+@app.route("/admin/extend/<sap_username>", methods=["POST"])
+def admin_extend_user(sap_username):
+    """Set or extend the expiry date for a participant."""
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    uname = sap_username.upper()
+    mode  = request.form.get("mode", "date")  # "date" or "plus7"
+    db = get_db()
+    if mode == "plus7":
+        # Add 7 days to current expiry (or from now if not set / expired)
+        row = db.execute("SELECT expires_at FROM participants WHERE sap_username=?", (uname,)).fetchone()
+        current = None
+        if row and row["expires_at"]:
+            try:
+                dt = datetime.fromisoformat(row["expires_at"])
+                if dt > datetime.utcnow():
+                    current = dt
+            except Exception:
+                pass
+        base = current or datetime.utcnow()
+        from datetime import timedelta as _td
+        new_expiry = (base + _td(days=7)).isoformat(timespec="seconds")
+    else:
+        raw = request.form.get("expires_at", "").strip()
+        if not raw:
+            db.close()
+            return redirect("/admin")
+        # Accept YYYY-MM-DD and turn it into end-of-day UTC
+        try:
+            new_expiry = datetime.strptime(raw, "%Y-%m-%d").replace(
+                hour=23, minute=59, second=59).isoformat(timespec="seconds")
+        except ValueError:
+            db.close()
+            return "Invalid date format.", 400
+    # If user was previously marked as deprovisioned (locked=99), reset so they're active again
+    db.execute(
+        "UPDATE participants SET expires_at=?, locked=CASE WHEN locked=99 THEN 0 ELSE locked END "
+        "WHERE sap_username=?", (new_expiry, uname))
+    db.commit()
+    db.close()
+    app.logger.info("Admin extended expiry for %s → %s", uname, new_expiry)
     return redirect("/admin")
 
 @app.route("/admin/lock/<sap_username>", methods=["POST"])
