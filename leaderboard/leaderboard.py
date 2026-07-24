@@ -417,7 +417,7 @@ function findPeers() {
 @app.route("/levels")
 def levels_index():
     if not _has_access_cookie():
-        return redirect("/enroll")
+        return redirect("/register")
     codes = load_codes()
     items = []
     for lvl_key, info in codes.items():
@@ -451,7 +451,7 @@ def levels_index():
 @app.route("/levels/<int:level_num>")
 def level_guide(level_num):
     if not _has_access_cookie():
-        return redirect("/enroll")
+        return redirect("/register")
     if level_num in LOCKED_LEVELS:
         return render_template_string("""<!DOCTYPE html>
 <html>
@@ -874,7 +874,7 @@ HOME_TEMPLATE = """
     <h1>Welcome to <span>Pathlock</span> Academy</h1>
     <p>Hands-on, certification-level training for the Pathlock security and compliance platform. Work through real SAP scenarios, earn points, and qualify for official certificates.</p>
     <div class="cta-note">
-      Don't have access yet? &nbsp;<a href="mailto:academy@pathlock.com">Contact Pathlock</a> to enrol in a course or request a private workshop for your team.
+      New here? &nbsp;<a href="/register">Request access →</a>&nbsp; &nbsp;Already approved? &nbsp;<a href="/enroll">Enroll in your class →</a>
     </div>
   </div>
 
@@ -1329,7 +1329,7 @@ def index():
 @app.route("/leaderboard")
 def leaderboard_page():
     if not _has_access_cookie():
-        return redirect("/enroll")
+        return redirect("/register")
     rows = get_leaderboard()
     codes = load_codes()
     return render_template_string(LEADERBOARD_TEMPLATE,
@@ -1419,7 +1419,7 @@ REQUEST_TEMPLATE = """<!DOCTYPE html>
       <div class="icon">📬</div>
       <h2>Request received</h2>
       <p>Thanks <strong>{{ name }}</strong>. We've received your request and will review it shortly.<br><br>
-         Once approved, you'll be able to enroll in a class at <strong>/enroll</strong> using the class code your instructor provides.</p>
+         Once approved, come back and <a href="/enroll" style="color:#c8102e;font-weight:600">enroll in your class →</a> using the class code your instructor provides.</p>
     </div>
   {% else %}
     <h1>Request Access</h1>
@@ -1436,6 +1436,7 @@ REQUEST_TEMPLATE = """<!DOCTYPE html>
         <textarea name="message" placeholder="e.g. attending the SAP security workshop on July 30th">{{ form_message }}</textarea></div>
       <button class="submit-btn" type="submit">Request Access →</button>
     </form>
+    <p style="text-align:center;color:#555;font-size:0.85rem;margin-top:20px">Already approved? <a href="/enroll" style="color:#888">Go to enrollment →</a></p>
   {% endif %}
 </div>
 </body></html>
@@ -1742,7 +1743,7 @@ def enroll():
 def download_wg_conf(sap_username):
     """Serve the WireGuard .conf for a registered participant."""
     if not _has_access_cookie():
-        return redirect("/enroll")
+        return redirect("/register")
     db = get_db()
     row = db.execute(
         "SELECT wg_conf, name FROM participants WHERE sap_username=?",
@@ -1760,7 +1761,7 @@ def download_wg_conf(sap_username):
 @app.route("/submit", methods=["GET", "POST"])
 def submit():
     if not _has_access_cookie():
-        return redirect("/enroll")
+        return redirect("/register")
     msg, msg_type = None, "ok"
     codes = load_codes()
     if request.method == "POST":
