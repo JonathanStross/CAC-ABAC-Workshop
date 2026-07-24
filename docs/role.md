@@ -166,8 +166,8 @@ Last updated: 2026-06-08
 
 ## Pre-Workshop Checklist
 
-- [ ] `ZWORKSHOP` built and transported to all 4 servers
-- [ ] `ZRANALYST` built and transported to all 4 servers
+- [ ] `ZWORKSHOP` built on sap2
+- [ ] `ZRANALYST` built on sap2
 - [ ] All 3 clearance shell roles built and transported
 - [ ] `ZWORKSHOP` + `Z_CLEARANCE_PUBLIC` assigned as default in registration flow
 - [ ] `ZRANALYST` assigned to all participants before L5 (or add to registration default set)

@@ -78,21 +78,16 @@ _sap_port        = f"32{SAP_SYSNR.zfill(2)}"
 SAP_CONN_DISPLAY = f"{SAP_HOST}  |  Instance {SAP_SYSNR}  |  Client {SAP_CLIENT}"
 
 # ---------------------------------------------------------------------------
-# Multi-server slot assignment
+# SAP server — single system (sap2)
 # ---------------------------------------------------------------------------
-# One entry per SAP workshop server.
-# SAP_HOST (above) is the WireGuard VPN IP shown to participants — it's always
-# 10.8.0.1 regardless of which physical server they're on.
-# These backend hosts are used only for RFC connections from the leaderboard.
+# sap3/4/5 were decommissioned July 2026. Only sap2 remains active.
+# SAP_HOST is the WireGuard VPN address shown to participants (always 10.8.0.1).
+# SAP2_HOST is used for backend RFC connections from the leaderboard.
 SAP_SERVERS: dict[str, dict] = {
     "sap2": {"host": os.environ.get("SAP2_HOST", "159.195.81.132"), "sysnr": "00"},
-    "sap3": {"host": os.environ.get("SAP3_HOST", "159.195.82.197"), "sysnr": "00"},
-    "sap4": {"host": os.environ.get("SAP4_HOST", "159.195.80.156"), "sysnr": "00"},
-    "sap5": {"host": os.environ.get("SAP5_HOST", "159.195.80.181"), "sysnr": "00"},
 }
-# Slot seeding order: round-robin across servers for each client group
-# sap2/100 → sap3/100 → sap4/100 → sap5/100 → sap2/200 → … → sap5/500
-SLOT_SERVERS = list(SAP_SERVERS.keys())           # ['sap2','sap3','sap4','sap5']
+# All participants are assigned to sap2. Multiple clients allow parallel sessions.
+SLOT_SERVERS = list(SAP_SERVERS.keys())           # ['sap2']
 SLOT_CLIENTS = ["100", "200", "300", "400", "500"]
 
 # Simple in-memory rate limiter  {ip: [timestamp, ...]}

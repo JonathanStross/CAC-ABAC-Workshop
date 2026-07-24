@@ -27,11 +27,8 @@ services:
 
     volumes:
       - leaderboard_data:/data
-      # WireGuard: SSH keys for each SAP workshop server (sap2–sap5)
+      # WireGuard: SSH key for sap2 (only active SAP server — sap3/4/5 decommissioned July 2026)
       - /root/.ssh/netcup_sap2:/secrets/wg_sap2_key:ro
-      - /root/.ssh/netcup_sap3:/secrets/wg_sap3_key:ro
-      - /root/.ssh/netcup_sap4:/secrets/wg_sap4_key:ro
-      - /root/.ssh/netcup_sap5:/secrets/wg_sap5_key:ro
       # Legacy single-server key (kept for offgrid fallback / backward compat)
       - /root/.ssh/id_ed25519:/secrets/wg_ssh_key:ro
       # Level guides: mount handouts/ from the git clone so content updates = git pull only

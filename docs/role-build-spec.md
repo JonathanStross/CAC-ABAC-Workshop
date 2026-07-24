@@ -7,7 +7,7 @@ Last updated: 2026-06-08
 
 ## Overview
 
-Four roles are needed. Build on **sap2**, transport to sap3/4/5.
+Four roles are needed. Build on **sap2** (only active SAP server — sap3/4/5 decommissioned July 2026).
 
 | Role | Type | Assigned at | Purpose |
 |---|---|---|---|
@@ -280,8 +280,8 @@ Import on each server in this sequence:
 
 ## Pre-Session Checklist
 
-- [ ] Build `ZWORKSHOP` on sap2, transport to sap3/4/5
-- [ ] Build `ZRANALYST` on sap2, transport to sap3/4/5
+- [ ] Build `ZWORKSHOP` on sap2
+- [ ] Build `ZRANALYST` on sap2
 - [ ] Build `Z_CLEARANCE_TOPSECRET`, `Z_CLEARANCE_INTERNAL`, `Z_CLEARANCE_PUBLIC` — transport
 - [ ] Assign `ZWORKSHOP` + `Z_CLEARANCE_PUBLIC` to all auto-registered participants (leaderboard does this)
 - [ ] Assign `Z_CLEARANCE_TOPSECRET` to instructor demo user manually
