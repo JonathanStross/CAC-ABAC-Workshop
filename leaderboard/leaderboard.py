@@ -655,24 +655,29 @@ def init_db():
     # Migrate older DBs — add any missing columns
     existing = {row[1] for row in db.execute("PRAGMA table_info(participants)")}
     for col, typedef in [
-        ("wg_ip",           "TEXT"),
-        ("wg_conf",         "TEXT"),
-        ("locked",          "INTEGER DEFAULT 0"),
-        ("kicked_at",       "TEXT"),
-        ("server",          "TEXT"),
-        ("sap_client",      "TEXT"),
-        ("waiver_accepted", "INTEGER DEFAULT 0"),
-        ("class_id",        "INTEGER"),
-        ("password_hash",   "TEXT"),
-        ("temp_password",   "TEXT"),
-        ("expires_at",      "TEXT"),
+        ("wg_ip",             "TEXT"),
+        ("wg_conf",           "TEXT"),
+        ("locked",            "INTEGER DEFAULT 0"),
+        ("kicked_at",         "TEXT"),
+        ("server",            "TEXT"),
+        ("sap_client",        "TEXT"),
+        ("waiver_accepted",   "INTEGER DEFAULT 0"),
+        ("class_id",          "INTEGER"),
+        ("password_hash",     "TEXT"),
+        ("temp_password",     "TEXT"),
+        ("expires_at",        "TEXT"),
     ]:
         if col not in existing:
             db.execute(f"ALTER TABLE participants ADD COLUMN {col} {typedef}")
     # Migrate pending_registrations too
     pr_existing = {row[1] for row in db.execute("PRAGMA table_info(pending_registrations)")}
-    if "password_hash" not in pr_existing:
-        db.execute("ALTER TABLE pending_registrations ADD COLUMN password_hash TEXT")
+    for col, typedef in [
+        ("password_hash",      "TEXT"),
+        ("enroll_token",       "TEXT"),
+        ("assigned_class_id",  "INTEGER"),
+    ]:
+        if col not in pr_existing:
+            db.execute(f"ALTER TABLE pending_registrations ADD COLUMN {col} {typedef}")
     db.commit()
     _seed_slots(db)
     db.close()
@@ -1963,16 +1968,17 @@ ENROLL_TEMPLATE = """<!DOCTYPE html>
     </div>
   {% else %}
     <h1>Enroll in a Class</h1>
-    <p class="sub">Your request must be approved before you can enroll. Enter your SAP username and the class code your instructor provided.</p>
+    <p class="sub">Enter the personal invite token your instructor sent you, and choose your SAP username.</p>
     {% if msg %}<div class="msg-{{ msg_type }}">{{ msg }}</div>{% endif %}
     <form method="POST">
       <div class="field"><label>Choose your SAP username *</label>
         <input name="sap_username" value="{{ form_sap }}" required placeholder="JSMITH" maxlength="12"
                style="text-transform:uppercase">
         <div class="hint">3–12 characters, letters/digits/underscore only. This becomes your login on the SAP system.</div></div>
-      <div class="field"><label>Class enrollment code *</label>
-        <input name="enroll_code" value="{{ form_code }}" required placeholder="provided by your instructor">
-        <div class="hint">Each class has a unique code — ask your instructor if you don't have one.</div></div>
+      <div class="field"><label>Your personal invite token *</label>
+        <input name="enroll_token" value="{{ form_token }}" required placeholder="sent to you by your instructor"
+               style="font-family:monospace">
+        <div class="hint">This is a one-time token unique to you — contact your instructor if you don't have one.</div></div>
       <div style="margin-top:20px">
         <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;color:#aaa;font-size:0.85rem">
           <input type="checkbox" name="w_agree" style="margin-top:2px;width:auto">
@@ -1988,51 +1994,45 @@ ENROLL_TEMPLATE = """<!DOCTYPE html>
 
 @app.route("/enroll", methods=["GET", "POST"])
 def enroll():
-    """Step 2: approved users enroll in a specific class using the class code."""
+    """Step 2: approved users enroll using their personal invite token."""
     if not _is_logged_in():
         return redirect("/login")
-    # If already enrolled, go straight to profile
     if _is_enrolled():
         return redirect("/profile")
-    # If not yet approved, send to profile so they can see their status
-    logged_email = session["user_email"]
-    db_check = get_db()
-    pr_check = db_check.execute(
-        "SELECT status FROM pending_registrations WHERE email=?", (logged_email,)).fetchone()
-    db_check.close()
-    if not pr_check or pr_check["status"] != "approved":
-        return redirect("/profile")
 
-    ip = request.remote_addr or "unknown"
     logged_email = session["user_email"]
+    ip = request.remote_addr or "unknown"
+
+    # Pre-fill token from query string (e.g. link in email)
+    prefill_token = request.args.get("token", "")
 
     if request.method == "GET":
         return render_template_string(ENROLL_TEMPLATE,
             style=STYLE, topbar=_topbar("/enroll", authenticated=False),
             success=False, msg=None, msg_type="ok",
-            form_sap="", form_code="")
+            form_sap="", form_token=prefill_token)
 
     if not _check_rate_limit(ip):
         return render_template_string(ENROLL_TEMPLATE,
             style=STYLE, topbar=_topbar("/enroll", authenticated=False),
             success=False, msg="Too many attempts. Please wait.", msg_type="err",
-            form_sap="", form_code="")
+            form_sap="", form_token="")
 
-    sap_username = _sanitize_text(request.form.get("sap_username", "").upper(), 12)
-    enroll_code  = _sanitize_text(request.form.get("enroll_code", "").strip(), 80)
+    sap_username  = _sanitize_text(request.form.get("sap_username", "").upper(), 12)
+    enroll_token  = _sanitize_text(request.form.get("enroll_token", "").strip(), 100)
 
     def err(msg):
         return render_template_string(ENROLL_TEMPLATE,
             style=STYLE, topbar=_topbar("/enroll", authenticated=False),
             success=False, msg=msg, msg_type="err",
-            form_sap=sap_username, form_code=enroll_code)
+            form_sap=sap_username, form_token=enroll_token)
 
     if not sap_username or len(sap_username) < 3 or len(sap_username) > 12:
         return err("SAP username must be 3–12 characters.")
     if not re.match(r'^[A-Z0-9_]+$', sap_username):
         return err("SAP username may only contain letters, digits and underscore.")
-    if not enroll_code:
-        return err("Enrollment code is required.")
+    if not enroll_token:
+        return err("Invite token is required.")
     if not request.form.get("w_agree"):
         return err("You must accept the participant agreement to enroll.")
 
@@ -2043,34 +2043,43 @@ def enroll():
 
     db = get_db()
 
-    # Check approval status
+    # Validate token — must belong to this user's email and be unused
     pending = db.execute(
-        "SELECT * FROM pending_registrations WHERE email=?", (logged_email,)).fetchone()
+        "SELECT * FROM pending_registrations WHERE email=? AND enroll_token=? AND status='approved'",
+        (logged_email, enroll_token)).fetchone()
     if not pending:
-        db.close()
-        return err("No access request found for your account. Please contact your instructor.")
-    if pending["status"] == "pending":
-        db.close()
-        return err("Your request is still pending admin approval. Check your profile for status.")
-    if pending["status"] == "rejected":
-        db.close()
-        return err("Your access request was not approved. Contact jonathan.stross@pathlock.com.")
+        # Fallback: also accept if approved with no token (legacy plain approval)
+        pending_legacy = db.execute(
+            "SELECT * FROM pending_registrations WHERE email=? AND status='approved' AND (enroll_token IS NULL OR enroll_token='')",
+            (logged_email,)).fetchone()
+        if not pending_legacy:
+            db.close()
+            return err("Invalid or already-used invite token. Contact your instructor for a new one.")
+        pending = pending_legacy
+        cls_id = pending["assigned_class_id"]
+        # For legacy approvals without a token, we still need a class — reject if not set
+        if not cls_id:
+            db.close()
+            return err("Your approval has no class assigned yet. Ask your instructor to generate your invite token.")
+    else:
+        cls_id = pending["assigned_class_id"]
+        if not cls_id:
+            db.close()
+            return err("Your invite token has no class assigned. Contact your instructor.")
 
     # Already enrolled
     if db.execute("SELECT 1 FROM participants WHERE email=?", (logged_email,)).fetchone():
         db.close()
-        session["user_email"] = logged_email
         return redirect("/profile")
     if db.execute("SELECT 1 FROM participants WHERE sap_username=?", (sap_username,)).fetchone():
         db.close()
         return err(f"SAP username '{sap_username}' is already taken — choose another.")
 
-    # Validate class code
-    cls = db.execute(
-        "SELECT * FROM classes WHERE enroll_code=? AND active=1", (enroll_code,)).fetchone()
+    # Load class
+    cls = db.execute("SELECT * FROM classes WHERE id=? AND active=1", (cls_id,)).fetchone()
     if not cls:
         db.close()
-        return err("Invalid or inactive enrollment code. Check with your instructor.")
+        return err("The class assigned to your invite is inactive. Contact your instructor.")
 
     # Assign slot
     server_alias, slot_client = _assign_slot(sap_username)
@@ -2122,6 +2131,10 @@ def enroll():
             (name, logged_email, sap_username, pending["company"], pending["password_hash"],
              cls["id"], 1 if sap_ok else 0, wg_ip, wg_conf, server_alias, slot_client,
              temp_password, expires_at))
+        # Burn the token — it's single-use
+        db.execute(
+            "UPDATE pending_registrations SET enroll_token=NULL WHERE email=?",
+            (logged_email,))
         db.commit()
     except sqlite3.IntegrityError as exc:
         db.close()
@@ -2255,21 +2268,79 @@ def admin_approvals():
     db = get_db()
     pending = db.execute(
         "SELECT * FROM pending_registrations ORDER BY submitted_at DESC").fetchall()
+    classes = db.execute("SELECT id, name FROM classes WHERE active=1 ORDER BY name").fetchall()
     db.close()
+
+    # Build class options for the invite form
+    class_options = "".join(
+        f"<option value='{c['id']}'>{c['name']}</option>" for c in classes
+    )
+    no_classes_msg = "" if classes else (
+        "<p style='color:#f39c12'>⚠ No active classes yet — "
+        "<a href='/admin/classes' style='color:#f39c12'>create one first</a>.</p>"
+    )
+
     td = "style='padding:6px 12px;vertical-align:middle'"
     th = "style='text-align:left;padding:6px 12px;color:#aaa;white-space:nowrap'"
     rows = ""
     for p in pending:
         badge_color = {"pending": "#f39c12", "approved": "#2ecc71", "rejected": "#e74c3c"}.get(p["status"], "#aaa")
         badge = f"<span style='color:{badge_color};font-weight:bold'>{p['status'].upper()}</span>"
+
+        token_cell = "—"
+        if p["enroll_token"]:
+            tok = p["enroll_token"]
+            token_cell = (
+                f"<span style='font-family:monospace;font-size:0.82em;color:#ffd700'>{tok}</span>"
+                f"<button onclick=\"navigator.clipboard.writeText('{tok}');this.textContent='✓'\" "
+                f"style='background:#2a2a3e;color:#aaa;border:none;padding:1px 6px;border-radius:3px;"
+                f"cursor:pointer;font-size:0.78em;margin-left:6px'>Copy</button>"
+            )
+            if p.get("assigned_class_id"):
+                class_name_for_tok = next((c["name"] for c in classes if c["id"] == p["assigned_class_id"]), "?")
+                token_cell += f"<br><span style='color:#888;font-size:0.75em'>{class_name_for_tok}</span>"
+
         actions = ""
         if p["status"] == "pending":
-            actions = (
-                f"<form method='POST' action='/admin/approvals/{p['id']}/approve' style='display:inline'>"
-                f"<button style='background:#27ae60;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:4px'>✓ Approve</button></form>"
+            # Approve & Invite: class picker + generate token
+            if classes:
+                actions += (
+                    f"<form method='POST' action='/admin/approvals/{p['id']}/invite' style='display:inline;white-space:nowrap'>"
+                    f"<select name='class_id' style='background:#1a1a2e;border:1px solid #333;color:#fff;padding:2px 6px;border-radius:3px;font-size:0.82em;margin-right:4px'>"
+                    f"{class_options}</select>"
+                    f"<button style='background:#27ae60;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:4px'>✓ Approve &amp; Invite</button>"
+                    f"</form>"
+                )
+            actions += (
                 f"<form method='POST' action='/admin/approvals/{p['id']}/reject' style='display:inline'>"
                 f"<button style='background:#c0392b;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.85em'>✗ Reject</button></form>"
             )
+        elif p["status"] == "approved" and not p["enroll_token"]:
+            # Already approved but no token yet — allow generating one
+            if classes:
+                actions += (
+                    f"<form method='POST' action='/admin/approvals/{p['id']}/invite' style='display:inline;white-space:nowrap'>"
+                    f"<select name='class_id' style='background:#1a1a2e;border:1px solid #333;color:#fff;padding:2px 6px;border-radius:3px;font-size:0.82em;margin-right:4px'>"
+                    f"{class_options}</select>"
+                    f"<button style='background:#2980b9;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:4px'>🔑 Generate Token</button>"
+                    f"</form>"
+                )
+        elif p["status"] == "approved" and p["enroll_token"]:
+            # Re-generate token (e.g. if they lost it)
+            if classes:
+                cur_class = p.get("assigned_class_id") or (classes[0]["id"] if classes else "")
+                opt_regen = "".join(
+                    f"<option value='{c['id']}' {'selected' if c['id']==cur_class else ''}>{c['name']}</option>"
+                    for c in classes
+                )
+                actions += (
+                    f"<form method='POST' action='/admin/approvals/{p['id']}/invite' style='display:inline;white-space:nowrap'>"
+                    f"<select name='class_id' style='background:#1a1a2e;border:1px solid #333;color:#fff;padding:2px 6px;border-radius:3px;font-size:0.82em;margin-right:4px'>"
+                    f"{opt_regen}</select>"
+                    f"<button style='background:#8e44ad;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:4px'>🔄 Regen Token</button>"
+                    f"</form>"
+                )
+
         actions += (
             f"<form method='POST' action='/admin/approvals/{p['id']}/delete' style='display:inline'"
             f" onsubmit=\"return confirm('Delete {p['name']} permanently?')\">"
@@ -2280,25 +2351,50 @@ def admin_approvals():
             f"<td {td}>{p['name']}</td>"
             f"<td {td} style='color:#aaa;font-size:0.85em'>{p['email']}</td>"
             f"<td {td} style='color:#aaa;font-size:0.85em'>{p['company'] or '—'}</td>"
-            f"<td {td} style='color:#aaa;font-size:0.8em;max-width:240px'>{p['message'] or '—'}</td>"
+            f"<td {td} style='color:#aaa;font-size:0.8em;max-width:200px'>{p['message'] or '—'}</td>"
             f"<td {td}>{badge}</td>"
             f"<td {td} style='color:#aaa;font-size:0.8em'>{(p['submitted_at'] or '')[:16]}</td>"
-            f"<td {td}>{actions}</td>"
+            f"<td {td}>{token_cell}</td>"
+            f"<td {td} style='white-space:nowrap'>{actions}</td>"
             f"</tr>"
         )
     html = (
-        f"<html><body style='font-family:monospace;background:#111;color:#eee;padding:20px'>"
+        f"<html><head><title>Access Requests</title></head>"
+        f"<body style='font-family:monospace;background:#111;color:#eee;padding:20px'>"
         f"<p><a href='/admin' style='color:#4f8ef7'>← Back to Admin</a></p>"
         f"<h2>Access Requests ({len(pending)})</h2>"
+        f"{no_classes_msg}"
+        f"<p style='color:#888;font-size:0.85em'>Approving generates a <strong style='color:#fff'>personal one-time token</strong> "
+        f"for each person. Copy it and send it to them — they use it at <strong>/enroll</strong>.</p>"
         f"<table style='border-collapse:collapse;width:100%'>"
         f"<tr><th {th}>Name</th><th {th}>Email</th><th {th}>Company</th>"
-        f"<th {th}>Message</th><th {th}>Status</th><th {th}>Submitted</th><th {th}>Actions</th></tr>"
+        f"<th {th}>Message</th><th {th}>Status</th><th {th}>Submitted</th>"
+        f"<th {th}>Invite Token</th><th {th}>Actions</th></tr>"
         f"{rows}</table></body></html>"
     )
     return html
 
+@app.route("/admin/approvals/<int:req_id>/invite", methods=["POST"])
+def admin_invite(req_id):
+    """Approve a request and generate a personal one-time enrollment token."""
+    auth_err = _require_admin_auth()
+    if auth_err:
+        return auth_err
+    class_id = request.form.get("class_id", "")
+    if not class_id:
+        return "Class is required.", 400
+    token = secrets.token_urlsafe(24)  # ~32 chars, URL-safe
+    db = get_db()
+    db.execute(
+        "UPDATE pending_registrations SET status='approved', enroll_token=?, assigned_class_id=? WHERE id=?",
+        (token, int(class_id), req_id))
+    db.commit()
+    db.close()
+    return redirect("/admin/approvals")
+
 @app.route("/admin/approvals/<int:req_id>/approve", methods=["POST"])
 def admin_approve(req_id):
+    """Legacy plain approve (no token) — kept for backward compat."""
     auth_err = _require_admin_auth()
     if auth_err:
         return auth_err
