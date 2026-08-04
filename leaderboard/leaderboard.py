@@ -1007,7 +1007,15 @@ HOME_TEMPLATE = """
     <h1>Welcome to <span>Pathlock</span> Academy</h1>
     <p>Hands-on, certification-level training for the Pathlock security and compliance platform. Work through real SAP scenarios, earn points, and qualify for official certificates.</p>
     <div class="cta-note">
-      New here? &nbsp;<a href="/register">Request access →</a>&nbsp; &nbsp;Already approved? &nbsp;<a href="/enroll">Enroll in your class →</a>
+      {% if authenticated %}
+        <a href="/levels" style="color:#2ecc71;font-weight:700">📖 Open your levels →</a>
+        &nbsp; &nbsp;<a href="/leaderboard">🏆 Leaderboard</a>
+        &nbsp; &nbsp;<a href="/profile">My Profile</a>
+      {% elif logged_in %}
+        Welcome back! &nbsp;<a href="/profile">Go to your profile →</a>
+      {% else %}
+        New here? &nbsp;<a href="/register">Request access →</a>&nbsp; &nbsp;Already approved? &nbsp;<a href="/enroll">Enroll in your class →</a>
+      {% endif %}
     </div>
   </div>
 
@@ -1047,7 +1055,7 @@ HOME_TEMPLATE = """
     </div>
 
     <div class="catalog-section">
-      <h2>TD <span>Threat Detection</span></h2>
+      <h2>TD <span>Threat Detection &amp; Response</span></h2>
       <div class="course-row">
         <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TD</div><div class="cn">Practitioner</div><div class="cs">Threat patterns · Alert configuration · Incident triage</div></div>
         <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TD</div><div class="cn">Professional</div><div class="cs">Detection rules · SIEM integration · Threat intelligence</div></div>
@@ -1056,20 +1064,32 @@ HOME_TEMPLATE = """
     </div>
 
     <div class="catalog-section">
-      <h2>TR <span>Threat Response</span></h2>
+      <h2>CAC <span>Cybersecurity Application Controls</span></h2>
       <div class="course-row">
-        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TR</div><div class="cn">Practitioner</div><div class="cs">Incident handling · Containment procedures · Evidence collection</div></div>
-        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TR</div><div class="cn">Professional</div><div class="cs">Response playbooks · Forensics · SIEM-driven automation</div></div>
-        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">TR</div><div class="cn">Master</div><div class="cs">Crisis management · Post-incident review · Regulatory reporting</div></div>
+        {% if authenticated %}
+        <a class="course-card" href="/levels">
+          <span class="cbadge blive">Live now</span>
+          <div class="ct">Code Security</div>
+          <div class="cn">Practitioner</div>
+          <div class="cs">Insecure ABAP · Vulnerability scanning · Transport gate</div>
+        </a>
+        {% else %}
+        <div class="course-card locked">
+          <span class="cbadge bsoon">Enroll to access</span>
+          <div class="ct">Code Security</div>
+          <div class="cn">Practitioner</div>
+          <div class="cs">Insecure ABAP · Vulnerability scanning · Transport gate</div>
+        </div>
+        {% endif %}
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Threat Detection</div><div class="cn">Practitioner</div><div class="cs">Event monitor · Incident management · Alert patterns</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Vulnerability Management</div><div class="cn">Practitioner</div><div class="cs">Assessments · Findings · Risk reporting</div></div>
+        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Transport Control</div><div class="cn">Practitioner</div><div class="cs">Change gate policies · Transport risk scoring</div></div>
       </div>
     </div>
 
     <div class="catalog-section">
       <h2>Other Tracks</h2>
       <div class="course-row">
-        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Code Security</div><div class="cn">Practitioner</div><div class="cs">ABAP scanning · Vulnerability patterns</div></div>
-        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Vulnerability Management</div><div class="cn">Practitioner</div><div class="cs">Patch analysis · Risk prioritisation</div></div>
-        <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Transport Control</div><div class="cn">Practitioner</div><div class="cs">Change gate policies · Transport risk scoring</div></div>
         <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Application Profiler</div><div class="cn">Practitioner</div><div class="cs">Usage analytics · Licence optimisation</div></div>
         <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Health Monitoring</div><div class="cn">Practitioner</div><div class="cs">System health · Alerting · SLA dashboards</div></div>
       </div>
@@ -1470,6 +1490,7 @@ def index():
     auth = enrolled  # enrolled users get full nav
     return render_template_string(HOME_TEMPLATE,
         authenticated=auth,
+        logged_in=logged_in,
         topbar=_topbar("/", authenticated=auth))
 
 
