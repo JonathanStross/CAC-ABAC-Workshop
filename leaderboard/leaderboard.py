@@ -282,24 +282,91 @@ def serve_video(filename):
     return send_from_directory(os.path.realpath(VIDEOS_DIR), filename)
 
 # ---------------------------------------------------------------------------
-# Level guide renderer — markdown files from the handouts/ directory
+# Curriculum registry — one entry per workshop type
+# Each entry maps a slug to its handout files, level codes, and metadata.
 # ---------------------------------------------------------------------------
-LEVEL_FILES = {
-    0:  "level-00-briefing.md",
-    1:  "level-01-orientation.md",
-    2:  "level-02-pii-masking.md",
-    3:  "level-03-contextual-access.md",
-    4:  "level-04-tcode-block.md",
-    5:  "level-05-audit-feed.md",
-    6:  "level-06-overprivileged-role.md",
-    7:  "level-07-classification.md",
-    8:  "level-08-export-block.md",
-    9:  "level-09-fiori-masking.md",
+_BASE = os.path.dirname(__file__)
+
+CURRICULUM_REGISTRY: dict[str, dict] = {
+    "dac": {
+        "title":    "DAC: Practitioner Level",
+        "subtitle": "Meridian AG Audit Remediation",
+        "handouts_dir": os.path.join(_BASE, "..", "handouts"),
+        "codes_file":   "/data/level_codes_dac.json",
+        "level_files": {
+            0: "level-00-briefing.md",
+            1: "level-01-orientation.md",
+            2: "level-02-pii-masking.md",
+            3: "level-03-contextual-access.md",
+            4: "level-04-tcode-block.md",
+            5: "level-05-audit-feed.md",
+            6: "level-06-overprivileged-role.md",
+            7: "level-07-classification.md",
+            8: "level-08-export-block.md",
+            9: "level-09-fiori-masking.md",
+        },
+        "locked_levels": {6, 7, 8, 9},
+        "key_prefix": "L",   # L0, L1 …
+    },
+    "cac-cs": {
+        "title":    "CAC Code Security: Practitioner Level",
+        "subtitle": "Meridian AG — Cybersecurity Application Controls",
+        "handouts_dir": os.path.join(_BASE, "..", "..", "cac-workshop", "handouts"),
+        "codes_file":   "/data/level_codes_cac_cs.json",
+        "level_files": {
+            0: "level-cs-00-briefing.md",
+            1: "level-cs-01-insecure-code.md",
+            2: "level-cs-02-scan-identify.md",
+            3: "level-cs-03-proactive-block.md",
+        },
+        "locked_levels": set(),
+        "key_prefix": "CS",  # CS0, CS1 …
+    },
 }
 
-# Levels not yet released — greyed out on index, joke page if accessed by URL
-LOCKED_LEVELS = {6, 7, 8, 9}
+# Fallback for the legacy CONFIG_FILE path — kept so existing /data/level_codes.json
+# is still read if no DAC-specific file exists yet (backwards compat).
+CONFIG_FILE = "/data/level_codes.json"
+# Level guide .md files — lives one directory above the leaderboard/ folder
+HANDOUTS_DIR = os.path.join(os.path.dirname(__file__), "..", "handouts")
 
+
+def _get_curriculum(slug: str | None) -> dict:
+    """Return the curriculum registry entry for *slug*, defaulting to 'dac'."""
+    return CURRICULUM_REGISTRY.get(slug or "dac", CURRICULUM_REGISTRY["dac"])
+
+
+def _curriculum_for_user() -> dict:
+    """Return the curriculum dict for the currently logged-in participant."""
+    email = session.get("user_email")
+    if not email:
+        return _get_curriculum("dac")
+    db = get_db()
+    row = db.execute(
+        "SELECT c.curriculum FROM participants p "
+        "LEFT JOIN classes c ON c.id = p.class_id "
+        "WHERE p.email=?", (email,)).fetchone()
+    db.close()
+    slug = row["curriculum"] if row and row["curriculum"] else "dac"
+    return _get_curriculum(slug)
+
+
+def _load_codes_for(curriculum: dict) -> dict:
+    """Load level codes for a curriculum — tries its own file, then legacy fallback."""
+    path = curriculum["codes_file"]
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    # Legacy fallback: shared /data/level_codes.json
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE) as f:
+            return json.load(f)
+    return DEFAULT_CODES
+
+
+# ---------------------------------------------------------------------------
+# Level guide renderer — styles and widgets
+# ---------------------------------------------------------------------------
 LEVEL_STYLE = """
 <style>
   *,*::before,*::after{box-sizing:border-box}
@@ -447,30 +514,39 @@ function findPeers() {
 def levels_index():
     if not _has_access_cookie():
         return redirect("/register")
-    codes = load_codes()
+    cur = _curriculum_for_user()
+    codes = _load_codes_for(cur)
+    level_files   = cur["level_files"]
+    locked_levels = cur["locked_levels"]
+    handouts_dir  = cur["handouts_dir"]
+    prefix        = cur["key_prefix"]
     items = []
     for lvl_key, info in codes.items():
-        n = int(lvl_key[1:])
-        available = n in LEVEL_FILES and os.path.exists(
-            os.path.join(HANDOUTS_DIR, LEVEL_FILES[n]))
+        # Keys may be "L0"/"CS0" etc — strip prefix to get int
+        n_str = lvl_key[len(prefix):]
+        if not n_str.isdigit():
+            continue
+        n = int(n_str)
+        available = n in level_files and os.path.exists(
+            os.path.join(handouts_dir, level_files[n]))
         items.append((n, lvl_key, info["title"], info["points"], available))
     items.sort(key=lambda x: x[0])
     rows = ""
     for n, key, title, pts, avail in items:
-        if n in LOCKED_LEVELS:
-            link = f"<span style='color:#444'>{key} — {title} <em style='font-size:0.8em'>(not yet available)</em></span>"
+        if n in locked_levels:
+            link    = f"<span style='color:#444'>{key} — {title} <em style='font-size:0.8em'>(not yet available)</em></span>"
             pts_str = f"<span style='color:#333'>{pts} pts</span>"
         elif avail:
-            link = f"<a href='/levels/{n}' style='color:#2ecc71'>{key} — {title}</a>"
+            link    = f"<a href='/levels/{n}' style='color:#2ecc71'>{key} — {title}</a>"
             pts_str = f"<span style='color:#aaa'>{pts} pts</span>"
         else:
-            link = f"<span style='color:#555'>{key} — {title} <em style='font-size:0.8em'>(coming soon)</em></span>"
+            link    = f"<span style='color:#555'>{key} — {title} <em style='font-size:0.8em'>(coming soon)</em></span>"
             pts_str = f"<span style='color:#aaa'>{pts} pts</span>"
         rows += f"<tr><td>{link}</td><td>{pts_str}</td></tr>"
-    return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level Guides — DAC: Practitioner Level</title>{LEVEL_STYLE}</head>
+    return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level Guides — {cur['title']}</title>{LEVEL_STYLE}</head>
 <body>
   {_topbar('/levels')}
-  <div class='page-header'><h1>Level Guides</h1><p>Meridian AG Audit Remediation &nbsp;·&nbsp; DAC: Practitioner Level</p></div>
+  <div class='page-header'><h1>Level Guides</h1><p>{cur['subtitle']} &nbsp;·&nbsp; {cur['title']}</p></div>
   <div class='container'>
     <h2 style='color:#fff;margin-top:24px'>All Levels</h2>
     <table><tr><th>Level</th><th>Points</th></tr>{rows}</table>
@@ -481,7 +557,12 @@ def levels_index():
 def level_guide(level_num):
     if not _has_access_cookie():
         return redirect("/register")
-    if level_num in LOCKED_LEVELS:
+    cur = _curriculum_for_user()
+    level_files   = cur["level_files"]
+    locked_levels = cur["locked_levels"]
+    handouts_dir  = cur["handouts_dir"]
+    prefix        = cur["key_prefix"]
+    if level_num in locked_levels:
         return render_template_string("""<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>Nice try</title>""" + LEVEL_STYLE + """
@@ -503,13 +584,13 @@ def level_guide(level_num):
     <p>This level hasn't been unlocked yet.<br>
        Finish the levels that <em>are</em> available first — your instructor will unlock this one when it's time.</p>
     <a href="/levels" class="btn">← Back to Levels</a>
-    <p class="sub">Nice URL guessing though. That's the ABAC spirit.</p>
+    <p class="sub">Nice URL guessing though. That's the spirit.</p>
   </div>
 </body>
 </html>""")
-    if level_num not in LEVEL_FILES:
+    if level_num not in level_files:
         return "Level not found.", 404
-    md_path = os.path.join(HANDOUTS_DIR, LEVEL_FILES[level_num])
+    md_path = os.path.join(handouts_dir, level_files[level_num])
     if not os.path.exists(md_path):
         return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>Level {level_num}</title>{LEVEL_STYLE}</head>
 <body>
@@ -526,36 +607,30 @@ def level_guide(level_num):
             md_text, extensions=["tables", "fenced_code", "toc"])
     else:
         body_html = f"<pre style='white-space:pre-wrap'>{md_text}</pre>"
-    # Convert any <img src="/videos/..."> tags (generated by markdown ![...]() syntax)
-    # into proper <video> elements with controls and responsive styling.
     import re as _re
     def _img_to_video(m):
         src = m.group(1)
-        alt = m.group(2)
         return (f'<video src="{src}" controls controlslist="nodownload" '
                 f'style="max-width:100%;border-radius:6px;margin:12px 0;display:block">'
                 f'</video>')
     body_html = _re.sub(
         r'<img\s+(?:[^>]*?\s)?src="(/videos/[^"]+)"(?:\s+alt="([^"]*)")?[^>]*?>',
-        _img_to_video,
-        body_html
-    )
+        _img_to_video, body_html)
     prev_link = f"<a href='/levels/{level_num-1}'>← Level {level_num-1}</a>" if level_num > 0 else "<span></span>"
-    next_link = f"<a href='/levels/{level_num+1}'>Level {level_num+1} →</a>" if (level_num+1) in LEVEL_FILES else "<span></span>"
-    codes = load_codes()
-    key = f"L{level_num}"
+    next_link = f"<a href='/levels/{level_num+1}'>Level {level_num+1} →</a>" if (level_num+1) in level_files else "<span></span>"
+    codes = _load_codes_for(cur)
+    key   = f"{prefix}{level_num}"
     title = codes.get(key, {}).get("title", f"Level {level_num}")
-    extra_widget = _L2_PEERS_WIDGET if level_num == 3 else ""
-    # Inject widget at placeholder position in the body (Step 1), not at the bottom
+    extra_widget = _L2_PEERS_WIDGET if (cur["key_prefix"] == "L" and level_num == 3) else ""
     if extra_widget and "<!-- PEERS_WIDGET -->" in body_html:
         body_html = body_html.replace("<!-- PEERS_WIDGET -->", extra_widget)
         extra_widget = ""
-    return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>L{level_num} — {title}</title>{LEVEL_STYLE}</head>
+    return f"""<!DOCTYPE html><html><head><meta charset='utf-8'><title>{key} — {title}</title>{LEVEL_STYLE}</head>
 <body>
   {_topbar('/levels')}
   <div class='page-header'>
-    <h1><span class='level-badge'>L{level_num}</span> {title}</h1>
-    <p>Meridian AG Audit Remediation &nbsp;·&nbsp; DAC: Practitioner Level</p>
+    <h1><span class='level-badge'>{key}</span> {title}</h1>
+    <p>{cur['subtitle']} &nbsp;·&nbsp; {cur['title']}</p>
   </div>
   <div class='container'>
     {body_html}
@@ -680,6 +755,10 @@ def init_db():
     ]:
         if col not in pr_existing:
             db.execute(f"ALTER TABLE pending_registrations ADD COLUMN {col} {typedef}")
+    # Migrate classes table — add curriculum column
+    cls_existing = {row[1] for row in db.execute("PRAGMA table_info(classes)")}
+    if "curriculum" not in cls_existing:
+        db.execute("ALTER TABLE classes ADD COLUMN curriculum TEXT DEFAULT 'dac'")
     db.commit()
     _seed_slots(db)
     db.close()
@@ -2433,27 +2512,27 @@ def api_provision_status():
 def submit():
     if not _has_access_cookie():
         return redirect("/register")
+    cur          = _curriculum_for_user()
+    locked_levels = cur["locked_levels"]
+    codes        = _load_codes_for(cur)
     msg, msg_type = None, "ok"
-    codes = load_codes()
     if request.method == "POST":
         sap_username = request.form.get("name", "").strip().upper()
         level = request.form.get("level", "").strip()
         code  = request.form.get("code", "").strip().upper()
 
-        # Check participant exists
         db = get_db()
         participant = db.execute("SELECT * FROM participants WHERE sap_username=?", (sap_username,)).fetchone()
         if not participant:
             msg, msg_type = f"SAP username '{sap_username}' not found. Please register first.", "err"
             db.close()
-            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes, locked_levels=LOCKED_LEVELS)
+            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes, locked_levels=locked_levels)
 
         if participant["locked"]:
             msg, msg_type = "Your account has been locked by the instructor. Please raise your hand.", "err"
             db.close()
-            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes, locked_levels=LOCKED_LEVELS)
+            return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes, locked_levels=locked_levels)
 
-        # Check not already submitted correctly
         already = db.execute(
             "SELECT * FROM submissions WHERE participant=? AND level=? AND correct=1",
             (sap_username, level)).fetchone()
@@ -2485,7 +2564,6 @@ def submit():
 </body>
 </html>""")
 
-        # Validate code
         correct_code = codes.get(level, {}).get("code", "").upper()
         base_points  = codes.get(level, {}).get("points", 100)
         correct = (code == correct_code)
@@ -2507,7 +2585,7 @@ def submit():
         db.commit()
         db.close()
 
-    return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes, locked_levels=LOCKED_LEVELS)
+    return render_template_string(SUBMIT_TEMPLATE, msg=msg, msg_type=msg_type, levels=codes, locked_levels=locked_levels)
 
 # ---------------------------------------------------------------------------
 # Admin — pending approvals
