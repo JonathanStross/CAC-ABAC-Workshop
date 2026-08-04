@@ -1124,7 +1124,7 @@ HOME_TEMPLATE = """
     </div>
 
     <div class="catalog-section">
-      <h2>Code Security <span>CAC Module</span></h2>
+      <h2>Code Security <span>CAC</span></h2>
       <div class="course-row">
         {% if authenticated %}
         <a class="course-card" href="/levels">
@@ -1147,7 +1147,7 @@ HOME_TEMPLATE = """
     </div>
 
     <div class="catalog-section">
-      <h2>Threat Detection &amp; Response <span>CAC Module</span></h2>
+      <h2>Threat Detection &amp; Response <span>CAC</span></h2>
       <div class="course-row">
         <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Practitioner</div><div class="cn">Threat Detection Practitioner</div><div class="cs">Event monitor · Incident management · Alert patterns</div></div>
         <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Professional</div><div class="cn">Threat Detection Professional</div><div class="cs">Detection rules · SIEM integration · Threat intelligence</div></div>
@@ -1156,7 +1156,7 @@ HOME_TEMPLATE = """
     </div>
 
     <div class="catalog-section">
-      <h2>Vulnerability Management <span>CAC Module</span></h2>
+      <h2>Vulnerability Management <span>CAC</span></h2>
       <div class="course-row">
         <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Practitioner</div><div class="cn">Vulnerability Management Practitioner</div><div class="cs">Assessments · Findings · Risk reporting</div></div>
         <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Professional</div><div class="cn">Vulnerability Management Professional</div><div class="cs">Custom policies · Remediation tracking · Compliance mapping</div></div>
@@ -1165,7 +1165,7 @@ HOME_TEMPLATE = """
     </div>
 
     <div class="catalog-section">
-      <h2>Transport Control <span>CAC Module</span></h2>
+      <h2>Transport Control <span>CAC</span></h2>
       <div class="course-row">
         <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Practitioner</div><div class="cn">Transport Control Practitioner</div><div class="cs">Change gate policies · Transport risk scoring · Emergency approvals</div></div>
         <div class="course-card locked"><span class="cbadge bsoon">Coming soon</span><div class="ct">Professional</div><div class="cn">Transport Control Professional</div><div class="cs">Approval workflows · Multi-system gates · Audit trail</div></div>
